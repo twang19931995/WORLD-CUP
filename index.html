@@ -160,7 +160,7 @@
             <div class="space-y-3" id="leaderboard-container"></div>
         </section>
 
-        <!-- View 2: 今日比赛 (新增区域) -->
+        <!-- View 2: 今日比赛 -->
         <section id="view-today" class="hidden space-y-4 animate-bounce-in">
             <div class="flex items-center justify-between">
                 <h2 class="text-lg font-bold text-white border-l-4 border-yellow-400 pl-2">今日赛程</h2>
@@ -197,13 +197,69 @@
             <div id="stats-list-container" class="space-y-6"></div>
         </section>
 
-        <!-- View 5: 玩家管理 (我的) -->
+        <!-- View 5: 玩家管理 -->
         <section id="view-players" class="hidden animate-bounce-in">
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-lg font-bold text-white border-l-4 border-neonPink pl-2">玩家阵营</h2>
                 <button onclick="openModal('addPlayerModal'); playAudio('click')" class="btn-3d px-4 py-1.5 text-sm">招募玩家</button>
             </div>
             <div class="grid grid-cols-2 gap-3" id="players-grid"></div>
+        </section>
+
+        <!-- View 6: 设置后台 (新增管理控制后台) -->
+        <section id="view-admin" class="hidden space-y-6 animate-bounce-in pb-10">
+            <div class="flex items-center justify-between mb-2">
+                <h2 class="text-lg font-bold text-white border-l-4 border-yellow-400 pl-2">管理控制台</h2>
+            </div>
+            
+            <!-- 导入导出卡片 -->
+            <div class="bg-black/30 border border-white/10 rounded-2xl p-4 shadow-xl backdrop-blur-md space-y-3">
+                <h3 class="text-sm font-black text-yellow-400 flex items-center gap-2">
+                    <i class="fa-solid fa-file-import"></i> 数据备份与恢复
+                </h3>
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="exportDatabase(); playAudio('click')" class="btn-3d py-2 text-xs bg-gradient-to-b from-blue-500 to-blue-800 shadow-[0_4px_10px_rgba(59,130,246,0.4)]">
+                        <i class="fa-solid fa-file-export mr-1"></i> 导出 JSON 文件
+                    </button>
+                    <label class="btn-3d py-2 text-xs text-center cursor-pointer bg-gradient-to-b from-purple-500 to-purple-800 shadow-[0_4px_10px_rgba(168,85,247,0.4)] block">
+                        <i class="fa-solid fa-file-import mr-1"></i> 导入 JSON 文件
+                        <input type="file" id="import-file-input" class="hidden" onchange="importDatabase(event)">
+                    </label>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="copyDbToClipboard(); playAudio('click')" class="btn-3d btn-blue py-2 text-xs">
+                        <i class="fa-solid fa-copy mr-1"></i> 复制到剪贴板
+                    </button>
+                    <button onclick="pasteDbFromClipboard(); playAudio('click')" class="btn-3d py-2 text-xs bg-gradient-to-b from-emerald-500 to-emerald-800 shadow-[0_4px_10px_rgba(16,185,129,0.4)]">
+                        <i class="fa-solid fa-paste mr-1"></i> 剪贴板导入
+                    </button>
+                </div>
+            </div>
+
+            <!-- 数据任意改 (高级 JSON 语法检查器) -->
+            <div class="bg-black/30 border border-white/10 rounded-2xl p-4 shadow-xl backdrop-blur-md space-y-3">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-sm font-black text-yellow-400 flex items-center gap-2">
+                        <i class="fa-solid fa-code"></i> 原始数据任意修改
+                    </h3>
+                    <span class="text-[10px] text-gray-400">支持修改任一一句和任何字段</span>
+                </div>
+                <textarea id="raw-db-textarea" class="w-full h-64 bg-black/60 border border-white/20 rounded-xl p-3 font-mono text-xs text-green-400 outline-none focus:border-yellow-400" placeholder="数据加载中..."></textarea>
+                <div class="flex gap-2">
+                    <button onclick="formatRawDbText(); playAudio('click')" class="flex-1 py-2 text-xs font-bold rounded-xl border border-white/20 hover:bg-white/10 text-white">格式化代码</button>
+                    <button onclick="saveRawDbText(); playAudio('coin')" class="flex-1 btn-3d py-2 text-sm">保存并实时同步</button>
+                </div>
+            </div>
+
+            <!-- 快捷重置与管理 -->
+            <div class="bg-black/30 border border-white/10 rounded-2xl p-4 shadow-xl backdrop-blur-md space-y-3">
+                <h3 class="text-sm font-black text-red-400 flex items-center gap-2">
+                    <i class="fa-solid fa-triangle-exclamation"></i> 危险操作区域
+                </h3>
+                <button onclick="resetEntireDatabase(); playAudio('click')" class="w-full btn-3d bg-gradient-to-b from-red-600 to-red-900 shadow-[0_4px_10px_rgba(220,38,38,0.4)] py-2 text-xs">
+                    <i class="fa-solid fa-trash-can mr-1"></i> 重置并清空所有数据
+                </button>
+            </div>
         </section>
     </main>
 
@@ -213,7 +269,7 @@
             <i class="fa-solid fa-house nav-icon"></i><span>首页</span>
         </div>
         <div class="nav-item" id="nav-today" onclick="switchTab('today'); playAudio('click')">
-            <i class="fa-solid fa-calendar-day nav-icon"></i><span>今日比赛</span>
+            <i class="fa-solid fa-calendar-day nav-icon"></i><span>今日</span>
         </div>
         <div class="nav-item" id="nav-matches" onclick="switchTab('matches'); playAudio('click')">
             <i class="fa-solid fa-futbol nav-icon"></i><span>赛事</span>
@@ -223,6 +279,9 @@
         </div>
         <div class="nav-item" id="nav-players" onclick="switchTab('players'); playAudio('click')">
             <i class="fa-solid fa-user-group nav-icon"></i><span>阵营</span>
+        </div>
+        <div class="nav-item" id="nav-admin" onclick="switchTab('admin'); playAudio('click')">
+            <i class="fa-solid fa-gears nav-icon"></i><span>后台</span>
         </div>
     </nav>
 
@@ -354,7 +413,7 @@
                 ["Group A", "6月25日 09:00", "第3轮", "墨西哥城", "捷克", "墨西哥"], ["Group A", "6月25日 09:00", "第3轮", "蒙特雷", "南非", "韩国"],
                 ["Group B", "6月13日 03:00", "第1轮", "多伦多", "加拿大", "波黑"], ["Group B", "6月14日 03:00", "第1轮", "旧金山湾区", "卡塔尔", "瑞士"],
                 ["Group B", "6月19日 03:00", "第2轮", "洛杉矶", "瑞士", "波黑"], ["Group B", "6月19日 06:00", "第2轮", "温哥华", "加拿大", "卡塔尔"],
-                ["Group B", "6月25日 03:00", "第3轮", "温哥举", "瑞士", "加拿大"], ["Group B", "6月25日 03:00", "第3轮", "西雅图", "波黑", "卡塔尔"],
+                ["Group B", "6月25日 03:00", "第3轮", "温哥华", "瑞士", "加拿大"], ["Group B", "6月25日 03:00", "第3轮", "西雅图", "波黑", "卡塔尔"],
                 ["Group C", "6月14日 06:00", "第1轮", "纽约/新泽西", "巴西", "摩洛哥"], ["Group C", "6月14日 09:00", "第1轮", "波士顿", "海地", "苏格兰"],
                 ["Group C", "6月20日 06:00", "第2轮", "波士顿", "苏格兰", "摩洛哥"], ["Group C", "6月20日 09:00", "第2轮", "费城", "巴西", "海地"],
                 ["Group C", "6月25日 06:00", "第3轮", "迈阿密", "苏格兰", "巴西"], ["Group C", "6月25日 06:00", "第3轮", "亚特兰大", "摩洛哥", "海地"],
@@ -405,6 +464,8 @@
             return res;
         }
 
+        // 分配本设备唯一 Client ID (用于握手同步判定)
+        const myClientId = 'device_' + Math.random().toString(36).substr(2, 9);
         let db = { players: [], matches: [], bets: {}, timestamp: 0 };
         const roomId = new URLSearchParams(window.location.search).get('room') || 'public_wc2026';
         document.getElementById('room-id-display').innerText = `房号: ${roomId}`;
@@ -417,13 +478,35 @@
             if (typeof mqtt === 'undefined') { setSyncStatus(false, "离线单机版"); return; }
             try {
                 mqttClient = mqtt.connect('wss://broker.emqx.io:8084/mqtt');
-                mqttClient.on('connect', () => { mqttClient.subscribe(syncTopic); setSyncStatus(true); });
+                mqttClient.on('connect', () => { 
+                    mqttClient.subscribe(syncTopic); 
+                    setSyncStatus(true); 
+                    
+                    // 新设备主动握手机制：连接成功后立即向全局发送一个“请求同步最新信息”指令 [1]
+                    setTimeout(() => {
+                        const syncReq = { type: "sync_request", requester: myClientId };
+                        mqttClient.publish(syncTopic, JSON.stringify(syncReq));
+                    }, 500); 
+                });
                 mqttClient.on('offline', () => setSyncStatus(false)); mqttClient.on('error', () => setSyncStatus(false));
                 mqttClient.on('message', (topic, message) => {
                     try {
-                        const remoteDb = JSON.parse(message.toString());
-                        if (remoteDb.timestamp > db.timestamp) {
-                            isReceiving = true; db = remoteDb; localStorage.setItem(`wc_db_v4_${roomId}`, JSON.stringify(db));
+                        const data = JSON.parse(message.toString());
+                        
+                        // 1. 处理来自新设备的握手同步请求 [1]
+                        if (data.type === "sync_request") {
+                            // 若是其他设备请求，并且本设备拥有本地数据，则代替全网重播最新数据 [1]
+                            if (data.requester !== myClientId && db.players.length > 0) {
+                                setTimeout(() => {
+                                    broadcastData();
+                                }, Math.random() * 400); // 随机微秒延迟防碰撞
+                            }
+                            return;
+                        }
+
+                        // 2. 处理常规数据包同步流程 [1]
+                        if (data.timestamp && data.timestamp > db.timestamp) {
+                            isReceiving = true; db = data; localStorage.setItem(`wc_db_v4_${roomId}`, JSON.stringify(db));
                             refreshAllUI(); setTimeout(() => isReceiving = false, 100);
                         }
                     } catch (e) { }
@@ -518,6 +601,8 @@
                 renderPlayerStatsList();
             } else if (currentTab === 'players') {
                 renderPlayers();
+            } else if (currentTab === 'admin') {
+                loadRawDbToTextarea();
             }
         }
 
@@ -528,7 +613,7 @@
         // 底部导航切换
         function switchTab(tabId) {
             currentTab = tabId;
-            ['dashboard', 'today', 'matches', 'stats', 'players'].forEach(id => {
+            ['dashboard', 'today', 'matches', 'stats', 'players', 'admin'].forEach(id => {
                 const viewEl = document.getElementById(`view-${id}`);
                 const navEl = document.getElementById(`nav-${id}`);
                 if (viewEl) viewEl.classList.add('hidden');
@@ -568,7 +653,7 @@
             });
         }
 
-        // --- View 1: 首页仪表盘 ---
+        // --- View 1: 首页排行榜 ---
         function renderDashboard() {
             const c = document.getElementById('leaderboard-container');
             if (db.players.length === 0) {
@@ -609,7 +694,7 @@
             document.getElementById('global-money').innerText = `$${totalM}`;
         }
 
-        // --- View 2: 今日比赛动态渲染逻辑 ---
+        // --- View 2: 今日赛程 ---
         function renderTodayDateSelector() {
             const container = document.getElementById('date-scroll-container');
             const dates = getUniqueDates();
@@ -807,7 +892,7 @@
             c.innerHTML = html;
         }
 
-        // --- View 4: 数据统计平铺列表 ---
+        // --- View 4: 数据统计 ---
         function renderPlayerStatsList() {
             calculateAdvancedStats();
             const c = document.getElementById('stats-list-container');
@@ -873,7 +958,7 @@
             c.innerHTML = html;
         }
 
-        // --- View 5: 阵营管理 ---
+        // --- View 5: 玩家阵营管理 ---
         function addPlayer() {
             const name = document.getElementById('newPlayerName').value.trim(), avatarInput = document.getElementById('newPlayerAvatar').value.trim();
             if (!name) return alert("代号必填！");
@@ -882,7 +967,6 @@
             broadcastData(); closeModal('addPlayerModal'); refreshAllUI();
         }
 
-        // 修改头像逻辑 [3]
         function editPlayerAvatar(playerId) {
             const p = db.players.find(x => x.id === playerId);
             if (!p) return;
@@ -908,6 +992,118 @@
                     </div>`;
             });
             container.innerHTML = html;
+        }
+
+        // --- View 6: 设置后台逻辑控制 --- [1]
+        function loadRawDbToTextarea() {
+            const ta = document.getElementById('raw-db-textarea');
+            if (ta) {
+                ta.value = JSON.stringify(db, null, 4);
+            }
+        }
+
+        function formatRawDbText() {
+            const ta = document.getElementById('raw-db-textarea');
+            if (!ta) return;
+            try {
+                const parsed = JSON.parse(ta.value);
+                ta.value = JSON.stringify(parsed, null, 4);
+            } catch(e) {
+                alert("JSON 语法检测到错误，无法格式化！\n错误提示: " + e.message);
+            }
+        }
+
+        function saveRawDbText() {
+            const ta = document.getElementById('raw-db-textarea');
+            if (!ta) return;
+            try {
+                const parsed = JSON.parse(ta.value);
+                if (!parsed.players || !parsed.matches) {
+                    return alert("保存失败：JSON 必须具有 players 与 matches 核心字段节点！");
+                }
+                // 实时覆盖并向全网广播，促使旧设备自动接收并静默刷新 [1]
+                db = parsed;
+                broadcastData();
+                refreshAllUI();
+                alert("✅ 数据库成功保存！修改信息已实时发布，旧设备正在同步更新！");
+            } catch(e) {
+                alert("保存失败：您输入的 JSON 存在语法错误，请检查后再行保存！\n" + e.message);
+            }
+        }
+
+        function exportDatabase() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db, null, 4));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `wc2026_db_backup_${Date.now()}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        function importDatabase(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const parsed = JSON.parse(e.target.result);
+                    if (!parsed.players || !parsed.matches) {
+                        return alert("导入失败：导入格式非合法的世界杯数据库备份！");
+                    }
+                    if (confirm("确定要导入此备份吗？导入后将全面覆盖本地现存的所有数据！")) {
+                        db = parsed;
+                        broadcastData();
+                        refreshAllUI();
+                        loadRawDbToTextarea();
+                        alert("✅ 数据库备份导入成功，已实时广播同步全网！");
+                    }
+                } catch(err) {
+                    alert("导入失败：该文件并不是合法的 JSON 格式文本。");
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = ''; 
+        }
+
+        function copyDbToClipboard() {
+            const txt = JSON.stringify(db, null, 4);
+            navigator.clipboard.writeText(txt).then(() => {
+                alert("📋 数据 JSON 已成功复制到您的剪贴板，可前往其他设备进行粘贴！");
+            }).catch(() => {
+                const ta = document.createElement('textarea');
+                ta.value = txt; document.body.appendChild(ta); ta.select();
+                document.execCommand('copy'); document.body.removeChild(ta);
+                alert("📋 数据 JSON 已成功复制到您的剪贴板！");
+            });
+        }
+
+        function pasteDbFromClipboard() {
+            const input = prompt("请在此处粘贴导出的 JSON 字符串：");
+            if (!input) return;
+            try {
+                const parsed = JSON.parse(input.trim());
+                if (!parsed.players || !parsed.matches) {
+                    return alert("导入失败：该 JSON 数据不满足玩家及对阵的基础结构特征！");
+                }
+                db = parsed;
+                broadcastData();
+                refreshAllUI();
+                loadRawDbToTextarea();
+                alert("✅ 剪贴板导入成功！数据已实时向所有在线设备进行广播！");
+            } catch(e) {
+                alert("导入失败：错误的 JSON 语法表达格式！\n" + e.message);
+            }
+        }
+
+        function resetEntireDatabase() {
+            if (confirm("🚨 警告：这会清空本房所有玩家记录、所有历史注单，重置全部104场比赛！确定执行此项毁灭性重置吗？")) {
+                db = { players: [], matches: generateMatches(), bets: {}, timestamp: Date.now() };
+                broadcastData();
+                refreshAllUI();
+                loadRawDbToTextarea();
+                alert("✅ 数据库已被初始化归零！");
+            }
         }
 
         // --- 交互业务 (下注 & 结算) ---

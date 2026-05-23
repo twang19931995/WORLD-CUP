@@ -1,0 +1,1018 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>2026 世界杯竞猜大师 | 终极华丽版</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- 稳定的 CDN 依赖 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/canvas-confetti/1.9.2/confetti.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/5.5.2/mqtt.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        appBg: '#0f172a',
+                        cardGold: 'linear-gradient(135deg, #fff9c4, #fbc02d)',
+                        cardBlue: 'linear-gradient(135deg, #e3f2fd, #42a5f5)',
+                        cardRed: 'linear-gradient(135deg, #ffebee, #ef5350)',
+                        cardGreen: 'linear-gradient(135deg, #e8f5e9, #66bb6a)',
+                        cardPurple: 'linear-gradient(135deg, #f3e5f5, #ab47bc)',
+                    },
+                    animation: {
+                        'spin-slow': 'spin 10s linear infinite',
+                        'bounce-in': 'bounceIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards'
+                    },
+                    keyframes: {
+                        bounceIn: {
+                            '0%': { opacity: 0, transform: 'scale(0.8) translateY(20px)' },
+                            '100%': { opacity: 1, transform: 'scale(1) translateY(0)' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Noto+Sans+SC:wght@500;700;900&display=swap');
+        
+        body { 
+            font-family: 'Noto Sans SC', sans-serif; 
+            background: #003a8c;
+            background-image: radial-gradient(circle at 50% 0%, #007bff 0%, #001529 80%);
+            color: #fff; 
+            overflow-x: hidden;
+            -webkit-tap-highlight-color: transparent;
+            padding-bottom: 80px; /* 留出底部导航栏高度 */
+        }
+        
+        h1, h2, h3, .brand-font { font-family: 'Orbitron', 'Noto Sans SC', sans-serif; }
+        
+        /* 隐藏滚动条 */
+        ::-webkit-scrollbar { width: 0px; height: 0px; display: none; } 
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+
+        /* 3D 高光卡片样式 (复刻参考图) */
+        .match-card {
+            border-radius: 16px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3), inset 0 2px 4px rgba(255,255,255,0.4);
+            color: #1a1a1a;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.2s;
+        }
+        .match-card:active { transform: scale(0.97); }
+
+        .card-yellow { background: linear-gradient(135deg, #fffbe6 0%, #ffd666 100%); }
+        .card-blue { background: linear-gradient(135deg, #e6f7ff 0%, #69c0ff 100%); }
+        .card-red { background: linear-gradient(135deg, #fff0f6 0%, #ff85c0 100%); }
+        .card-green { background: linear-gradient(135deg, #f6ffed 0%, #95de64 100%); }
+        
+        /* 发光足球边框 */
+        .soccer-icon {
+            width: 48px; height: 48px;
+            border-radius: 50%;
+            background: #fff;
+            box-shadow: 0 0 15px rgba(255,255,255,0.8), inset 0 2px 5px rgba(0,0,0,0.1);
+            display: flex; justify-content: center; align-items: center;
+            font-size: 28px;
+            position: relative;
+        }
+        .soccer-icon::after {
+            content: ''; position: absolute; inset: -4px;
+            border-radius: 50%; border: 2px solid rgba(255,255,255,0.6);
+            border-top-color: transparent; animation: spin 2s linear infinite;
+        }
+
+        /* 3D 胶囊按钮 */
+        .btn-3d {
+            background: linear-gradient(to bottom, #ff9c00, #ff5500);
+            border: none; border-radius: 999px;
+            color: white; font-weight: 900;
+            box-shadow: 0 4px 10px rgba(255,85,0,0.4), inset 0 2px 2px rgba(255,255,255,0.3);
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+            transition: all 0.1s;
+        }
+        .btn-3d:active { transform: translateY(2px); box-shadow: 0 2px 5px rgba(255,85,0,0.4); }
+        .btn-blue { background: linear-gradient(to bottom, #40a9ff, #096dd9); box-shadow: 0 4px 10px rgba(9,109,217,0.4), inset 0 2px 2px rgba(255,255,255,0.3); }
+
+        /* 底部导航栏 */
+        .bottom-nav {
+            position: fixed; bottom: 0; left: 0; right: 0;
+            background: rgba(10, 20, 40, 0.95); backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(255,255,255,0.1);
+            display: flex; justify-content: space-around; padding: 10px 0 calc(10px + env(safe-area-inset-bottom));
+            z-index: 50; box-shadow: 0 -5px 20px rgba(0,0,0,0.5);
+        }
+        .nav-item {
+            display: flex; flex-direction: column; align-items: center; gap: 4px;
+            color: #64748b; font-size: 10px; transition: all 0.2s; cursor: pointer;
+        }
+        .nav-item.active { color: #00f3ff; text-shadow: 0 0 10px rgba(0,243,255,0.5); transform: translateY(-2px); }
+        .nav-icon { font-size: 20px; }
+
+        /* 数据卡片 */
+        .data-card { background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 12px; }
+
+        /* 模态框动画 */
+        .modal-enter { animation: bounceIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+    </style>
+</head>
+<body>
+
+    <!-- 顶部标题栏 -->
+    <header class="pt-10 pb-4 px-4 text-center relative z-10">
+        <h1 class="text-3xl font-black italic tracking-wider text-transparent bg-clip-text bg-gradient-to-b from-white to-gray-400 drop-shadow-lg">
+            2026<span class="text-yellow-400">世界杯竞猜</span>
+        </h1>
+        <div class="absolute right-4 top-10 flex flex-col items-end">
+            <span id="room-id-display" class="bg-black/40 px-2 py-0.5 rounded text-[10px] text-gray-300 border border-white/10 mb-1">房号: public</span>
+            <div id="sync-status" class="text-[10px] text-yellow-400 flex items-center gap-1 bg-black/40 px-2 py-0.5 rounded border border-white/10">
+                <i class="fa-solid fa-circle-notch fa-spin"></i> 连接中
+            </div>
+        </div>
+    </header>
+
+    <!-- 主体容器 (限制最大宽度，更有手机APP感) -->
+    <main class="max-w-md mx-auto px-4 z-10 relative" id="main-content">
+        
+        <!-- View 1: 首页 (排行榜) -->
+        <section id="view-dashboard" class="space-y-4 animate-bounce-in">
+            <!-- 头图 Banner -->
+            <div class="relative w-full h-40 rounded-2xl overflow-hidden shadow-2xl border border-white/20 flex items-center justify-center bg-gradient-to-br from-blue-600 to-indigo-900">
+                <i class="fa-solid fa-futbol text-8xl text-white/20 absolute -right-4 -bottom-4 animate-spin-slow"></i>
+                <div class="z-10 text-center">
+                    <p class="text-sm text-blue-200 font-bold mb-1">全球资金池总量</p>
+                    <p class="text-4xl font-black text-yellow-400 drop-shadow-[0_0_10px_rgba(250,204,21,0.8)] font-mono" id="global-money">$0</p>
+                </div>
+            </div>
+
+            <!-- 排行榜列表 -->
+            <div class="flex items-center justify-between mt-6 mb-2">
+                <h2 class="text-lg font-bold text-white border-l-4 border-yellow-400 pl-2">财富排行榜</h2>
+            </div>
+            <div class="space-y-3" id="leaderboard-container"></div>
+        </section>
+
+        <!-- View 2: 今日比赛 (新增区域) -->
+        <section id="view-today" class="hidden space-y-4 animate-bounce-in">
+            <div class="flex items-center justify-between">
+                <h2 class="text-lg font-bold text-white border-l-4 border-yellow-400 pl-2">今日赛程</h2>
+            </div>
+            <!-- 左右滑动的日期容器 -->
+            <div id="date-scroll-container" class="flex gap-2 overflow-x-auto py-2 px-1 mb-2 no-scrollbar scroll-smooth"></div>
+            <!-- 今日赛事列表 -->
+            <div class="space-y-4" id="today-matches-container"></div>
+        </section>
+
+        <!-- View 3: 赛事中心 -->
+        <section id="view-matches" class="hidden flex flex-col h-full animate-bounce-in">
+            <!-- 搜索与筛选 -->
+            <div class="flex items-center gap-2 mb-4 bg-white/10 p-1.5 rounded-full backdrop-blur-md">
+                <button onclick="filterMatches('all'); playAudio('click')" id="fm-all" class="flex-1 py-1.5 rounded-full text-xs font-bold bg-white text-blue-900 shadow-md">全部</button>
+                <button onclick="filterMatches('upcoming'); playAudio('click')" id="fm-up" class="flex-1 py-1.5 rounded-full text-xs font-bold text-white hover:bg-white/20">未开赛</button>
+                <button onclick="filterMatches('finished'); playAudio('click')" id="fm-fin" class="flex-1 py-1.5 rounded-full text-xs font-bold text-white hover:bg-white/20">已完赛</button>
+            </div>
+            <div class="relative mb-4">
+                <i class="fa-solid fa-search absolute left-4 top-3 text-gray-400"></i>
+                <input type="text" id="match-search" oninput="renderMatches()" placeholder="搜索国家/阶段..." class="w-full bg-black/40 border border-white/20 rounded-full pl-10 pr-4 py-2.5 text-sm text-white focus:border-yellow-400 outline-none backdrop-blur-md">
+            </div>
+
+            <!-- 赛事列表容器 -->
+            <div class="space-y-4" id="matches-container"></div>
+        </section>
+
+        <!-- View 4: 数据统计 -->
+        <section id="view-stats" class="hidden space-y-6 animate-bounce-in pb-10">
+            <div class="flex items-center justify-between mb-2">
+                <h2 class="text-lg font-bold text-white border-l-4 border-neonBlue pl-2">上帝视角数据分析</h2>
+            </div>
+            <!-- 平铺玩家数据卡片的容器 -->
+            <div id="stats-list-container" class="space-y-6"></div>
+        </section>
+
+        <!-- View 5: 玩家管理 (我的) -->
+        <section id="view-players" class="hidden animate-bounce-in">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-bold text-white border-l-4 border-neonPink pl-2">玩家阵营</h2>
+                <button onclick="openModal('addPlayerModal'); playAudio('click')" class="btn-3d px-4 py-1.5 text-sm">招募玩家</button>
+            </div>
+            <div class="grid grid-cols-2 gap-3" id="players-grid"></div>
+        </section>
+    </main>
+
+    <!-- 底部 App 导航栏 (新增今日比赛项) -->
+    <nav class="bottom-nav">
+        <div class="nav-item active" id="nav-dashboard" onclick="switchTab('dashboard'); playAudio('click')">
+            <i class="fa-solid fa-house nav-icon"></i><span>首页</span>
+        </div>
+        <div class="nav-item" id="nav-today" onclick="switchTab('today'); playAudio('click')">
+            <i class="fa-solid fa-calendar-day nav-icon"></i><span>今日比赛</span>
+        </div>
+        <div class="nav-item" id="nav-matches" onclick="switchTab('matches'); playAudio('click')">
+            <i class="fa-solid fa-futbol nav-icon"></i><span>赛事</span>
+        </div>
+        <div class="nav-item" id="nav-stats" onclick="switchTab('stats'); playAudio('click')">
+            <i class="fa-solid fa-chart-pie nav-icon"></i><span>数据</span>
+        </div>
+        <div class="nav-item" id="nav-players" onclick="switchTab('players'); playAudio('click')">
+            <i class="fa-solid fa-user-group nav-icon"></i><span>阵营</span>
+        </div>
+    </nav>
+
+    <!-- Modals -->
+    <!-- 添加玩家 -->
+    <div id="addPlayerModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden flex justify-center items-center z-50 p-4">
+        <div class="bg-gradient-to-b from-[#1e3a8a] to-[#0f172a] p-6 rounded-3xl border border-white/20 w-full max-w-sm relative shadow-2xl">
+            <button onclick="closeModal('addPlayerModal'); playAudio('click')" class="absolute top-4 right-4 text-white/50 hover:text-white"><i class="fa-solid fa-times text-xl"></i></button>
+            <h3 class="text-2xl font-black mb-6 text-center text-white">添加新玩家</h3>
+            <div class="space-y-4">
+                <input type="text" id="newPlayerName" class="w-full bg-black/50 border border-white/20 rounded-xl p-3 text-white text-center font-bold outline-none focus:border-yellow-400" placeholder="玩家代号 (必填)">
+                <input type="text" id="newPlayerAvatar" class="w-full bg-black/50 border border-white/20 rounded-xl p-3 text-white text-center text-sm outline-none focus:border-yellow-400" placeholder="自定义头像 URL (选填)">
+                <button onclick="addPlayer(); playAudio('click')" class="w-full btn-3d py-3 mt-2 text-lg">立即加入</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 设定对阵球队 -->
+    <div id="editMatchModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden flex justify-center items-center z-50 p-4">
+        <div class="bg-gradient-to-b from-[#b45309] to-[#451a03] p-6 rounded-3xl border border-white/20 w-full max-w-sm relative shadow-2xl">
+            <button onclick="closeModal('editMatchModal'); playAudio('click')" class="absolute top-4 right-4 text-white/50 hover:text-white"><i class="fa-solid fa-times text-xl"></i></button>
+            <h3 class="text-2xl font-black mb-6 text-center text-yellow-400">修改对阵</h3>
+            <div class="space-y-4 flex flex-col items-center">
+                <input type="hidden" id="editMatchId">
+                <input type="text" id="editHome" class="w-full bg-black/50 border border-white/20 rounded-xl p-3 text-white text-center font-black text-xl">
+                <span class="text-yellow-400 font-black text-xl italic">VS</span>
+                <input type="text" id="editAway" class="w-full bg-black/50 border border-white/20 rounded-xl p-3 text-white text-center font-black text-xl">
+                <button onclick="saveMatchEdit(); playAudio('click')" class="w-full btn-3d py-3 mt-4 text-lg">保存并同步</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 下注界面 -->
+    <div id="betModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden flex justify-center flex-col justify-end z-50">
+        <div class="bg-[#0f172a] rounded-t-3xl border-t border-white/20 w-full h-[85vh] flex flex-col shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+            <div class="flex justify-between items-center p-4 border-b border-white/10">
+                <h3 class="text-lg font-black text-yellow-400 truncate" id="bet-match-title"></h3>
+                <button onclick="closeModal('betModal'); playAudio('click')" class="text-white/50 hover:text-white px-2"><i class="fa-solid fa-chevron-down text-xl"></i></button>
+            </div>
+            
+            <div class="p-4 bg-black/40 flex items-center justify-between shrink-0">
+                <span class="font-bold text-blue-300">本场单注金额 <i class="fa-solid fa-coins text-yellow-400"></i></span>
+                <div class="flex items-center gap-2 bg-black rounded-lg p-1 border border-white/20">
+                    <span class="text-yellow-400 font-black pl-2">$</span>
+                    <input type="number" id="matchStake" class="w-20 bg-transparent text-center text-white font-black text-lg outline-none" value="100">
+                </div>
+            </div>
+
+            <div id="bet-players-list" class="flex-1 overflow-y-auto p-2 space-y-2"></div>
+            
+            <div class="p-4 bg-[#0f172a] border-t border-white/10 shrink-0 pb-10">
+                <button onclick="saveBets(); playAudio('coin')" class="w-full btn-3d py-3 text-lg tracking-widest">锁定盘口</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 开奖结算 -->
+    <div id="settleModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden flex justify-center items-center z-50 p-4">
+        <div class="bg-gradient-to-b from-[#7f1d1d] to-[#450a0a] p-6 rounded-3xl border border-white/20 w-full max-w-sm relative shadow-2xl text-center">
+            <button onclick="closeModal('settleModal'); playAudio('click')" class="absolute top-4 right-4 text-white/50"><i class="fa-solid fa-times text-xl"></i></button>
+            <h3 class="text-xl font-black mb-2 text-white" id="settle-match-title"></h3>
+            
+            <div class="bg-black/40 p-4 rounded-2xl border border-white/10 mb-6 mt-4">
+                <p class="text-xs text-red-200 mb-3 font-bold">录入最终比分 (选填)</p>
+                <div class="flex items-center justify-center gap-4">
+                    <input type="number" id="settleScoreHome" class="w-16 h-16 bg-black border-2 border-white/20 rounded-xl text-center text-3xl font-black text-white focus:border-yellow-400 outline-none" placeholder="-">
+                    <span class="text-white/50 font-black text-2xl">:</span>
+                    <input type="number" id="settleScoreAway" class="w-16 h-16 bg-black border-2 border-white/20 rounded-xl text-center text-3xl font-black text-white focus:border-yellow-400 outline-none" placeholder="-">
+                </div>
+            </div>
+
+            <p class="text-xs text-red-200 mb-2 font-bold">选择赛果以结算资金流向</p>
+            <div class="grid grid-cols-3 gap-2 mb-6">
+                <button onclick="setResult('home'); playAudio('click')" id="res-home" class="result-btn py-3 rounded-xl border-2 border-white/10 font-bold text-white bg-black/30 transition">主胜</button>
+                <button onclick="setResult('draw'); playAudio('click')" id="res-draw" class="result-btn py-3 rounded-xl border-2 border-white/10 font-bold text-gray-400 bg-black/30 transition">平局</button>
+                <button onclick="setResult('away'); playAudio('click')" id="res-away" class="result-btn py-3 rounded-xl border-2 border-white/10 font-bold text-white bg-black/30 transition">客胜</button>
+            </div>
+            
+            <input type="hidden" id="settleMatchId"><input type="hidden" id="settleFinalResult">
+            <button onclick="confirmSettle()" class="w-full btn-3d bg-gradient-to-b from-red-500 to-red-800 shadow-[0_4px_15px_rgba(220,38,38,0.6)] py-3 text-lg">确认开奖</button>
+        </div>
+    </div>
+
+    <!-- Web Audio API 音效合成引擎 -->
+    <script>
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        let audioCtx;
+        function initAudio() { if (!audioCtx) audioCtx = new AudioContext(); if (audioCtx.state === 'suspended') audioCtx.resume(); }
+
+        function playAudio(type) {
+            initAudio(); if (!audioCtx) return;
+            const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            const now = audioCtx.currentTime;
+
+            if (type === 'click') {
+                osc.type = 'sine'; osc.frequency.setValueAtTime(800, now); osc.frequency.exponentialRampToValueAtTime(300, now + 0.1);
+                gain.gain.setValueAtTime(0.3, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                osc.start(now); osc.stop(now + 0.1);
+            } else if (type === 'coin') {
+                osc.type = 'square'; osc.frequency.setValueAtTime(1200, now); osc.frequency.setValueAtTime(1600, now + 0.05);
+                gain.gain.setValueAtTime(0.15, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                osc.start(now); osc.stop(now + 0.2);
+            } else if (type === 'win') {
+                osc.type = 'triangle'; osc.frequency.setValueAtTime(400, now); osc.frequency.setValueAtTime(600, now + 0.1); osc.frequency.setValueAtTime(800, now + 0.2); osc.frequency.setValueAtTime(1200, now + 0.3);
+                gain.gain.setValueAtTime(0.2, now); gain.gain.linearRampToValueAtTime(0, now + 0.6);
+                osc.start(now); osc.stop(now + 0.6);
+            }
+        }
+        // 绑定全局点击初始化音效
+        document.body.addEventListener('click', initAudio, { once: true });
+    </script>
+
+    <!-- 业务逻辑引擎 -->
+    <script>
+        const flags = {
+            '墨西哥':'🇲🇽','南非':'🇿🇦','韩国':'🇰🇷','捷克':'🇨🇿','加拿大':'🇨🇦','波黑':'🇧🇦','美国':'🇺🇸','巴拉圭':'🇵🇾','卡塔尔':'🇶🇦','瑞士':'🇨🇭','巴西':'🇧🇷',
+            '摩洛哥':'🇲🇦','海地':'🇭🇹','苏格兰':'🏴󠁧󠁢󠁳󠁣󠁴󠁿','澳大利亚':'🇦🇺','土耳其':'🇹🇷','德国':'🇩🇪','库拉索':'🇨🇼','科特迪瓦':'🇨🇮','厄瓜多尔':'🇪🇨','荷兰':'🇳🇱',
+            '日本':'🇯🇵','瑞典':'🇸🇪','突尼斯':'🇹🇳','比利时':'🇧🇪','埃及':'🇪🇬','伊朗':'🇮🇷','新西兰':'🇳🇿','西班牙':'🇪🇸','佛得角':'🇨🇻','沙特阿拉伯':'🇸🇦','乌拉圭':'🇺🇾',
+            '法国':'🇫🇷','塞内加尔':'🇸🇳','伊拉克':'🇮🇶','挪威':'🇳🇴','阿根廷':'🇦🇷','阿尔及利亚':'🇩🇿','奥地利':'🇦🇹','约旦':'🇯🇴','葡萄牙':'🇵🇹','刚果(金)':'🇨🇩',
+            '乌兹别克斯坦':'🇺🇿','哥伦比亚':'🇨🇴','英格兰':'🏴󠁧󠁢󠁥󠁮󠁧󠁿','克罗地亚':'🇭🇷','加纳':'🇬🇭','巴拿马':'🇵🇦'
+        };
+        function getFlag(name) { return flags[name] || '⚽'; }
+
+        // 生成赛程数据 (104场)
+        function generateMatches() {
+            const rawData = [
+                ["Group A", "6月12日 03:00", "第1轮", "墨西哥城", "墨西哥", "南非"], ["Group A", "6月12日 10:00", "第1轮", "瓜达拉哈拉", "韩国", "捷克"],
+                ["Group A", "6月19日 00:00", "第2轮", "亚特兰大", "捷克", "南非"], ["Group A", "6月19日 09:00", "第2轮", "瓜达拉哈拉", "墨西哥", "韩国"],
+                ["Group A", "6月25日 09:00", "第3轮", "墨西哥城", "捷克", "墨西哥"], ["Group A", "6月25日 09:00", "第3轮", "蒙特雷", "南非", "韩国"],
+                ["Group B", "6月13日 03:00", "第1轮", "多伦多", "加拿大", "波黑"], ["Group B", "6月14日 03:00", "第1轮", "旧金山湾区", "卡塔尔", "瑞士"],
+                ["Group B", "6月19日 03:00", "第2轮", "洛杉矶", "瑞士", "波黑"], ["Group B", "6月19日 06:00", "第2轮", "温哥华", "加拿大", "卡塔尔"],
+                ["Group B", "6月25日 03:00", "第3轮", "温哥华", "瑞士", "加拿大"], ["Group B", "6月25日 03:00", "第3轮", "西雅图", "波黑", "卡塔尔"],
+                ["Group C", "6月14日 06:00", "第1轮", "纽约/新泽西", "巴西", "摩洛哥"], ["Group C", "6月14日 09:00", "第1轮", "波士顿", "海地", "苏格兰"],
+                ["Group C", "6月20日 06:00", "第2轮", "波士顿", "苏格兰", "摩洛哥"], ["Group C", "6月20日 09:00", "第2轮", "费城", "巴西", "海地"],
+                ["Group C", "6月25日 06:00", "第3轮", "迈阿密", "苏格兰", "巴西"], ["Group C", "6月25日 06:00", "第3轮", "亚特兰大", "摩洛哥", "海地"],
+                ["Group D", "6月13日 09:00", "第1轮", "洛杉矶", "美国", "巴拉圭"], ["Group D", "6月14日 12:00", "第1轮", "温哥华", "澳大利亚", "土耳其"],
+                ["Group D", "6月20日 03:00", "第2轮", "西雅图", "美国", "澳大利亚"], ["Group D", "6月20日 12:00", "第2轮", "旧金山湾区", "土耳其", "巴拉圭"],
+                ["Group D", "6月26日 10:00", "第3轮", "洛杉矶", "土耳其", "美国"], ["Group D", "6月26日 10:00", "第3轮", "旧金山湾区", "巴拉圭", "澳大利亚"],
+                ["Group E", "6月15日 01:00", "第1轮", "休斯敦", "德国", "库拉索"], ["Group E", "6月15日 07:00", "第1轮", "费城", "科特瓦", "厄瓜多尔"],
+                ["Group E", "6月21日 04:00", "第2轮", "多伦多", "德国", "科特迪瓦"], ["Group E", "6月21日 08:00", "第2轮", "堪萨斯城", "厄瓜多尔", "库拉索"],
+                ["Group E", "6月26日 04:00", "第3轮", "纽约/新泽西", "厄瓜多尔", "德国"], ["Group E", "6月26日 04:00", "第3轮", "费城", "库拉索", "科特迪瓦"],
+                ["Group F", "6月15日 04:00", "第1轮", "达拉斯", "荷兰", "日本"], ["Group F", "6月15日 10:00", "第1轮", "蒙特雷", "瑞典", "突尼斯"],
+                ["Group F", "6月21日 01:00", "第2轮", "休斯敦", "荷兰", "瑞典"], ["Group F", "6月21日 12:00", "第2轮", "蒙特雷", "突尼斯", "日本"],
+                ["Group F", "6月26日 07:00", "第3轮", "达拉斯", "日本", "瑞典"], ["Group F", "6月26日 07:00", "第3轮", "堪萨斯城", "突尼斯", "荷兰"],
+                ["Group G", "6月16日 03:00", "第1轮", "西雅图", "比利时", "埃及"], ["Group G", "6月16日 09:00", "第1轮", "洛杉矶", "伊朗", "新西兰"],
+                ["Group G", "6月22日 03:00", "第2轮", "洛杉矶", "比利时", "伊朗"], ["Group G", "6月22日 09:00", "第2轮", "温哥华", "新西兰", "埃及"],
+                ["Group G", "6月27日 11:00", "第3轮", "西雅图", "埃及", "伊朗"], ["Group G", "6月27日 11:00", "第3轮", "温哥华", "新西兰", "比利时"],
+                ["Group H", "6月16日 00:00", "第1轮", "亚特兰大", "西班牙", "佛得角"], ["Group H", "6月16日 06:00", "第1轮", "沙特阿拉伯", "乌拉圭"],
+                ["Group H", "6月22日 00:00", "第2轮", "亚特兰大", "西班牙", "沙特阿拉伯"], ["Group H", "6月22日 06:00", "第2轮", "迈阿密", "乌拉圭", "佛得角"],
+                ["Group H", "6月27日 08:00", "第3轮", "休斯敦", "佛得角", "沙特阿拉伯"], ["Group H", "6月27日 08:00", "第3轮", "瓜达拉哈拉", "乌拉圭", "西班牙"],
+                ["Group I", "6月17日 03:00", "第1轮", "纽约/新泽西", "法国", "塞内加尔"], ["Group I", "6月17日 06:00", "第1轮", "波士顿", "伊拉克", "挪威"],
+                ["Group I", "6月23日 05:00", "第2轮", "费城", "法国", "伊拉克"], ["Group I", "6月23日 08:00", "第2轮", "纽约/新泽西", "挪威", "塞内加尔"],
+                ["Group I", "6月27日 03:00", "第3轮", "波士顿", "挪威", "法国"], ["Group I", "6月27日 03:00", "第3轮", "多伦多", "塞内加尔", "伊拉克"],
+                ["Group J", "6月17日 09:00", "第1轮", "堪萨斯城", "阿根廷", "阿尔及利亚"], ["Group J", "6月17日 12:00", "第1轮", "旧金山湾区", "奥地利", "约旦"],
+                ["Group J", "6月23日 01:00", "第2轮", "达拉斯", "阿根廷", "奥地利"], ["Group J", "6月23日 11:00", "第2轮", "旧金山湾区", "约旦", "阿尔及利亚"],
+                ["Group J", "6月28日 10:00", "第3轮", "堪萨斯城", "阿尔及利亚", "奥地利"], ["Group J", "6月28日 10:00", "第3轮", "达拉斯", "约旦", "阿根廷"],
+                ["Group K", "6月18日 01:00", "第1轮", "休斯敦", "葡萄牙", "刚果(金)"], ["Group K", "6月18日 10:00", "第1轮", "墨西哥城", "乌兹别克斯坦", "哥伦比亚"],
+                ["Group K", "6月24日 01:00", "第2轮", "休斯敦", "葡萄牙", "乌兹别克斯坦"], ["Group K", "6月24日 10:00", "第2轮", "瓜达拉哈拉", "哥伦比亚", "刚果(金)"],
+                ["Group K", "6月28日 07:30", "第3轮", "迈阿密", "哥伦比亚", "葡萄牙"], ["Group K", "6月28日 07:30", "第3轮", "亚特兰大", "刚果(金)", "乌兹别克斯坦"],
+                ["Group L", "6月18日 04:00", "第1轮", "达拉斯", "英格兰", "克罗地亚"], ["Group L", "6月18日 07:00", "第1轮", "多伦多", "加纳", "巴拿马"],
+                ["Group L", "6月24日 04:00", "第2轮", "波士顿", "英格兰", "加纳"], ["Group L", "6月24日 07:00", "第2轮", "多伦多", "巴拿马", "克罗地亚"],
+                ["Group L", "6月28日 05:00", "第3轮", "纽约/新泽西", "巴拿马", "英格兰"], ["Group L", "6月28日 05:00", "第3轮", "费城", "克罗地亚", "加纳"]
+            ];
+            const knockoutData = [
+                [73,"1/16决赛","6月29日 03:00","洛杉矶","A2","B2"], [74,"1/16决赛","6月30日 04:30","波士顿","E1","A3/B3/C3/D3/F3"], [75,"1/16决赛","6月30日 09:00","蒙特雷","F1","C2"],
+                [76,"1/16决赛","6月30日 01:00","休斯敦","C1","F2"], [77,"1/16决赛","7月01日 05:00","纽约/新泽西","I1","C3/D3/F3/G3/H3"], [78,"1/16决赛","7月01日 01:00","达拉斯","E2","I2"],
+                [79,"1/16决赛","7月01日 09:00","墨西哥城","A1","C3/E3/F3/H3/I3"], [80,"1/16决赛","7月02日 00:00","亚特兰大","L1","E3/H3/I3/J3/K3"], [81,"1/16决赛","7月02日 08:00","旧金山湾区","D1","B3/E3/F3/I3/J3"],
+                [82,"1/16决赛","7月02日 04:00","西雅图","G1","A3/E3/H3/I3/J3"], [83,"1/16决赛","7月03日 07:00","多伦多","K2","L2"], [84,"1/16决赛","7月03日 03:00","洛杉矶","H1","J2"],
+                [85,"1/16决赛","7月03日 11:00","温哥华","B1","E3/F3/G3/I3/J3"], [86,"1/16决赛","7月04日 06:00","迈阿密","J1","H2"], [87,"1/16决赛","7月04日 09:30","堪萨斯城","K1","D3/E3/I3/J3/L3"], [88,"1/16决赛","7月04日 02:00","达拉斯","D2","G2"],
+                [89,"1/8决赛","7月05日 05:00","费城","74胜者","77胜者"], [90,"1/8决赛","7月05日 01:00","休斯敦","73胜者","75胜者"], [91,"1/8决赛","7月06日 04:00","纽约/新泽西","76胜者","78胜者"],
+                [92,"1/8决赛","7月06日 08:00","墨西哥城","79胜者","80胜者"], [93,"1/8决赛","7月07日 03:00","达拉斯","83胜者","84胜者"], [94,"1/8决赛","7月07日 08:00","西雅图","81胜者","82胜者"],
+                [95,"1/8决赛","7月08日 00:00","亚特兰大","86胜者","88胜者"], [96,"1/8决赛","7月08日 04:00","温哥华","85胜者","87胜者"],
+                [97,"1/4决赛","7月10日 04:00","波士顿","89胜者","90胜者"], [98,"1/4决赛","7月11日 03:00","洛杉矶","93胜者","94胜者"], [99,"1/4决赛","7月12日 05:00","迈阿密","91胜者","92胜者"], [100,"1/4决赛","7月12日 09:00","堪萨斯城","95胜者","96胜者"],
+                [101,"半决赛","7月15日 03:00","达拉斯","97胜者","98胜者"], [102,"半决赛","7月16日 03:00","亚特兰大","99胜者","100胜者"],
+                [103,"季军赛","7月19日 05:00","迈阿密","半决负1","半决负2"], [104,"决赛","7月20日 03:00","纽约/新泽西","半决胜1","半决胜2"]
+            ];
+            let res = [];
+            rawData.forEach((d, i) => { res.push({ id: i+1, group: d[0], date: d[1], round: d[2], venue: d[3], home: d[4], away: d[5], status: 'upcoming', result: null, score: null, winners: [] }); });
+            knockoutData.forEach(d => { res.push({ id: d[0], group: d[1], date: d[2], round: '淘汰赛', venue: d[3], home: d[4], away: d[5], status: 'upcoming', result: null, score: null, winners: [] }); });
+            return res;
+        }
+
+        let db = { players: [], matches: [], bets: {}, timestamp: 0 };
+        const roomId = new URLSearchParams(window.location.search).get('room') || 'public_wc2026';
+        document.getElementById('room-id-display').innerText = `房号: ${roomId}`;
+
+        // MQTT 连接架构
+        let mqttClient = null, isReceiving = false;
+        const syncTopic = `wc_betmaster_sync_v4_${roomId}`;
+
+        function initMQTT() {
+            if (typeof mqtt === 'undefined') { setSyncStatus(false, "离线单机版"); return; }
+            try {
+                mqttClient = mqtt.connect('wss://broker.emqx.io:8084/mqtt');
+                mqttClient.on('connect', () => { mqttClient.subscribe(syncTopic); setSyncStatus(true); });
+                mqttClient.on('offline', () => setSyncStatus(false)); mqttClient.on('error', () => setSyncStatus(false));
+                mqttClient.on('message', (topic, message) => {
+                    try {
+                        const remoteDb = JSON.parse(message.toString());
+                        if (remoteDb.timestamp > db.timestamp) {
+                            isReceiving = true; db = remoteDb; localStorage.setItem(`wc_db_v4_${roomId}`, JSON.stringify(db));
+                            refreshAllUI(); setTimeout(() => isReceiving = false, 100);
+                        }
+                    } catch (e) { }
+                });
+            } catch (e) { setSyncStatus(false, "连接异常"); }
+        }
+
+        function broadcastData() {
+            if (isReceiving) return;
+            db.timestamp = Date.now(); localStorage.setItem(`wc_db_v4_${roomId}`, JSON.stringify(db));
+            if (mqttClient && mqttClient.connected) mqttClient.publish(syncTopic, JSON.stringify(db), { retain: true });
+        }
+
+        function setSyncStatus(connected, msg = "") {
+            const el = document.getElementById('sync-status');
+            if(connected) el.innerHTML = '<i class="fa-solid fa-bolt text-green-400"></i> 云同步中';
+            else el.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-red-400"></i> ${msg || '离线模式'}`;
+        }
+
+        // 全局标签追踪与默认今日日期
+        let currentTab = 'dashboard';
+        let activeTodayDate = '';
+
+        // 日期处理助手
+        function getUniqueDates() {
+            const dates = new Set();
+            db.matches.forEach(m => {
+                const match = m.date.match(/\d+月\d+日/);
+                if (match) dates.add(match[0]);
+            });
+            return Array.from(dates).sort((a, b) => {
+                const ma = a.match(/(\d+)月(\d+)日/);
+                const mb = b.match(/(\d+)月(\d+)日/);
+                const da = parseInt(ma[1]) * 100 + parseInt(ma[2]);
+                const dbVal = parseInt(mb[1]) * 100 + parseInt(mb[2]);
+                return da - dbVal;
+            });
+        }
+
+        function getWeekday(dateStr) {
+            const match = dateStr.match(/(\d+)月(\d+)日/);
+            if (!match) return '';
+            const month = parseInt(match[1]) - 1;
+            const day = parseInt(match[2]);
+            const d = new Date(2026, month, day);
+            const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+            return weekdays[d.getDay()];
+        }
+
+        // 初始化
+        window.onload = () => {
+            initMQTT();
+            try { const saved = localStorage.getItem(`wc_db_v4_${roomId}`); if (saved) db = JSON.parse(saved); } catch(e) {}
+            if (!db.matches || db.matches.length < 100) { db.matches = generateMatches(); broadcastData(); }
+            
+            // 初始化今日日期
+            const uniqueDates = getUniqueDates();
+            const today = new Date();
+            const todayStr = `${today.getMonth() + 1}月${today.getDate()}日`;
+            
+            if (uniqueDates.includes(todayStr)) {
+                activeTodayDate = todayStr;
+            } else {
+                // 如果今天没有比赛（例如未在世界杯期间），智能寻找最近的未来比赛日期
+                const nowTime = today.getTime();
+                let nearestDate = uniqueDates[0];
+                let minDiff = Infinity;
+                uniqueDates.forEach(dStr => {
+                    const match = dStr.match(/(\d+)月(\d+)日/);
+                    const d = new Date(2026, parseInt(match[1]) - 1, parseInt(match[2]));
+                    const diff = d.getTime() - nowTime;
+                    if (diff >= 0 && diff < minDiff) {
+                        minDiff = diff;
+                        nearestDate = dStr;
+                    }
+                });
+                activeTodayDate = nearestDate || uniqueDates[0];
+            }
+
+            refreshAllUI();
+        };
+
+        // 按需渲染控制中心（解决多页面冗余重绘导致的极度卡顿）
+        function renderActiveTabUI() {
+            if (currentTab === 'dashboard') {
+                renderDashboard();
+            } else if (currentTab === 'today') {
+                renderTodayDateSelector();
+                renderTodayMatches();
+            } else if (currentTab === 'matches') {
+                renderMatches();
+            } else if (currentTab === 'stats') {
+                renderPlayerStatsList();
+            } else if (currentTab === 'players') {
+                renderPlayers();
+            }
+        }
+
+        function refreshAllUI() { 
+            renderActiveTabUI(); 
+        }
+
+        // 底部导航切换
+        function switchTab(tabId) {
+            currentTab = tabId;
+            ['dashboard', 'today', 'matches', 'stats', 'players'].forEach(id => {
+                const viewEl = document.getElementById(`view-${id}`);
+                const navEl = document.getElementById(`nav-${id}`);
+                if (viewEl) viewEl.classList.add('hidden');
+                if (navEl) navEl.classList.remove('active');
+            });
+            const targetView = document.getElementById(`view-${tabId}`);
+            const targetNav = document.getElementById(`nav-${tabId}`);
+            if (targetView) targetView.classList.remove('hidden');
+            if (targetNav) targetNav.classList.add('active');
+            
+            renderActiveTabUI();
+        }
+
+        function openModal(id) { document.getElementById(id).classList.remove('hidden'); document.getElementById(id).children[0].classList.add('modal-enter'); }
+        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+        // --- 核心底层计算逻辑：高级数据统计 (连胜/连败等) ---
+        function calculateAdvancedStats() {
+            db.players.forEach(p => {
+                p.currentStreak = 0; p.maxWinStreak = 0; p.maxLossStreak = 0; p.netWins = 0;
+                let currentW = 0, currentL = 0;
+                
+                db.matches.filter(m => m.status === 'finished').sort((a,b)=>a.id-b.id).forEach(m => {
+                    const b = db.bets[m.id];
+                    if (b && b.predictions && b.predictions[p.id] && b.predictions[p.id] !== 'none') {
+                        if (b.predictions[p.id] === m.result) {
+                            currentW++; currentL = 0; p.netWins++;
+                            p.maxWinStreak = Math.max(p.maxWinStreak, currentW);
+                            p.currentStreak = currentW;
+                        } else {
+                            currentL++; currentW = 0; p.netWins--;
+                            p.maxLossStreak = Math.max(p.maxLossStreak, currentL);
+                            p.currentStreak = -currentL;
+                        }
+                    }
+                });
+            });
+        }
+
+        // --- View 1: 首页仪表盘 (全面摒弃 += DOM 重绘以优化性能) ---
+        function renderDashboard() {
+            const c = document.getElementById('leaderboard-container');
+            if (db.players.length === 0) {
+                c.innerHTML = '<div class="text-center text-white/50 py-10 text-sm">暂无数据，请先前往「阵营」添加玩家</div>';
+                document.getElementById('global-money').innerText = `$0`;
+                return;
+            }
+            
+            let html = '';
+            [...db.players].sort((a, b) => b.balance - a.balance).forEach((p, i) => {
+                let rankStr = i===0?'<i class="fa-solid fa-crown text-yellow-400 text-2xl drop-shadow-[0_0_5px_yellow]"></i>':
+                              i===1?'<i class="fa-solid fa-medal text-gray-300 text-2xl drop-shadow-[0_0_5px_white]"></i>':
+                              i===2?'<i class="fa-solid fa-medal text-amber-600 text-2xl drop-shadow-[0_0_5px_orange]"></i>':
+                              `<span class="text-white/50 font-black text-lg w-6 text-center">${i+1}</span>`;
+                
+                html += `
+                    <div class="bg-black/40 backdrop-blur-md rounded-2xl p-3 flex items-center gap-3 border border-white/10 shadow-lg relative overflow-hidden">
+                        ${i===0 ? '<div class="absolute inset-0 bg-gradient-to-r from-yellow-500/20 to-transparent"></div>' : ''}
+                        <div class="w-8 text-center z-10">${rankStr}</div>
+                        <img src="${p.avatar}" class="w-12 h-12 rounded-full border-2 border-white/20 z-10 bg-black/50 object-cover">
+                        <div class="flex-1 z-10">
+                            <h3 class="font-black text-white text-base">${p.name}</h3>
+                            <p class="text-xs text-white/50 mt-0.5">胜率 ${p.totalBets>0?Math.round(p.correctGuesses/p.totalBets*100):0}%</p>
+                        </div>
+                        <div class="z-10 text-right">
+                            <div class="${p.balance>0?'text-green-400':(p.balance<0?'text-red-400':'text-white')} font-black text-xl font-mono">${p.balance>0?'+':''}${p.balance.toFixed(0)}</div>
+                        </div>
+                    </div>`;
+            });
+            c.innerHTML = html;
+
+            let totalM = 0;
+            for (let mId in db.bets) {
+                if(db.matches.find(m => m.id == mId && m.status === 'finished')) {
+                    totalM += db.bets[mId].stake * Object.values(db.bets[mId].predictions).filter(v => v !== 'none').length;
+                }
+            }
+            document.getElementById('global-money').innerText = `$${totalM}`;
+        }
+
+        // --- View 2: 今日比赛动态渲染逻辑 ---
+        function renderTodayDateSelector() {
+            const container = document.getElementById('date-scroll-container');
+            const dates = getUniqueDates();
+            let html = '';
+            
+            dates.forEach(dStr => {
+                const match = dStr.match(/(\d+)月(\d+)日/);
+                const month = match[1];
+                const day = match[2];
+                const weekday = getWeekday(dStr);
+                const isActive = dStr === activeTodayDate;
+                
+                const activeClasses = 'bg-yellow-400 text-blue-950 border-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.5)]';
+                const inactiveClasses = 'bg-black/40 text-gray-400 border-white/10 hover:border-white/20';
+                
+                html += `
+                    <button onclick="selectTodayDate('${dStr}'); playAudio('click')" class="date-btn shrink-0 px-3.5 py-2 rounded-2xl text-center text-xs font-bold transition flex flex-col items-center justify-center min-w-[75px] border ${isActive ? activeClasses : inactiveClasses} select-none">
+                        <span class="text-[9px] ${isActive ? 'text-blue-900/80' : 'text-white/40'} font-semibold mb-0.5">${weekday}</span>
+                        <span class="text-sm font-black ${isActive ? 'text-blue-950' : 'text-white'}">${month}-${day}</span>
+                    </button>
+                `;
+            });
+            container.innerHTML = html;
+            
+            // 自动将当前选中的日期平滑滚动到中央可见视口 [3]
+            setTimeout(() => {
+                const activeBtn = container.querySelector('.bg-yellow-400');
+                if (activeBtn) {
+                    activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                }
+            }, 100);
+        }
+
+        function renderTodayMatches() {
+            const container = document.getElementById('today-matches-container');
+            const list = db.matches.filter(m => {
+                const match = m.date.match(/\d+月\d+日/);
+                return match && match[0] === activeTodayDate;
+            });
+            
+            if (list.length === 0) {
+                container.innerHTML = `<div class="text-center text-white/50 py-10 text-sm">此日无安排赛事</div>`;
+                return;
+            }
+            
+            let html = '';
+            list.forEach((m, index) => {
+                let isFin = m.status === 'finished';
+                let bet = db.bets[m.id] || { stake: 0, predictions: {} };
+                let parts = Object.values(bet.predictions).filter(v => v !== 'none').length;
+                let pool = (bet.stake || 0) * parts;
+                
+                let themeClass = isFin ? 'bg-gray-300' : colorClasses[index % colorClasses.length];
+
+                let winnerHTML = '';
+                if(isFin && m.winners && m.winners.length > 0) {
+                    m.winners.slice(0, 4).forEach(pid => {
+                        let p = db.players.find(x => x.id === pid);
+                        if(p) winnerHTML += `<img src="${p.avatar}" class="inline-block h-6 w-6 rounded-full ring-2 ring-white object-cover bg-black">`;
+                    });
+                    if(m.winners.length > 4) winnerHTML += `<div class="inline-flex items-center justify-center h-6 w-6 rounded-full bg-white ring-2 ring-gray-300 text-[10px] font-bold text-black">+${m.winners.length-4}</div>`;
+                } else if(isFin) winnerHTML = `<span class="text-xs text-black/50 font-bold">无人生还</span>`;
+
+                let centerUI = isFin 
+                    ? `<div class="text-lg font-black text-red-600 bg-white/80 px-3 py-0.5 rounded-lg shadow-inner">${m.score || m.result.replace('home','主胜').replace('away','客胜').replace('draw','平局')}</div>`
+                    : `<div class="text-xs font-black text-black/40 italic">VS</div>`;
+
+                html += `
+                    <div class="match-card ${themeClass} p-3 flex flex-col gap-2">
+                        <div class="flex justify-between items-center text-[10px] font-bold text-black/60 border-b border-black/10 pb-1">
+                            <div class="flex gap-2">
+                                <span class="bg-black/10 px-2 py-0.5 rounded">${m.group}</span>
+                                <span>${m.round}</span>
+                            </div>
+                            <div class="flex items-center gap-1"><i class="fa-solid fa-location-dot"></i> ${m.venue} | ${m.date}</div>
+                        </div>
+                        
+                        <div class="flex items-center justify-between py-1 relative">
+                            ${!isFin ? `<i onclick="openEditMatch(${m.id}); playAudio('click')" class="fa-solid fa-pen-to-square absolute right-0 top-0 text-black/30 hover:text-black cursor-pointer p-1"></i>` : ''}
+                            
+                            <div class="flex items-center gap-2 w-[40%] justify-end">
+                                <span class="font-black text-sm md:text-base truncate drop-shadow-md text-right">${m.home}</span>
+                                <div class="soccer-icon shrink-0">${getFlag(m.home)}</div>
+                            </div>
+                            
+                            <div class="w-[20%] text-center px-1 flex justify-center">${centerUI}</div>
+                            
+                            <div class="flex items-center gap-2 w-[40%] justify-start">
+                                <div class="soccer-icon shrink-0">${getFlag(m.away)}</div>
+                                <span class="font-black text-sm md:text-base truncate drop-shadow-md text-left">${m.away}</span>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-between items-center pt-1">
+                            <div class="flex -space-x-2 overflow-hidden min-w-[70px]">${winnerHTML}</div>
+                            <div class="text-xs font-black text-black/60 text-center flex-1">奖池: <span class="text-orange-600">$${pool}</span></div>
+                            <div class="flex shrink-0">
+                                ${isFin 
+                                    ? `<button disabled class="px-4 py-1.5 text-xs rounded-full text-white/80 bg-black/30 font-bold">已结算</button>`
+                                    : `<button onclick="openBetModal(${m.id}); playAudio('click')" class="btn-3d btn-blue px-3 py-1.5 text-xs mr-1">下注</button>
+                                       <button onclick="openSettleModal(${m.id}); playAudio('click')" class="btn-3d px-3 py-1.5 text-xs">开奖</button>`
+                                }
+                            </div>
+                        </div>
+                    </div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        function selectTodayDate(dStr) {
+            activeTodayDate = dStr;
+            renderTodayDateSelector();
+            renderTodayMatches();
+        }
+
+        // --- View 3: 赛事中心 (优化拼装算法) ---
+        let currentFilter = 'all';
+        function filterMatches(f) { 
+            currentFilter = f; 
+            ['all','up','fin'].forEach(id => document.getElementById('fm-'+id).className = 'flex-1 py-1.5 rounded-full text-xs font-bold text-white hover:bg-white/20 transition');
+            const map = {all:'fm-all', upcoming:'fm-up', finished:'fm-fin'};
+            document.getElementById(map[f]).className = 'flex-1 py-1.5 rounded-full text-xs font-bold bg-white text-blue-900 shadow-md transition';
+            renderMatches(); 
+        }
+
+        const colorClasses = ['card-yellow', 'card-blue', 'card-red', 'card-green'];
+
+        function renderMatches() {
+            const c = document.getElementById('matches-container');
+            const query = document.getElementById('match-search').value.toLowerCase();
+            let list = db.matches;
+            if (currentFilter !== 'all') list = list.filter(m => m.status === currentFilter);
+            if (query) list = list.filter(m => m.home.toLowerCase().includes(query) || m.away.toLowerCase().includes(query) || m.group.toLowerCase().includes(query));
+
+            let html = '';
+            list.forEach((m, index) => {
+                let isFin = m.status === 'finished';
+                let bet = db.bets[m.id] || { stake: 0, predictions: {} };
+                let parts = Object.values(bet.predictions).filter(v => v !== 'none').length;
+                let pool = (bet.stake || 0) * parts;
+                
+                let themeClass = isFin ? 'bg-gray-300' : colorClasses[index % colorClasses.length];
+
+                let winnerHTML = '';
+                if(isFin && m.winners && m.winners.length > 0) {
+                    m.winners.slice(0, 4).forEach(pid => {
+                        let p = db.players.find(x => x.id === pid);
+                        if(p) winnerHTML += `<img src="${p.avatar}" class="inline-block h-6 w-6 rounded-full ring-2 ring-white object-cover bg-black">`;
+                    });
+                    if(m.winners.length > 4) winnerHTML += `<div class="inline-flex items-center justify-center h-6 w-6 rounded-full bg-white ring-2 ring-gray-300 text-[10px] font-bold text-black">+${m.winners.length-4}</div>`;
+                } else if(isFin) winnerHTML = `<span class="text-xs text-black/50 font-bold">无人生还</span>`;
+
+                let centerUI = isFin 
+                    ? `<div class="text-lg font-black text-red-600 bg-white/80 px-3 py-0.5 rounded-lg shadow-inner">${m.score || m.result.replace('home','主胜').replace('away','客胜').replace('draw','平局')}</div>`
+                    : `<div class="text-xs font-black text-black/40 italic">VS</div>`;
+
+                html += `
+                    <div class="match-card ${themeClass} p-3 flex flex-col gap-2">
+                        <div class="flex justify-between items-center text-[10px] font-bold text-black/60 border-b border-black/10 pb-1">
+                            <div class="flex gap-2">
+                                <span class="bg-black/10 px-2 py-0.5 rounded">${m.group}</span>
+                                <span>${m.round}</span>
+                            </div>
+                            <div class="flex items-center gap-1"><i class="fa-solid fa-location-dot"></i> ${m.venue} | ${m.date}</div>
+                        </div>
+                        
+                        <div class="flex items-center justify-between py-1 relative">
+                            ${!isFin ? `<i onclick="openEditMatch(${m.id}); playAudio('click')" class="fa-solid fa-pen-to-square absolute right-0 top-0 text-black/30 hover:text-black cursor-pointer p-1"></i>` : ''}
+                            
+                            <div class="flex items-center gap-2 w-[40%] justify-end">
+                                <span class="font-black text-sm md:text-base truncate drop-shadow-md text-right">${m.home}</span>
+                                <div class="soccer-icon shrink-0">${getFlag(m.home)}</div>
+                            </div>
+                            
+                            <div class="w-[20%] text-center px-1 flex justify-center">${centerUI}</div>
+                            
+                            <div class="flex items-center gap-2 w-[40%] justify-start">
+                                <div class="soccer-icon shrink-0">${getFlag(m.away)}</div>
+                                <span class="font-black text-sm md:text-base truncate drop-shadow-md text-left">${m.away}</span>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-between items-center pt-1">
+                            <div class="flex -space-x-2 overflow-hidden min-w-[70px]">${winnerHTML}</div>
+                            <div class="text-xs font-black text-black/60 text-center flex-1">奖池: <span class="text-orange-600">$${pool}</span></div>
+                            <div class="flex shrink-0">
+                                ${isFin 
+                                    ? `<button disabled class="px-4 py-1.5 text-xs rounded-full text-white/80 bg-black/30 font-bold">已结算</button>`
+                                    : `<button onclick="openBetModal(${m.id}); playAudio('click')" class="btn-3d btn-blue px-3 py-1.5 text-xs mr-1">下注</button>
+                                       <button onclick="openSettleModal(${m.id}); playAudio('click')" class="btn-3d px-3 py-1.5 text-xs">开奖</button>`
+                                }
+                            </div>
+                        </div>
+                    </div>`;
+            });
+            c.innerHTML = html;
+        }
+
+        // --- View 4: 数据统计平铺列表 (优化拼装算法) ---
+        function renderPlayerStatsList() {
+            calculateAdvancedStats();
+            const c = document.getElementById('stats-list-container');
+            if(db.players.length === 0) { c.innerHTML = '<div class="text-center text-white/50">暂无数据</div>'; return; }
+            
+            let html = '';
+            [...db.players].sort((a,b)=>b.balance-a.balance).forEach(p => {
+                let roi = p.totalInvest > 0 ? ((p.balance / p.totalInvest) * 100).toFixed(1) : 0;
+                let avgBet = p.totalBets > 0 ? (p.totalInvest / p.totalBets).toFixed(0) : 0;
+                
+                let tStats = p.teamStats || {}, bestT = '-', worstT = '-', maxP = 0, minP = 0;
+                for(let t in tStats) { 
+                    if(tStats[t] > maxP) { maxP = tStats[t]; bestT = t; } 
+                    if(tStats[t] < minP) { minP = tStats[t]; worstT = t; } 
+                }
+                
+                let streakText = p.currentStreak > 0 ? `<span class="text-red-400">${p.currentStreak}连胜🔥</span>` : 
+                                 (p.currentStreak < 0 ? `<span class="text-green-400">${Math.abs(p.currentStreak)}连败❄️</span>` : '无');
+
+                html += `
+                    <div class="bg-black/30 border border-white/10 rounded-2xl p-4 shadow-xl backdrop-blur-md">
+                        <!-- Header -->
+                        <div class="flex items-center gap-3 mb-4 pb-3 border-b border-white/10">
+                            <img src="${p.avatar}" class="w-14 h-14 rounded-full border-2 border-neonBlue bg-black object-cover">
+                            <div class="flex-1">
+                                <h3 class="text-xl font-black text-white">${p.name}</h3>
+                                <p class="text-xs text-white/60 mt-1">总投资: $${p.totalInvest}</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-[10px] text-white/50 mb-0.5">净利润</p>
+                                <p class="${p.balance>=0?'text-green-400':'text-red-400'} font-black text-2xl font-mono">${p.balance>=0?'+':''}${p.balance.toFixed(0)}</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Grid 核心数据 -->
+                        <div class="grid grid-cols-3 gap-2 mb-3">
+                            <div class="data-card text-center"><p class="text-[10px] text-white/50">ROI 回报率</p><p class="text-sm font-black mt-1 ${roi>=0?'text-green-400':'text-red-400'}">${roi}%</p></div>
+                            <div class="data-card text-center"><p class="text-[10px] text-white/50">胜率</p><p class="text-sm font-black mt-1 text-blue-300">${p.totalBets>0?Math.round(p.correctGuesses/p.totalBets*100):0}%</p></div>
+                            <div class="data-card text-center"><p class="text-[10px] text-white/50">净胜场</p><p class="text-sm font-black mt-1 ${p.netWins>=0?'text-yellow-400':'text-gray-400'}">${p.netWins>0?'+':''}${p.netWins||0}</p></div>
+                        </div>
+                        
+                        <!-- Grid 进阶数据 -->
+                        <div class="grid grid-cols-4 gap-2 mb-3">
+                            <div class="bg-white/5 rounded-lg p-2 text-center"><p class="text-[9px] text-white/40">当前状态</p><p class="text-xs font-bold mt-1">${streakText}</p></div>
+                            <div class="bg-white/5 rounded-lg p-2 text-center"><p class="text-[9px] text-white/40">最高连胜</p><p class="text-xs font-bold mt-1 text-red-300">${p.maxWinStreak||0}</p></div>
+                            <div class="bg-white/5 rounded-lg p-2 text-center"><p class="text-[9px] text-white/40">单注均额</p><p class="text-xs font-bold mt-1 text-white">$${avgBet}</p></div>
+                            <div class="bg-white/5 rounded-lg p-2 text-center"><p class="text-[9px] text-white/40">最大盈利</p><p class="text-xs font-bold mt-1 text-green-300">+$${p.biggestWin||0}</p></div>
+                        </div>
+
+                        <!-- 趣味底栏 -->
+                        <div class="flex gap-2">
+                            <div class="flex-1 bg-gradient-to-r from-red-900/40 to-transparent p-2 rounded-lg border border-red-500/20">
+                                <p class="text-[9px] text-red-300 mb-0.5"><i class="fa-solid fa-fire"></i> 幸运星 (赢最多)</p>
+                                <p class="text-xs font-black text-white truncate">${maxP>0?bestT:'无'}</p>
+                            </div>
+                            <div class="flex-1 bg-gradient-to-r from-green-900/40 to-transparent p-2 rounded-lg border border-green-500/20">
+                                <p class="text-[9px] text-green-300 mb-0.5"><i class="fa-solid fa-poop"></i> 灾星 (输最多)</p>
+                                <p class="text-xs font-black text-white truncate">${minP<0?worstT:'无'}</p>
+                            </div>
+                        </div>
+                    </div>`;
+            });
+            c.innerHTML = html;
+        }
+
+        // --- View 5: 阵营管理 (优化拼装算法) ---
+        function addPlayer() {
+            const name = document.getElementById('newPlayerName').value.trim(), avatarInput = document.getElementById('newPlayerAvatar').value.trim();
+            if (!name) return alert("代号必填！");
+            const avatar = avatarInput || `https://api.dicebear.com/6.x/bottts/svg?seed=${name}&backgroundColor=00f3ff`;
+            db.players.push({ id: 'P_'+Date.now(), name, avatar, balance: 0, totalInvest: 0, correctGuesses: 0, totalBets: 0, highestBalance: 0, lowestBalance: 0, biggestWin: 0, biggestLoss: 0, teamStats: {} });
+            broadcastData(); closeModal('addPlayerModal'); refreshAllUI();
+        }
+
+        function renderPlayers() {
+            const container = document.getElementById('players-grid');
+            let html = '';
+            db.players.forEach(p => {
+                html += `
+                    <div class="bg-black/30 border border-white/10 p-4 rounded-2xl text-center relative group backdrop-blur-md">
+                        <img src="${p.avatar}" class="w-16 h-16 mx-auto rounded-full bg-black/50 border-2 border-white/20 mb-3 object-cover shadow-lg">
+                        <h4 class="font-black text-sm truncate text-white mb-1">${p.name}</h4>
+                        <p class="${p.balance>=0?'text-green-400':'text-red-400'} font-black text-sm">${p.balance>=0?'+':''}$${p.balance.toFixed(0)}</p>
+                        <button onclick="if(confirm('忍痛割爱删除此玩家?')) { db.players = db.players.filter(x=>x.id!=='${p.id}'); broadcastData(); refreshAllUI(); playAudio('click'); }" class="absolute top-2 right-2 text-white/30 hover:text-red-500 transition"><i class="fa-solid fa-trash text-sm"></i></button>
+                    </div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        // --- 交互业务 (下注 & 结算) ---
+        function openEditMatch(id) {
+            const m = db.matches.find(x => x.id === id); document.getElementById('editMatchId').value = id;
+            document.getElementById('editHome').value = m.home; document.getElementById('editAway').value = m.away;
+            openModal('editMatchModal');
+        }
+
+        function saveMatchEdit() {
+            const m = db.matches.find(x => x.id === parseInt(document.getElementById('editMatchId').value));
+            m.home = document.getElementById('editHome').value.trim() || '主队'; m.away = document.getElementById('editAway').value.trim() || '客队';
+            broadcastData(); closeModal('editMatchModal'); refreshAllUI();
+        }
+
+        let actMatchId = null;
+        function openBetModal(id) {
+            if (!db.players.length) return alert("请先前往「阵营」添加玩家");
+            const m = db.matches.find(x => x.id === id); actMatchId = id;
+            document.getElementById('bet-match-title').innerText = `${m.home} vs ${m.away}`;
+            let b = db.bets[id] || { stake: 100, predictions: {} }; document.getElementById('matchStake').value = b.stake;
+            const list = document.getElementById('bet-players-list');
+            
+            let html = '';
+            db.players.forEach(p => {
+                let cur = b.predictions[p.id] || 'none';
+                html += `
+                    <div class="bg-black/20 p-2 rounded-xl flex items-center justify-between border border-white/5">
+                        <div class="flex items-center gap-2 w-1/3 truncate"><img src="${p.avatar}" class="w-8 h-8 rounded-full bg-black"><span class="font-bold text-sm text-white">${p.name}</span></div>
+                        <div class="flex gap-1 bg-black/50 p-1 rounded-lg">
+                            <label><input type="radio" name="p_${p.id}" value="home" class="peer hidden" ${cur==='home'?'checked':''} onchange="playAudio('click')"><div class="px-3 py-1.5 rounded-md text-xs font-bold text-white/40 peer-checked:bg-blue-600 peer-checked:text-white transition cursor-pointer">主</div></label>
+                            <label><input type="radio" name="p_${p.id}" value="draw" class="peer hidden" ${cur==='draw'?'checked':''} onchange="playAudio('click')"><div class="px-3 py-1.5 rounded-md text-xs font-bold text-white/40 peer-checked:bg-gray-500 peer-checked:text-white transition cursor-pointer">平</div></label>
+                            <label><input type="radio" name="p_${p.id}" value="away" class="peer hidden" ${cur==='away'?'checked':''} onchange="playAudio('click')"><div class="px-3 py-1.5 rounded-md text-xs font-bold text-white/40 peer-checked:bg-red-500 peer-checked:text-white transition cursor-pointer">客</div></label>
+                            <label><input type="radio" name="p_${p.id}" value="none" class="peer hidden" ${cur==='none'?'checked':''} onchange="playAudio('click')"><div class="px-3 py-1.5 rounded-md text-xs font-bold text-white/20 peer-checked:text-yellow-500 transition cursor-pointer"><i class="fa-solid fa-ban"></i></div></label>
+                        </div>
+                    </div>`;
+            });
+            list.innerHTML = html;
+            openModal('betModal');
+        }
+
+        function saveBets() {
+            let stake = parseInt(document.getElementById('matchStake').value) || 0; let preds = {};
+            db.players.forEach(p => { for(let r of document.getElementsByName(`p_${p.id}`)) if(r.checked) { preds[p.id] = r.value; break; } });
+            db.bets[actMatchId] = { stake, predictions: preds }; broadcastData(); closeModal('betModal'); refreshAllUI();
+        }
+
+        function openSettleModal(id) {
+            const m = db.matches.find(x => x.id === id); if (!db.bets[id]) return alert("该场比赛无人下注，无法开奖！");
+            document.getElementById('settleMatchId').value = id;
+            document.getElementById('settle-match-title').innerText = `${m.home} vs ${m.away}`;
+            document.getElementById('settleScoreHome').value = ''; document.getElementById('settleScoreAway').value = '';
+            document.querySelectorAll('.result-btn').forEach(b => { b.classList.remove('border-yellow-400', 'bg-yellow-400/20', 'text-yellow-400'); b.classList.add('border-white/10', 'bg-black/30'); });
+            document.getElementById('settleFinalResult').value = '';
+            openModal('settleModal');
+        }
+
+        function setResult(res) {
+            document.getElementById('settleFinalResult').value = res;
+            document.querySelectorAll('.result-btn').forEach(b => { b.classList.remove('border-yellow-400', 'bg-yellow-400/20', 'text-yellow-400'); b.classList.add('border-white/10', 'bg-black/30'); });
+            const activeBtn = document.getElementById(`res-${res}`);
+            activeBtn.classList.remove('border-white/10', 'bg-black/30', 'text-gray-400');
+            activeBtn.classList.add('border-yellow-400', 'bg-yellow-400/20', 'text-yellow-400');
+        }
+
+        function confirmSettle() {
+            const id = document.getElementById('settleMatchId').value, res = document.getElementById('settleFinalResult').value;
+            const scoreH = document.getElementById('settleScoreHome').value, scoreA = document.getElementById('settleScoreAway').value;
+            if(!res) return alert("必须选择比赛结果(胜平负)！");
+
+            const m = db.matches.find(x => x.id == id); const b = db.bets[id];
+            let parts = [], wins = [];
+            let finalScoreText = (scoreH !== '' && scoreA !== '') ? `${scoreH} : ${scoreA}` : null;
+
+            db.players.forEach(p => {
+                if(p.totalInvest===undefined) p.totalInvest = 0; if(!p.teamStats) p.teamStats = {};
+                if(p.highestBalance===undefined) p.highestBalance = p.balance; if(p.lowestBalance===undefined) p.lowestBalance = p.balance;
+                if(p.biggestWin===undefined) p.biggestWin = 0; if(p.biggestLoss===undefined) p.biggestLoss = 0;
+            });
+
+            for (let pid in b.predictions) {
+                if (b.predictions[pid] !== 'none') {
+                    parts.push(pid);
+                    if (b.predictions[pid] === res) wins.push(pid);
+                }
+            }
+
+            if(parts.length > 0) {
+                let pool = parts.length * b.stake;
+                parts.forEach(pid => {
+                    let p = db.players.find(x => x.id === pid);
+                    if(p) {
+                        p.totalBets++; p.totalInvest += b.stake; p.balance -= b.stake;
+                        let predTeam = b.predictions[pid] === 'home' ? m.home : (b.predictions[pid] === 'away' ? m.away : '平局');
+                        if (wins.includes(pid)) {
+                            p.correctGuesses++; let winAmt = pool / wins.length; p.balance += winAmt;
+                            let netProfit = winAmt - b.stake; p.biggestWin = Math.max(p.biggestWin, netProfit);
+                            p.teamStats[predTeam] = (p.teamStats[predTeam] || 0) + netProfit;
+                        } else {
+                            p.biggestLoss = Math.max(p.biggestLoss, b.stake); p.teamStats[predTeam] = (p.teamStats[predTeam] || 0) - b.stake;
+                        }
+                        p.highestBalance = Math.max(p.highestBalance, p.balance); p.lowestBalance = Math.min(p.lowestBalance, p.balance);
+                    }
+                });
+                if (wins.length > 0) {
+                    playAudio('win');
+                    if(typeof confetti !== 'undefined') confetti({particleCount: 200, spread: 100, origin:{y:0.6}, zIndex: 9999, colors: ['#FFD700', '#FF8C00', '#00F3FF']});
+                    setTimeout(() => alert(`🎊 结算完成!\n赢家: ${wins.map(pid=>db.players.find(x=>x.id===pid).name).join(', ')}\n各分得: $${(pool/wins.length).toFixed(1)}`), 500);
+                } else {
+                    alert(`💸 爆冷！全军覆没，庄家吃掉 $${pool}`);
+                }
+            }
+            m.status = 'finished'; m.result = res; m.score = finalScoreText; m.winners = wins;
+            broadcastData(); closeModal('settleModal'); refreshAllUI();
+        }
+    </script>
+</body>
+</html>

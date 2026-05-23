@@ -207,7 +207,7 @@
         </section>
     </main>
 
-    <!-- 底部 App 导航栏 (新增今日比赛项) -->
+    <!-- 底部 App 导航栏 -->
     <nav class="bottom-nav">
         <div class="nav-item active" id="nav-dashboard" onclick="switchTab('dashboard'); playAudio('click')">
             <i class="fa-solid fa-house nav-icon"></i><span>首页</span>
@@ -332,7 +332,6 @@
                 osc.start(now); osc.stop(now + 0.6);
             }
         }
-        // 绑定全局点击初始化音效
         document.body.addEventListener('click', initAudio, { once: true });
     </script>
 
@@ -355,14 +354,14 @@
                 ["Group A", "6月25日 09:00", "第3轮", "墨西哥城", "捷克", "墨西哥"], ["Group A", "6月25日 09:00", "第3轮", "蒙特雷", "南非", "韩国"],
                 ["Group B", "6月13日 03:00", "第1轮", "多伦多", "加拿大", "波黑"], ["Group B", "6月14日 03:00", "第1轮", "旧金山湾区", "卡塔尔", "瑞士"],
                 ["Group B", "6月19日 03:00", "第2轮", "洛杉矶", "瑞士", "波黑"], ["Group B", "6月19日 06:00", "第2轮", "温哥华", "加拿大", "卡塔尔"],
-                ["Group B", "6月25日 03:00", "第3轮", "温哥华", "瑞士", "加拿大"], ["Group B", "6月25日 03:00", "第3轮", "西雅图", "波黑", "卡塔尔"],
+                ["Group B", "6月25日 03:00", "第3轮", "温哥举", "瑞士", "加拿大"], ["Group B", "6月25日 03:00", "第3轮", "西雅图", "波黑", "卡塔尔"],
                 ["Group C", "6月14日 06:00", "第1轮", "纽约/新泽西", "巴西", "摩洛哥"], ["Group C", "6月14日 09:00", "第1轮", "波士顿", "海地", "苏格兰"],
                 ["Group C", "6月20日 06:00", "第2轮", "波士顿", "苏格兰", "摩洛哥"], ["Group C", "6月20日 09:00", "第2轮", "费城", "巴西", "海地"],
                 ["Group C", "6月25日 06:00", "第3轮", "迈阿密", "苏格兰", "巴西"], ["Group C", "6月25日 06:00", "第3轮", "亚特兰大", "摩洛哥", "海地"],
                 ["Group D", "6月13日 09:00", "第1轮", "洛杉矶", "美国", "巴拉圭"], ["Group D", "6月14日 12:00", "第1轮", "温哥华", "澳大利亚", "土耳其"],
                 ["Group D", "6月20日 03:00", "第2轮", "西雅图", "美国", "澳大利亚"], ["Group D", "6月20日 12:00", "第2轮", "旧金山湾区", "土耳其", "巴拉圭"],
                 ["Group D", "6月26日 10:00", "第3轮", "洛杉矶", "土耳其", "美国"], ["Group D", "6月26日 10:00", "第3轮", "旧金山湾区", "巴拉圭", "澳大利亚"],
-                ["Group E", "6月15日 01:00", "第1轮", "休斯敦", "德国", "库拉索"], ["Group E", "6月15日 07:00", "第1轮", "费城", "科特瓦", "厄瓜多尔"],
+                ["Group E", "6月15日 01:00", "第1轮", "休斯敦", "德国", "库拉索"], ["Group E", "6月15日 07:00", "第1轮", "费城", "科特迪瓦", "厄瓜多尔"],
                 ["Group E", "6月21日 04:00", "第2轮", "多伦多", "德国", "科特迪瓦"], ["Group E", "6月21日 08:00", "第2轮", "堪萨斯城", "厄瓜多尔", "库拉索"],
                 ["Group E", "6月26日 04:00", "第3轮", "纽约/新泽西", "厄瓜多尔", "德国"], ["Group E", "6月26日 04:00", "第3轮", "费城", "库拉索", "科特迪瓦"],
                 ["Group F", "6月15日 04:00", "第1轮", "达拉斯", "荷兰", "日本"], ["Group F", "6月15日 10:00", "第1轮", "蒙特雷", "瑞典", "突尼斯"],
@@ -488,7 +487,6 @@
             if (uniqueDates.includes(todayStr)) {
                 activeTodayDate = todayStr;
             } else {
-                // 如果今天没有比赛（例如未在世界杯期间），智能寻找最近的未来比赛日期
                 const nowTime = today.getTime();
                 let nearestDate = uniqueDates[0];
                 let minDiff = Infinity;
@@ -507,7 +505,7 @@
             refreshAllUI();
         };
 
-        // 按需渲染控制中心（解决多页面冗余重绘导致的极度卡顿）
+        // 按需渲染控制中心
         function renderActiveTabUI() {
             if (currentTab === 'dashboard') {
                 renderDashboard();
@@ -570,7 +568,7 @@
             });
         }
 
-        // --- View 1: 首页仪表盘 (全面摒弃 += DOM 重绘以优化性能) ---
+        // --- View 1: 首页仪表盘 ---
         function renderDashboard() {
             const c = document.getElementById('leaderboard-container');
             if (db.players.length === 0) {
@@ -636,7 +634,6 @@
             });
             container.innerHTML = html;
             
-            // 自动将当前选中的日期平滑滚动到中央可见视口 [3]
             setTimeout(() => {
                 const activeBtn = container.querySelector('.bg-yellow-400');
                 if (activeBtn) {
@@ -727,7 +724,7 @@
             renderTodayMatches();
         }
 
-        // --- View 3: 赛事中心 (优化拼装算法) ---
+        // --- View 3: 赛事中心 ---
         let currentFilter = 'all';
         function filterMatches(f) { 
             currentFilter = f; 
@@ -810,7 +807,7 @@
             c.innerHTML = html;
         }
 
-        // --- View 4: 数据统计平铺列表 (优化拼装算法) ---
+        // --- View 4: 数据统计平铺列表 ---
         function renderPlayerStatsList() {
             calculateAdvancedStats();
             const c = document.getElementById('stats-list-container');
@@ -876,7 +873,7 @@
             c.innerHTML = html;
         }
 
-        // --- View 5: 阵营管理 (优化拼装算法) ---
+        // --- View 5: 阵营管理 ---
         function addPlayer() {
             const name = document.getElementById('newPlayerName').value.trim(), avatarInput = document.getElementById('newPlayerAvatar').value.trim();
             if (!name) return alert("代号必填！");
@@ -885,13 +882,26 @@
             broadcastData(); closeModal('addPlayerModal'); refreshAllUI();
         }
 
+        // 修改头像逻辑 [3]
+        function editPlayerAvatar(playerId) {
+            const p = db.players.find(x => x.id === playerId);
+            if (!p) return;
+            const newUrl = prompt(`请输入玩家「${p.name}」的新头像链接 (支持图片 URL):\n(留空将恢复为机器人默认头像)`, p.avatar);
+            if (newUrl !== null) {
+                const trimmed = newUrl.trim();
+                p.avatar = trimmed || `https://api.dicebear.com/6.x/bottts/svg?seed=${p.name}&backgroundColor=00f3ff`;
+                broadcastData();
+                refreshAllUI();
+            }
+        }
+
         function renderPlayers() {
             const container = document.getElementById('players-grid');
             let html = '';
             db.players.forEach(p => {
                 html += `
                     <div class="bg-black/30 border border-white/10 p-4 rounded-2xl text-center relative group backdrop-blur-md">
-                        <img src="${p.avatar}" class="w-16 h-16 mx-auto rounded-full bg-black/50 border-2 border-white/20 mb-3 object-cover shadow-lg">
+                        <img onclick="editPlayerAvatar('${p.id}'); playAudio('click')" src="${p.avatar}" class="w-16 h-16 mx-auto rounded-full bg-black/50 border-2 border-white/20 mb-3 object-cover shadow-lg cursor-pointer hover:scale-110 active:scale-95 transition-all" title="点击修改头像">
                         <h4 class="font-black text-sm truncate text-white mb-1">${p.name}</h4>
                         <p class="${p.balance>=0?'text-green-400':'text-red-400'} font-black text-sm">${p.balance>=0?'+':''}$${p.balance.toFixed(0)}</p>
                         <button onclick="if(confirm('忍痛割爱删除此玩家?')) { db.players = db.players.filter(x=>x.id!=='${p.id}'); broadcastData(); refreshAllUI(); playAudio('click'); }" class="absolute top-2 right-2 text-white/30 hover:text-red-500 transition"><i class="fa-solid fa-trash text-sm"></i></button>

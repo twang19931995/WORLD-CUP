@@ -58,7 +58,7 @@
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
 
-        /* 3D 高光卡片样式 (复刻参考图) */
+        /* 3D 高光卡片样式 */
         .match-card {
             border-radius: 16px;
             box-shadow: 0 8px 20px rgba(0,0,0,0.3), inset 0 2px 4px rgba(255,255,255,0.4);
@@ -122,16 +122,29 @@
 
         /* 模态框动画 */
         .modal-enter { animation: bounceIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+
+        /* 卡片跑马灯特效的基础旋转动画 */
+        @keyframes borderRotate {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
     </style>
 </head>
 <body>
+
+    <!-- 滚动淡入淡出背景层 -->
+    <div id="bg-slideshow-container" class="fixed inset-0 z-0 overflow-hidden pointer-events-none transition-opacity duration-500 opacity-20">
+        <div id="bg-slide-1" class="absolute inset-0 bg-cover bg-center transition-opacity opacity-0"></div>
+        <div id="bg-slide-2" class="absolute inset-0 bg-cover bg-center transition-opacity opacity-0"></div>
+    </div>
 
     <!-- 顶部标题栏 -->
     <header class="pt-10 pb-4 px-4 text-center relative z-10">
         <h1 class="text-3xl font-black italic tracking-wider text-transparent bg-clip-text bg-gradient-to-b from-white to-gray-400 drop-shadow-lg">
             2026<span class="text-yellow-400">世界杯竞猜</span>
         </h1>
-        <div class="absolute right-4 top-10 flex flex-col items-end">
+        <div id="sync-info-header" class="absolute right-4 top-10 flex flex-col items-end hidden">
             <span id="room-id-display" class="bg-black/40 px-2 py-0.5 rounded text-[10px] text-gray-300 border border-white/10 mb-1">房号: public</span>
             <div id="sync-status" class="text-[10px] text-yellow-400 flex items-center gap-1 bg-black/40 px-2 py-0.5 rounded border border-white/10">
                 <i class="fa-solid fa-circle-notch fa-spin"></i> 连接中
@@ -148,14 +161,14 @@
             <div class="relative w-full h-40 rounded-2xl overflow-hidden shadow-2xl border border-white/20 flex items-center justify-center bg-gradient-to-br from-blue-600 to-indigo-900">
                 <i class="fa-solid fa-futbol text-8xl text-white/20 absolute -right-4 -bottom-4 animate-spin-slow"></i>
                 <div class="z-10 text-center">
-                    <p class="text-sm text-blue-200 font-bold mb-1">全球资金池总量</p>
+                    <p class="text-sm text-blue-200 font-bold mb-1">积分池总量</p>
                     <p class="text-4xl font-black text-yellow-400 drop-shadow-[0_0_10px_rgba(250,204,21,0.8)] font-mono" id="global-money">$0</p>
                 </div>
             </div>
 
             <!-- 排行榜列表 -->
             <div class="flex items-center justify-between mt-6 mb-2">
-                <h2 class="text-lg font-bold text-white border-l-4 border-yellow-400 pl-2">财富排行榜</h2>
+                <h2 class="text-lg font-bold text-white border-l-4 border-yellow-400 pl-2">积分排行榜</h2>
             </div>
             <div class="space-y-3" id="leaderboard-container"></div>
         </section>
@@ -191,7 +204,7 @@
         <!-- View 4: 数据统计 -->
         <section id="view-stats" class="hidden space-y-6 animate-bounce-in pb-10">
             <div class="flex items-center justify-between mb-2">
-                <h2 class="text-lg font-bold text-white border-l-4 border-neonBlue pl-2">上帝视角数据分析</h2>
+                <h2 class="text-lg font-bold text-white border-l-4 border-cyan-400 pl-2">玩家数据总览</h2>
             </div>
             <!-- 平铺玩家数据卡片的容器 -->
             <div id="stats-list-container" class="space-y-6"></div>
@@ -200,93 +213,425 @@
         <!-- View 5: 玩家管理 -->
         <section id="view-players" class="hidden animate-bounce-in">
             <div class="flex justify-between items-center mb-4">
-                <h2 class="text-lg font-bold text-white border-l-4 border-neonPink pl-2">玩家阵营</h2>
-                <button onclick="openModal('addPlayerModal'); playAudio('click')" class="btn-3d px-4 py-1.5 text-sm">招募玩家</button>
+                <h2 class="text-lg font-bold text-white border-l-4 border-pink-500 pl-2">玩家阵营</h2>
+                <button onclick="triggerAddPlayerWithPassword(); playAudio('click')" class="btn-3d px-4 py-1.5 text-sm">添加玩家</button>
             </div>
             <div class="grid grid-cols-2 gap-3" id="players-grid"></div>
         </section>
 
-        <!-- View 7: 历史操作区 (新增) -->
+        <!-- View 7: 历史操作区 -->
         <section id="view-history" class="hidden space-y-4 animate-bounce-in pb-10">
             <div class="flex items-center justify-between mb-2">
                 <h2 class="text-lg font-bold text-white border-l-4 border-yellow-400 pl-2">历史操作日志</h2>
-                <button onclick="clearLogs(); playAudio('click')" class="text-xs text-red-400 hover:text-red-300 transition flex items-center gap-1">
-                    <i class="fa-solid fa-trash-can"></i> 清空日志
-                </button>
             </div>
-            <div id="logs-container" class="space-y-2 max-h-[70vh] overflow-y-auto pr-1"></div>
+            <!-- 日志按日期过滤选择器 -->
+            <div id="history-date-scroll" class="flex gap-2 overflow-x-auto py-2 px-1 mb-2 no-scrollbar scroll-smooth"></div>
+            <div id="logs-container" class="space-y-2 max-h-[65vh] overflow-y-auto pr-1"></div>
         </section>
 
-        <!-- View 6: 设置后台 (新增管理控制后台) -->
-        <section id="view-admin" class="hidden space-y-6 animate-bounce-in pb-10">
+        <!-- View 6: 设置后台 -->
+        <section id="view-admin" class="hidden space-y-4 animate-bounce-in pb-10">
             <div class="flex items-center justify-between mb-2">
                 <h2 class="text-lg font-bold text-white border-l-4 border-yellow-400 pl-2">管理控制台</h2>
             </div>
 
-            <!-- 投注安全规则 -->
-            <div class="bg-black/30 border border-white/10 rounded-2xl p-4 shadow-xl backdrop-blur-md space-y-3">
-                <h3 class="text-sm font-black text-yellow-400 flex items-center gap-2">
-                    <i class="fa-solid fa-clock"></i> 赛事投注时间管理
-                </h3>
-                <div class="flex items-center justify-between bg-black/20 p-3 rounded-xl border border-white/5">
-                    <div>
-                        <p class="text-xs font-bold text-white">开赛前 15 分钟禁止下注</p>
-                        <p class="text-[9px] text-gray-400">开启后玩家将无法在比赛开赛前 15 分钟内下单及修改注单</p>
+            <!-- 1. 投注安全规则 (风琴折叠板块) -->
+            <div class="bg-black/30 border border-white/10 rounded-2xl shadow-xl backdrop-blur-md overflow-hidden">
+                <button onclick="toggleAccordion('admin-bets'); playAudio('click')" class="w-full px-4 py-3 flex justify-between items-center bg-black/20 hover:bg-black/40 text-left transition-colors">
+                    <span class="text-sm font-black text-yellow-400 flex items-center gap-2">
+                        <i class="fa-solid fa-clock"></i> 赛事投注时间管理
+                    </span>
+                    <i id="admin-bets-icon" class="fa-solid fa-chevron-down text-xs text-yellow-400 transition-transform"></i>
+                </button>
+                <div id="admin-bets-content" class="hidden p-4 space-y-3 border-t border-white/5">
+                    <div class="flex items-center justify-between bg-black/20 p-3 rounded-xl border border-white/5">
+                        <div>
+                            <p class="text-xs font-bold text-white">开赛前 15 分钟禁止下注</p>
+                            <p class="text-[9px] text-gray-400">开启后玩家将无法在比赛开赛前 15 分钟内下单及修改注单</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer select-none">
+                            <input type="checkbox" id="lock-bets-toggle" onchange="toggleLockBetsSetting(this.checked); playAudio('click')" class="sr-only peer">
+                            <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-400"></div>
+                        </label>
                     </div>
-                    <label class="relative inline-flex items-center cursor-pointer select-none">
-                        <input type="checkbox" id="lock-bets-toggle" onchange="toggleLockBetsSetting(this.checked); playAudio('click')" class="sr-only peer">
-                        <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-400"></div>
-                    </label>
+                </div>
+            </div>
+
+            <!-- 2. UI 界面与背景个性化设置 (风琴折叠板块 - 包含色块、背景轮播、跑马灯与字体调节) -->
+            <div class="bg-black/30 border border-white/10 rounded-2xl shadow-xl backdrop-blur-md overflow-hidden">
+                <button onclick="toggleAccordion('admin-ui-settings'); playAudio('click')" class="w-full px-4 py-3 flex justify-between items-center bg-black/20 hover:bg-black/40 text-left transition-colors">
+                    <span class="text-sm font-black text-cyan-400 flex items-center gap-2">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> UI 界面与背景偏好配置
+                    </span>
+                    <i id="admin-ui-settings-icon" class="fa-solid fa-chevron-down text-xs text-cyan-400 transition-transform"></i>
+                </button>
+                <div id="admin-ui-settings-content" class="hidden p-4 space-y-6 border-t border-white/5">
+                    
+                    <!-- 2.1 透明度控制区域 -->
+                    <div class="space-y-3 border-b border-white/10 pb-4">
+                        <h4 class="text-xs font-black text-yellow-400 flex items-center gap-1.5">
+                            <i class="fa-solid fa-circle-half-stroke"></i> 各板块底部色块透明度 (0-100%)
+                        </h4>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="text-[10px] text-gray-400 block mb-1">积分排行榜: <span id="val-op-lb">40</span>%</label>
+                                <input type="range" min="0" max="100" value="40" id="cfg-op-lb" oninput="updateUIConfig('opacities', 'leaderboard', this.value)" class="w-full accent-cyan-400 cursor-pointer">
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-gray-400 block mb-1">今日/全部赛程: <span id="val-op-mc">30</span>%</label>
+                                <input type="range" min="0" max="100" value="30" id="cfg-op-mc" oninput="updateUIConfig('opacities', 'match', this.value)" class="w-full accent-cyan-400 cursor-pointer">
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-gray-400 block mb-1">玩家数据总览: <span id="val-op-st">30</span>%</label>
+                                <input type="range" min="0" max="100" value="30" id="cfg-op-st" oninput="updateUIConfig('opacities', 'stats', this.value)" class="w-full accent-cyan-400 cursor-pointer">
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-gray-400 block mb-1">玩家阵营卡片: <span id="val-op-pc">30</span>%</label>
+                                <input type="range" min="0" max="100" value="30" id="cfg-op-pc" oninput="updateUIConfig('opacities', 'player', this.value)" class="w-full accent-cyan-400 cursor-pointer">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2.2 跑马灯描边设置区域 -->
+                    <div class="space-y-3 border-b border-white/10 pb-4">
+                        <h4 class="text-xs font-black text-yellow-400 flex items-center gap-1.5">
+                            <i class="fa-solid fa-spinner animate-spin"></i> 卡片边缘跑马灯描边设置
+                        </h4>
+                        
+                        <!-- 排行榜跑马灯 -->
+                        <div class="bg-black/20 p-2.5 rounded-xl border border-white/5 space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[10px] text-gray-300 font-bold">积分排行榜跑马灯</span>
+                                <input type="checkbox" id="cfg-mq-lb-en" onchange="updateUIConfig('marquee', 'leaderboard', this.checked, 'enabled')" class="accent-cyan-400">
+                            </div>
+                            <div class="grid grid-cols-3 gap-2">
+                                <div>
+                                    <label class="text-[9px] text-gray-400 block">速度: <span id="val-mq-lb-sp">3</span>s</label>
+                                    <input type="range" min="1" max="10" step="0.5" id="cfg-mq-lb-sp" oninput="updateUIConfig('marquee', 'leaderboard', this.value, 'speed')" class="w-full accent-cyan-400 cursor-pointer">
+                                </div>
+                                <div>
+                                    <label class="text-[9px] text-gray-400 block">粗细: <span id="val-mq-lb-th">2</span>px</label>
+                                    <input type="range" min="1" max="8" id="cfg-mq-lb-th" oninput="updateUIConfig('marquee', 'leaderboard', this.value, 'thickness')" class="w-full accent-cyan-400 cursor-pointer">
+                                </div>
+                                <div>
+                                    <label class="text-[9px] text-gray-400 block">透明度: <span id="val-mq-lb-op">80</span>%</label>
+                                    <input type="range" min="0" max="100" id="cfg-mq-lb-op" oninput="updateUIConfig('marquee', 'leaderboard', this.value, 'opacity')" class="w-full accent-cyan-400 cursor-pointer">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 赛程跑马灯 -->
+                        <div class="bg-black/20 p-2.5 rounded-xl border border-white/5 space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[10px] text-gray-300 font-bold">今日/全部赛程跑马灯</span>
+                                <input type="checkbox" id="cfg-mq-mc-en" onchange="updateUIConfig('marquee', 'match', this.checked, 'enabled')" class="accent-cyan-400">
+                            </div>
+                            <div class="grid grid-cols-3 gap-2">
+                                <div>
+                                    <label class="text-[9px] text-gray-400 block">速度: <span id="val-mq-mc-sp">3</span>s</label>
+                                    <input type="range" min="1" max="10" step="0.5" id="cfg-mq-mc-sp" oninput="updateUIConfig('marquee', 'match', this.value, 'speed')" class="w-full accent-cyan-400 cursor-pointer">
+                                </div>
+                                <div>
+                                    <label class="text-[9px] text-gray-400 block">粗细: <span id="val-mq-mc-th">2</span>px</label>
+                                    <input type="range" min="1" max="8" id="cfg-mq-mc-th" oninput="updateUIConfig('marquee', 'match', this.value, 'thickness')" class="w-full accent-cyan-400 cursor-pointer">
+                                </div>
+                                <div>
+                                    <label class="text-[9px] text-gray-400 block">透明度: <span id="val-mq-mc-op">80</span>%</label>
+                                    <input type="range" min="0" max="100" id="cfg-mq-mc-op" oninput="updateUIConfig('marquee', 'match', this.value, 'opacity')" class="w-full accent-cyan-400 cursor-pointer">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 玩家数据跑马灯 -->
+                        <div class="bg-black/20 p-2.5 rounded-xl border border-white/5 space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[10px] text-gray-300 font-bold">玩家数据跑马灯</span>
+                                <input type="checkbox" id="cfg-mq-st-en" onchange="updateUIConfig('marquee', 'stats', this.checked, 'enabled')" class="accent-cyan-400">
+                            </div>
+                            <div class="grid grid-cols-3 gap-2">
+                                <div>
+                                    <label class="text-[9px] text-gray-400 block">速度: <span id="val-mq-st-sp">3</span>s</label>
+                                    <input type="range" min="1" max="10" step="0.5" id="cfg-mq-st-sp" oninput="updateUIConfig('marquee', 'stats', this.value, 'speed')" class="w-full accent-cyan-400 cursor-pointer">
+                                </div>
+                                <div>
+                                    <label class="text-[9px] text-gray-400 block">粗细: <span id="val-mq-st-th">2</span>px</label>
+                                    <input type="range" min="1" max="8" id="cfg-mq-st-th" oninput="updateUIConfig('marquee', 'stats', this.value, 'thickness')" class="w-full accent-cyan-400 cursor-pointer">
+                                </div>
+                                <div>
+                                    <label class="text-[9px] text-gray-400 block">透明度: <span id="val-mq-st-op">80</span>%</label>
+                                    <input type="range" min="0" max="100" id="cfg-mq-st-op" oninput="updateUIConfig('marquee', 'stats', this.value, 'opacity')" class="w-full accent-cyan-400 cursor-pointer">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 玩家阵营跑马灯 -->
+                        <div class="bg-black/20 p-2.5 rounded-xl border border-white/5 space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[10px] text-gray-300 font-bold">玩家阵营跑马灯</span>
+                                <input type="checkbox" id="cfg-mq-pc-en" onchange="updateUIConfig('marquee', 'player', this.checked, 'enabled')" class="accent-cyan-400">
+                            </div>
+                            <div class="grid grid-cols-3 gap-2">
+                                <div>
+                                    <label class="text-[9px] text-gray-400 block">速度: <span id="val-mq-pc-sp">3</span>s</label>
+                                    <input type="range" min="1" max="10" step="0.5" id="cfg-mq-pc-sp" oninput="updateUIConfig('marquee', 'player', this.value, 'speed')" class="w-full accent-cyan-400 cursor-pointer">
+                                </div>
+                                <div>
+                                    <label class="text-[9px] text-gray-400 block">粗细: <span id="val-mq-pc-th">2</span>px</label>
+                                    <input type="range" min="1" max="8" id="cfg-mq-pc-th" oninput="updateUIConfig('marquee', 'player', this.value, 'thickness')" class="w-full accent-cyan-400 cursor-pointer">
+                                </div>
+                                <div>
+                                    <label class="text-[9px] text-gray-400 block">透明度: <span id="val-mq-pc-op">80</span>%</label>
+                                    <input type="range" min="0" max="100" id="cfg-mq-pc-op" oninput="updateUIConfig('marquee', 'player', this.value, 'opacity')" class="w-full accent-cyan-400 cursor-pointer">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2.3 字体高级设置区域 -->
+                    <div class="space-y-3 border-b border-white/10 pb-4">
+                        <h4 class="text-xs font-black text-yellow-400 flex items-center gap-1.5">
+                            <i class="fa-solid fa-font"></i> 板块字体独立控制与文字描边
+                        </h4>
+                        
+                        <!-- 排行榜字体 -->
+                        <div class="bg-black/20 p-2.5 rounded-xl border border-white/5 space-y-2">
+                            <span class="text-[10px] text-gray-300 font-bold block">积分排行榜字体</span>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="text-[9px] text-gray-400 block">字体大小: <span id="val-ft-lb-sz">14</span>px</label>
+                                    <input type="range" min="10" max="24" id="cfg-ft-lb-sz" oninput="updateUIConfig('fonts', 'leaderboard', this.value, 'size')" class="w-full accent-cyan-400 cursor-pointer">
+                                </div>
+                                <div>
+                                    <label class="text-[9px] text-gray-400 block">主文字颜色</label>
+                                    <div class="flex gap-1 items-center">
+                                        <input type="color" id="cfg-ft-lb-cl" onchange="updateUIConfig('fonts', 'leaderboard', this.value, 'color')" class="w-6 h-6 bg-transparent border-0 cursor-pointer">
+                                        <input type="text" id="cfg-ft-lb-cl-txt" onchange="updateUIConfig('fonts', 'leaderboard', this.value, 'color')" class="bg-black/40 text-white text-[10px] px-1 rounded w-full border border-white/10 font-mono py-0.5 outline-none">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex items-center justify-between border-t border-white/5 pt-1.5 mt-1">
+                                <span class="text-[9px] text-gray-400 font-semibold">启用字体外轮廓描边</span>
+                                <input type="checkbox" id="cfg-ft-lb-st-en" onchange="updateUIConfig('fonts', 'leaderboard', this.checked, 'strokeEnabled')" class="accent-cyan-400">
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="text-[9px] text-gray-400 block">描边粗细: <span id="val-ft-lb-st-wi">1</span>px</label>
+                                    <input type="range" min="1" max="4" id="cfg-ft-lb-st-wi" oninput="updateUIConfig('fonts', 'leaderboard', this.value, 'strokeWidth')" class="w-full accent-cyan-400 cursor-pointer">
+                                </div>
+                                <div>
+                                    <label class="text-[9px] text-gray-400 block">描边颜色</label>
+                                    <div class="flex gap-1 items-center">
+                                        <input type="color" id="cfg-ft-lb-st-cl" onchange="updateUIConfig('fonts', 'leaderboard', this.value, 'strokeColor')" class="w-6 h-6 bg-transparent border-0 cursor-pointer">
+                                        <input type="text" id="cfg-ft-lb-st-cl-txt" onchange="updateUIConfig('fonts', 'leaderboard', this.value, 'strokeColor')" class="bg-black/40 text-white text-[10px] px-1 rounded w-full border border-white/10 font-mono py-0.5 outline-none">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 赛程卡片字体 -->
+                        <div class="bg-black/20 p-2.5 rounded-xl border border-white/5 space-y-2">
+                            <span class="text-[10px] text-gray-300 font-bold block">今日/全部赛程字体</span>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="text-[9px] text-gray-400 block">字体大小: <span id="val-ft-mc-sz">14</span>px</label>
+                                    <input type="range" min="10" max="24" id="cfg-ft-mc-sz" oninput="updateUIConfig('fonts', 'match', this.value, 'size')" class="w-full accent-cyan-400 cursor-pointer">
+                                </div>
+                                <div>
+                                    <label class="text-[9px] text-gray-400 block">主文字颜色</label>
+                                    <div class="flex gap-1 items-center">
+                                        <input type="color" id="cfg-ft-mc-cl" onchange="updateUIConfig('fonts', 'match', this.value, 'color')" class="w-6 h-6 bg-transparent border-0 cursor-pointer">
+                                        <input type="text" id="cfg-ft-mc-cl-txt" onchange="updateUIConfig('fonts', 'match', this.value, 'color')" class="bg-black/40 text-white text-[10px] px-1 rounded w-full border border-white/10 font-mono py-0.5 outline-none">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex items-center justify-between border-t border-white/5 pt-1.5 mt-1">
+                                <span class="text-[9px] text-gray-400 font-semibold">启用字体外轮廓描边</span>
+                                <input type="checkbox" id="cfg-ft-mc-st-en" onchange="updateUIConfig('fonts', 'match', this.checked, 'strokeEnabled')" class="accent-cyan-400">
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="text-[9px] text-gray-400 block">描边粗细: <span id="val-ft-mc-st-wi">1</span>px</label>
+                                    <input type="range" min="1" max="4" id="cfg-ft-mc-st-wi" oninput="updateUIConfig('fonts', 'match', this.value, 'strokeWidth')" class="w-full accent-cyan-400 cursor-pointer">
+                                </div>
+                                <div>
+                                    <label class="text-[9px] text-gray-400 block">描边颜色</label>
+                                    <div class="flex gap-1 items-center">
+                                        <input type="color" id="cfg-ft-mc-st-cl" onchange="updateUIConfig('fonts', 'match', this.value, 'strokeColor')" class="w-6 h-6 bg-transparent border-0 cursor-pointer">
+                                        <input type="text" id="cfg-ft-mc-st-cl-txt" onchange="updateUIConfig('fonts', 'match', this.value, 'strokeColor')" class="bg-black/40 text-white text-[10px] px-1 rounded w-full border border-white/10 font-mono py-0.5 outline-none">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 玩家数据字体 -->
+                        <div class="bg-black/20 p-2.5 rounded-xl border border-white/5 space-y-2">
+                            <span class="text-[10px] text-gray-300 font-bold block">玩家数据总览字体</span>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="text-[9px] text-gray-400 block">字体大小: <span id="val-ft-st-sz">14</span>px</label>
+                                    <input type="range" min="10" max="24" id="cfg-ft-st-sz" oninput="updateUIConfig('fonts', 'stats', this.value, 'size')" class="w-full accent-cyan-400 cursor-pointer">
+                                </div>
+                                <div>
+                                    <label class="text-[9px] text-gray-400 block">主文字颜色</label>
+                                    <div class="flex gap-1 items-center">
+                                        <input type="color" id="cfg-ft-st-cl" onchange="updateUIConfig('fonts', 'stats', this.value, 'color')" class="w-6 h-6 bg-transparent border-0 cursor-pointer">
+                                        <input type="text" id="cfg-ft-st-cl-txt" onchange="updateUIConfig('fonts', 'stats', this.value, 'color')" class="bg-black/40 text-white text-[10px] px-1 rounded w-full border border-white/10 font-mono py-0.5 outline-none">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex items-center justify-between border-t border-white/5 pt-1.5 mt-1">
+                                <span class="text-[9px] text-gray-400 font-semibold">启用字体外轮廓描边</span>
+                                <input type="checkbox" id="cfg-ft-st-st-en" onchange="updateUIConfig('fonts', 'stats', this.checked, 'strokeEnabled')" class="accent-cyan-400">
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="text-[9px] text-gray-400 block">描边粗细: <span id="val-ft-st-wi">1</span>px</label>
+                                    <input type="range" min="1" max="4" id="cfg-ft-st-wi" oninput="updateUIConfig('fonts', 'stats', this.value, 'strokeWidth')" class="w-full accent-cyan-400 cursor-pointer">
+                                </div>
+                                <div>
+                                    <label class="text-[9px] text-gray-400 block">描边颜色</label>
+                                    <div class="flex gap-1 items-center">
+                                        <input type="color" id="cfg-ft-st-st-cl" onchange="updateUIConfig('fonts', 'stats', this.value, 'strokeColor')" class="w-6 h-6 bg-transparent border-0 cursor-pointer">
+                                        <input type="text" id="cfg-ft-st-st-cl-txt" onchange="updateUIConfig('fonts', 'stats', this.value, 'strokeColor')" class="bg-black/40 text-white text-[10px] px-1 rounded w-full border border-white/10 font-mono py-0.5 outline-none">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 玩家阵营字体 -->
+                        <div class="bg-black/20 p-2.5 rounded-xl border border-white/5 space-y-2">
+                            <span class="text-[10px] text-gray-300 font-bold block">玩家阵营卡片字体</span>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="text-[9px] text-gray-400 block">字体大小: <span id="val-ft-pc-sz">14</span>px</label>
+                                    <input type="range" min="10" max="24" id="cfg-ft-pc-sz" oninput="updateUIConfig('fonts', 'player', this.value, 'size')" class="w-full accent-cyan-400 cursor-pointer">
+                                </div>
+                                <div>
+                                    <label class="text-[9px] text-gray-400 block">主文字颜色</label>
+                                    <div class="flex gap-1 items-center">
+                                        <input type="color" id="cfg-ft-pc-cl" onchange="updateUIConfig('fonts', 'player', this.value, 'color')" class="w-6 h-6 bg-transparent border-0 cursor-pointer">
+                                        <input type="text" id="cfg-ft-pc-cl-txt" onchange="updateUIConfig('fonts', 'player', this.value, 'color')" class="bg-black/40 text-white text-[10px] px-1 rounded w-full border border-white/10 font-mono py-0.5 outline-none">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex items-center justify-between border-t border-white/5 pt-1.5 mt-1">
+                                <span class="text-[9px] text-gray-400 font-semibold">启用字体外轮廓描边</span>
+                                <input type="checkbox" id="cfg-ft-pc-st-en" onchange="updateUIConfig('fonts', 'player', this.checked, 'strokeEnabled')" class="accent-cyan-400">
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="text-[9px] text-gray-400 block">描边粗细: <span id="val-ft-pc-st-wi">1</span>px</label>
+                                    <input type="range" min="1" max="4" id="cfg-ft-pc-st-wi" oninput="updateUIConfig('fonts', 'player', this.value, 'strokeWidth')" class="w-full accent-cyan-400 cursor-pointer">
+                                </div>
+                                <div>
+                                    <label class="text-[9px] text-gray-400 block">描边颜色</label>
+                                    <div class="flex gap-1 items-center">
+                                        <input type="color" id="cfg-ft-pc-st-cl" onchange="updateUIConfig('fonts', 'player', this.value, 'strokeColor')" class="w-6 h-6 bg-transparent border-0 cursor-pointer">
+                                        <input type="text" id="cfg-ft-pc-st-cl-txt" onchange="updateUIConfig('fonts', 'player', this.value, 'strokeColor')" class="bg-black/40 text-white text-[10px] px-1 rounded w-full border border-white/10 font-mono py-0.5 outline-none">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2.4 背景图动态轮播面板 (已合并至此区域) -->
+                    <div class="space-y-3 pt-2">
+                        <h4 class="text-xs font-black text-cyan-400 flex items-center gap-1.5">
+                            <i class="fa-solid fa-images"></i> 网页背景图动态轮播
+                        </h4>
+                        <div class="space-y-2">
+                            <p class="text-[10px] text-gray-400">批量输入背景图 URL 链接（每行一个）：</p>
+                            <textarea id="admin-bg-urls" class="w-full h-24 bg-black/50 border border-white/20 rounded-xl p-2.5 font-mono text-xs text-white outline-none focus:border-cyan-400" placeholder="支持任意图片直链（例：https://example.com/bg.jpg）"></textarea>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="text-[10px] text-gray-400 block mb-1">停留时间 (秒)</label>
+                                <input type="number" id="admin-bg-stay" min="0.5" step="0.5" class="w-full bg-black/50 border border-white/20 rounded-xl p-2 text-xs text-white font-bold outline-none focus:border-cyan-400 text-center">
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-gray-400 block mb-1">过渡时间 (秒)</label>
+                                <input type="number" id="admin-bg-fade" min="0.1" step="0.1" class="w-full bg-black/50 border border-white/20 rounded-xl p-2 text-xs text-white font-bold outline-none focus:border-cyan-400 text-center">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-[10px] text-gray-400 block mb-1">背景透明度 (当前: <span id="admin-bg-opacity-val">0.2</span>)</label>
+                            <input type="range" id="admin-bg-opacity" min="0" max="0.8" step="0.05" oninput="document.getElementById('admin-bg-opacity-val').innerText = this.value; updateLocalSlideshowOpacity(this.value);" class="w-full accent-cyan-400 cursor-pointer">
+                        </div>
+                        <button onclick="saveSlideshowSettings(); playAudio('coin')" class="w-full btn-3d bg-gradient-to-b from-cyan-500 to-blue-800 py-2.5 text-xs">
+                            <i class="fa-solid fa-floppy-disk mr-1"></i> 保存并实时同步背景
+                        </button>
+                    </div>
+
                 </div>
             </div>
             
-            <!-- 导入导出卡片 -->
-            <div class="bg-black/30 border border-white/10 rounded-2xl p-4 shadow-xl backdrop-blur-md space-y-3">
-                <h3 class="text-sm font-black text-yellow-400 flex items-center gap-2">
-                    <i class="fa-solid fa-file-import"></i> 数据备份与恢复
-                </h3>
-                <div class="grid grid-cols-2 gap-3">
-                    <button onclick="exportDatabase(); playAudio('click')" class="btn-3d py-2 text-xs bg-gradient-to-b from-blue-500 to-blue-800 shadow-[0_4px_10px_rgba(59,130,246,0.4)]">
-                        <i class="fa-solid fa-file-export mr-1"></i> 导出 JSON 文件
-                    </button>
-                    <label class="btn-3d py-2 text-xs text-center cursor-pointer bg-gradient-to-b from-purple-500 to-purple-800 shadow-[0_4px_10px_rgba(168,85,247,0.4)] block">
-                        <i class="fa-solid fa-file-import mr-1"></i> 导入 JSON 文件
-                        <input type="file" id="import-file-input" class="hidden" onchange="importDatabase(event)">
-                    </label>
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <button onclick="copyDbToClipboard(); playAudio('click')" class="btn-3d btn-blue py-2 text-xs">
-                        <i class="fa-solid fa-copy mr-1"></i> 复制到剪贴板
-                    </button>
-                    <button onclick="pasteDbFromClipboard(); playAudio('click')" class="btn-3d py-2 text-xs bg-gradient-to-b from-emerald-500 to-emerald-800 shadow-[0_4px_10px_rgba(16,185,129,0.4)]">
-                        <i class="fa-solid fa-paste mr-1"></i> 剪贴板导入
-                    </button>
-                </div>
-            </div>
-
-            <!-- 数据任意改 (高级 JSON 语法检查器) -->
-            <div class="bg-black/30 border border-white/10 rounded-2xl p-4 shadow-xl backdrop-blur-md space-y-3">
-                <div class="flex justify-between items-center">
-                    <h3 class="text-sm font-black text-yellow-400 flex items-center gap-2">
-                        <i class="fa-solid fa-code"></i> 原始数据任意修改
-                    </h3>
-                    <span class="text-[10px] text-gray-400">支持修改任一数据和任何字段</span>
-                </div>
-                <textarea id="raw-db-textarea" class="w-full h-64 bg-black/60 border border-white/20 rounded-xl p-3 font-mono text-xs text-green-400 outline-none focus:border-yellow-400" placeholder="数据加载中..."></textarea>
-                <div class="flex gap-2">
-                    <button onclick="formatRawDbText(); playAudio('click')" class="flex-1 py-2 text-xs font-bold rounded-xl border border-white/20 hover:bg-white/10 text-white">格式化代码</button>
-                    <button onclick="saveRawDbText(); playAudio('coin')" class="flex-1 btn-3d py-2 text-sm">保存并实时同步</button>
-                </div>
-            </div>
-
-            <!-- 快捷重置与管理 -->
-            <div class="bg-black/30 border border-white/10 rounded-2xl p-4 shadow-xl backdrop-blur-md space-y-3">
-                <h3 class="text-sm font-black text-red-400 flex items-center gap-2">
-                    <i class="fa-solid fa-triangle-exclamation"></i> 危险操作区域
-                </h3>
-                <button onclick="resetEntireDatabase(); playAudio('click')" class="w-full btn-3d bg-gradient-to-b from-red-600 to-red-900 shadow-[0_4px_10px_rgba(220,38,38,0.4)] py-2 text-xs">
-                    <i class="fa-solid fa-trash-can mr-1"></i> 重置并清空所有数据
+            <!-- 3. 数据备份与恢复 (风琴折叠板块) -->
+            <div class="bg-black/30 border border-white/10 rounded-2xl shadow-xl backdrop-blur-md overflow-hidden">
+                <button onclick="toggleAccordion('admin-backup'); playAudio('click')" class="w-full px-4 py-3 flex justify-between items-center bg-black/20 hover:bg-black/40 text-left transition-colors">
+                    <span class="text-sm font-black text-yellow-400 flex items-center gap-2">
+                        <i class="fa-solid fa-file-import"></i> 数据备份与恢复
+                    </span>
+                    <i id="admin-backup-icon" class="fa-solid fa-chevron-down text-xs text-yellow-400 transition-transform"></i>
                 </button>
+                <div id="admin-backup-content" class="hidden p-4 space-y-3 border-t border-white/5">
+                    <div class="grid grid-cols-2 gap-3">
+                        <button onclick="exportDatabase(); playAudio('click')" class="btn-3d py-2 text-xs bg-gradient-to-b from-blue-500 to-blue-800 shadow-[0_4px_10px_rgba(59,130,246,0.4)]">
+                            <i class="fa-solid fa-file-export mr-1"></i> 导出 JSON 文件
+                        </button>
+                        <label class="btn-3d py-2 text-xs text-center cursor-pointer bg-gradient-to-b from-purple-500 to-purple-800 shadow-[0_4px_10px_rgba(168,85,247,0.4)] block mb-0">
+                            <i class="fa-solid fa-file-import mr-1"></i> 导入 JSON 文件
+                            <input type="file" id="import-file-input" class="hidden" onchange="importDatabase(event)">
+                        </label>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button onclick="copyDbToClipboard(); playAudio('click')" class="btn-3d btn-blue py-2 text-xs">
+                            <i class="fa-solid fa-copy mr-1"></i> 复制到剪贴板
+                        </button>
+                        <button onclick="pasteDbFromClipboard(); playAudio('click')" class="btn-3d py-2 text-xs bg-gradient-to-b from-emerald-500 to-emerald-800 shadow-[0_4px_10px_rgba(16,185,129,0.4)]">
+                            <i class="fa-solid fa-paste mr-1"></i> 剪贴板导入
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. 原始数据任意修改 (风琴折叠板块 - 默认状态下 hidden) -->
+            <div id="raw-db-card" class="bg-black/30 border border-white/10 rounded-2xl shadow-xl backdrop-blur-md overflow-hidden hidden">
+                <button onclick="toggleAccordion('admin-raw'); playAudio('click')" class="w-full px-4 py-3 flex justify-between items-center bg-black/20 hover:bg-black/40 text-left transition-colors">
+                    <span class="text-sm font-black text-yellow-400 flex items-center gap-2">
+                        <i class="fa-solid fa-code"></i> 原始数据任意修改
+                    </span>
+                    <i id="admin-raw-icon" class="fa-solid fa-chevron-down text-xs text-yellow-400 transition-transform"></i>
+                </button>
+                <div id="admin-raw-content" class="hidden p-4 space-y-3 border-t border-white/5">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-[10px] text-gray-400">支持修改任意数据和任何字段</span>
+                    </div>
+                    <textarea id="raw-db-textarea" class="w-full h-64 bg-black/60 border border-white/20 rounded-xl p-3 font-mono text-xs text-green-400 outline-none focus:border-yellow-400" placeholder="数据加载中..."></textarea>
+                    <div class="flex gap-2">
+                        <button onclick="formatRawDbText(); playAudio('click')" class="flex-1 py-2 text-xs font-bold rounded-xl border border-white/20 hover:bg-white/10 text-white">格式化代码</button>
+                        <button onclick="saveRawDbText(); playAudio('coin')" class="flex-1 btn-3d py-2 text-sm">保存并实时同步</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 5. 危险操作区域 (风琴折叠板块) -->
+            <div class="bg-black/30 border border-white/10 rounded-2xl shadow-xl backdrop-blur-md overflow-hidden">
+                <button onclick="toggleAccordion('admin-danger'); playAudio('click')" class="w-full px-4 py-3 flex justify-between items-center bg-black/20 hover:bg-black/40 text-left transition-colors">
+                    <span class="text-sm font-black text-red-400 flex items-center gap-2">
+                        <i class="fa-solid fa-triangle-exclamation"></i> 危险操作区域
+                    </span>
+                    <i id="admin-danger-icon" class="fa-solid fa-chevron-down text-xs text-red-400 transition-transform"></i>
+                </button>
+                <div id="admin-danger-content" class="hidden p-4 space-y-3 border-t border-white/5">
+                    <div class="grid grid-cols-2 gap-3" id="danger-btns-container">
+                        <button id="clear-logs-btn" onclick="clearLogs(); playAudio('click')" class="btn-3d bg-gradient-to-b from-amber-600 to-amber-900 shadow-[0_4px_10px_rgba(217,119,6,0.4)] py-2 text-xs hidden">
+                            <i class="fa-solid fa-eraser mr-1"></i> 清空操作日志
+                        </button>
+                        <button onclick="resetEntireDatabase(); playAudio('click')" class="btn-3d bg-gradient-to-b from-red-600 to-red-900 shadow-[0_4px_10px_rgba(220,38,38,0.4)] py-2 text-xs" id="reset-db-btn">
+                            <i class="fa-solid fa-trash-can mr-1"></i> 重置并清空所有数据
+                        </button>
+                    </div>
+                </div>
             </div>
         </section>
     </main>
@@ -297,22 +642,22 @@
             <i class="fa-solid fa-house nav-icon"></i><span>首页</span>
         </div>
         <div class="nav-item" id="nav-today" onclick="switchTab('today'); playAudio('click')">
-            <i class="fa-solid fa-calendar-day nav-icon"></i><span>今日</span>
+            <i class="fa-solid fa-calendar-day nav-icon"></i><span>今日赛程</span>
         </div>
         <div class="nav-item" id="nav-matches" onclick="switchTab('matches'); playAudio('click')">
-            <i class="fa-solid fa-futbol nav-icon"></i><span>赛事</span>
+            <i class="fa-solid fa-futbol nav-icon"></i><span>全部赛事</span>
         </div>
         <div class="nav-item" id="nav-stats" onclick="switchTab('stats'); playAudio('click')">
-            <i class="fa-solid fa-chart-pie nav-icon"></i><span>数据</span>
+            <i class="fa-solid fa-chart-pie nav-icon"></i><span>玩家数据</span>
         </div>
         <div class="nav-item" id="nav-players" onclick="switchTab('players'); playAudio('click')">
-            <i class="fa-solid fa-user-group nav-icon"></i><span>阵营</span>
+            <i class="fa-solid fa-user-group nav-icon"></i><span>添加玩家</span>
         </div>
         <div class="nav-item" id="nav-history" onclick="switchTab('history'); playAudio('click')">
-            <i class="fa-solid fa-clock-rotate-left nav-icon"></i><span>历史</span>
+            <i class="fa-solid fa-clock-rotate-left nav-icon"></i><span>操作历史</span>
         </div>
         <div class="nav-item" id="nav-admin" onclick="switchTab('admin'); playAudio('click')">
-            <i class="fa-solid fa-gears nav-icon"></i><span>后台</span>
+            <i class="fa-solid fa-gears nav-icon"></i><span>后台管理</span>
         </div>
     </nav>
 
@@ -354,7 +699,7 @@
             </div>
             
             <div class="p-4 bg-black/40 flex items-center justify-between shrink-0">
-                <span class="font-bold text-blue-300">本场单注金额 <i class="fa-solid fa-coins text-yellow-400"></i></span>
+                <span class="font-bold text-blue-300">本场单注积分 <i class="fa-solid fa-coins text-yellow-400"></i></span>
                 <div class="flex items-center gap-2 bg-black rounded-lg p-1 border border-white/20">
                     <span class="text-yellow-400 font-black pl-2">$</span>
                     <input type="number" id="matchStake" class="w-20 bg-transparent text-center text-white font-black text-lg outline-none" value="100">
@@ -396,6 +741,35 @@
         </div>
     </div>
 
+    <!-- 记账本弹窗 -->
+    <div id="ledgerModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden flex justify-center items-center z-50 p-4">
+        <div class="bg-[#0f172a] p-6 rounded-3xl border border-white/20 w-full max-w-sm relative shadow-2xl flex flex-col max-h-[85vh] text-center font-semibold">
+            <button onclick="closeModal('ledgerModal'); playAudio('click')" class="absolute top-4 right-4 text-white/50 hover:text-white"><i class="fa-solid fa-times text-xl"></i></button>
+            <h3 class="text-lg font-black mb-4 text-center text-yellow-400" id="ledger-title">玩家记账本</h3>
+            
+            <!-- 记账本切换选择 -->
+            <div class="flex items-center gap-2 mb-4 bg-white/5 p-1 rounded-full border border-white/10 shrink-0">
+                <button onclick="filterLedgerTab('all'); playAudio('click')" id="lt-all" class="flex-1 py-1 rounded-full text-xs font-bold transition">全部</button>
+                <button onclick="filterLedgerTab('date'); playAudio('click')" id="lt-date" class="flex-1 py-1 rounded-full text-xs font-bold transition">按日期</button>
+            </div>
+            
+            <!-- 日期过滤下拉框 -->
+            <div id="ledger-date-select-container" class="hidden mb-4 shrink-0">
+                <select id="ledger-date-select" onchange="renderLedgerDetails(); playAudio('click')" class="w-full bg-black/50 border border-white/20 rounded-xl p-2.5 text-xs text-white outline-none focus:border-yellow-400 font-bold">
+                </select>
+            </div>
+
+            <!-- 数据总览 -->
+            <div class="bg-black/30 border border-white/10 rounded-2xl p-3 mb-4 shrink-0 flex justify-between text-xs font-bold text-gray-300">
+                <div>总计场次: <span id="ledger-total-count" class="text-white font-mono">0</span></div>
+                <div>合计净额: <span id="ledger-total-profit" class="font-mono">0</span></div>
+            </div>
+
+            <!-- 详单记录 -->
+            <div id="ledger-list-container" class="flex-1 overflow-y-auto space-y-2 pr-1 min-h-[150px] text-left"></div>
+        </div>
+    </div>
+
     <!-- Web Audio API 音效合成引擎 -->
     <script>
         const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -427,12 +801,20 @@
 
     <!-- 业务逻辑引擎 -->
     <script>
+        // ==========================================
+        // 安全控制配置:
+        // SHOW_HIDDEN_ADMIN_CONTROLS 控制是否在管理台内
+        // 显示“原始数据任意修改”及“清空操作日志”区域。
+        // 如需在网页中直接显示这些板块，请将下方的 false 改为 true 即可。
+        // ==========================================
+        const SHOW_HIDDEN_ADMIN_CONTROLS = false;
+
         const flags = {
             '墨西哥':'🇲🇽','南非':'🇿🇦','韩国':'🇰🇷','捷克':'🇨🇿','加拿大':'🇨🇦','波黑':'🇧🇦','美国':'🇺🇸','巴拉圭':'🇵🇾','卡塔尔':'🇶🇦','瑞士':'🇨🇭','巴西':'🇧🇷',
-            '摩洛哥':'🇲🇦','海地':'🇭🇹','苏格兰':'🏴󠁧󠁢󠁳󠁣󠁴󠁿','澳大利亚':'🇦🇺','土耳其':'🇹🇷','德国':'🇩🇪','库拉索':'🇨🇼','科特迪瓦':'🇨🇮','厄瓜多尔':'🇪🇨','荷兰':'🇳🇱',
+            '摩洛哥':'🇲🇦','海地':'🇭🇹','苏格兰':'🇬🇧','澳大利亚':'🇦🇺','土耳其':'🇹🇷','德国':'🇩🇪','库拉索':'🇨🇼','科特迪瓦':'🇨🇮','厄瓜多尔':'🇪🇨','荷兰':'🇳🇱',
             '日本':'🇯🇵','瑞典':'🇸🇪','突尼斯':'🇹🇳','比利时':'🇧🇪','埃及':'🇪🇬','伊朗':'🇮🇷','新西兰':'🇳🇿','西班牙':'🇪🇸','佛得角':'🇨🇻','沙特阿拉伯':'🇸🇦','乌拉圭':'🇺🇾',
-            '法国':'🇫🇷','塞内加尔':'🇸🇳','伊拉克':'🇮🇶','挪威':'🇳🇴','阿根廷':'🇦🇷','阿尔及利亚':'🇩🇿','奥地利':'🇦🇹','约旦':'🇯🇴','葡萄牙':'🇵🇹','刚果(金)':'🇨🇩',
-            '乌兹别克斯坦':'🇺🇿','哥伦比亚':'🇨🇴','英格兰':'🏴󠁧󠁢󠁥󠁮󠁧󠁿','克罗地亚':'🇭🇷','加纳':'🇬🇭','巴拿马':'🇵🇦'
+            '法国':'🇫🇷','塞内加言':'🇸🇳','伊拉克':'🇮🇶','挪威':'🇳🇴','阿根廷':'🇦🇷','阿尔及利亚':'🇩🇿','奥地利':'🇦🇹','约旦':'🇯🇴','葡萄牙':'🇵🇹','刚果(金)':'🇨🇩',
+            '乌兹别克斯坦':'🇺🇿','哥伦比亚':'🇨🇴','英格兰':'🇬🇧','克罗地亚':'🇭🇷','加纳':'🇬🇭','巴拿马':'🇵🇦'
         };
         function getFlag(name) { return flags[name] || '⚽'; }
 
@@ -459,7 +841,7 @@
                 ["Group F", "6月26日 07:00", "第3轮", "达拉斯", "日本", "瑞典"], ["Group F", "6月26日 07:00", "第3轮", "堪萨斯城", "突尼斯", "荷兰"],
                 ["Group G", "6月16日 03:00", "第1轮", "西雅图", "比利时", "埃及"], ["Group G", "6月16日 09:00", "第1轮", "洛杉矶", "伊朗", "新西兰"],
                 ["Group G", "6月22日 03:00", "第2轮", "洛杉矶", "比利时", "伊朗"], ["Group G", "6月22日 09:00", "第2轮", "温哥华", "新西兰", "埃及"],
-                ["Group G", "67月27日 11:00", "第3轮", "西雅图", "埃及", "伊朗"], ["Group G", "6月27日 11:00", "第3轮", "温哥华", "新西兰", "比利时"],
+                ["Group G", "6月27日 11:00", "第3轮", "西雅图", "埃及", "伊朗"], ["Group G", "6月27日 11:00", "第3轮", "温哥华", "新西兰", "比利时"],
                 ["Group H", "6月16日 00:00", "第1轮", "亚特兰大", "西班牙", "佛得角"], ["Group H", "6月16日 06:00", "第1轮", "沙特阿拉伯", "乌拉圭"],
                 ["Group H", "6月22日 00:00", "第2轮", "亚特兰大", "西班牙", "沙特阿拉伯"], ["Group H", "6月22日 06:00", "第2轮", "迈阿密", "乌拉圭", "佛得角"],
                 ["Group H", "6月27日 08:00", "第3轮", "休斯敦", "佛得角", "沙特阿拉伯"], ["Group H", "6月27日 08:00", "第3轮", "瓜达拉哈拉", "乌拉圭", "西班牙"],
@@ -485,7 +867,7 @@
                 [89,"1/8决赛","7月05日 05:00","费城","74胜者","77胜者"], [90,"1/8决赛","7月05日 01:00","休斯敦","73胜者","75胜者"], [91,"1/8决赛","7月06日 04:00","纽约/新泽西","76胜者","78胜者"],
                 [92,"1/8决赛","7月06日 08:00","墨西哥城","79胜者","80胜者"], [93,"1/8决赛","7月07日 03:00","达拉斯","83胜者","84胜者"], [94,"1/8决赛","7月07日 08:00","西雅图","81胜者","82胜者"],
                 [95,"1/8决赛","7月08日 00:00","亚特兰大","86胜者","88胜者"], [96,"1/8决赛","7月08日 04:00","温哥华","85胜者","87胜者"],
-                [97,"1/4决赛","7月10日 04:00","波士顿","89胜者","90胜者"], [98,"1/4决赛","7月11日 03:00","洛杉矶","93胜者","94胜者"], [99,"1/4决赛","7月12日 05:00","迈阿密","91胜者","92胜者"], [100,"1/4决赛","7月12日 09:00","堪萨斯城","95胜者","96胜7"],
+                [97,"1/4决赛","7月10日 04:00","波士顿","89胜者","90胜者"], [98,"1/4决赛","7月11日 03:00","洛杉矶","93胜者","94胜者"], [99,"1/4决赛","7月12日 05:00","迈阿密","91胜者","92胜者"], [100,"1/4决赛","7月12日 09:00","堪萨斯城","95胜者","96胜者"],
                 [101,"半决赛","7月15日 03:00","达拉斯","97胜者","98胜者"], [102,"半决赛","7月16日 03:00","亚特兰大","99胜者","100胜者"],
                 [103,"季军赛","7月19日 05:00","迈阿密","半决负1","半决负2"], [104,"决赛","7月20日 03:00","纽约/新泽西","半决胜1","半决胜2"]
             ];
@@ -495,13 +877,12 @@
             return res;
         }
 
-        // 分配本设备唯一 Client ID (用于握手同步判定)
+        // 分配本设备唯一 Client ID
         const myClientId = 'device_' + Math.random().toString(36).substr(2, 9);
         let db = { players: [], matches: [], bets: {}, logs: [], lockBets15Min: false, timestamp: 0 };
         const roomId = new URLSearchParams(window.location.search).get('room') || 'public_wc2026';
-        document.getElementById('room-id-display').innerText = `房号: ${roomId}`;
 
-        // MQTT 连接架构
+        // MQTT 连接
         let mqttClient = null, isReceiving = false;
         const syncTopic = `wc_betmaster_sync_v4_${roomId}`;
 
@@ -513,7 +894,7 @@
                     mqttClient.subscribe(syncTopic); 
                     setSyncStatus(true); 
                     
-                    // 新设备主动握手机制：连接成功后立即向全局发送一个“请求同步最新信息”指令
+                    // 新设备主动握手机制
                     setTimeout(() => {
                         const syncReq = { type: "sync_request", requester: myClientId };
                         mqttClient.publish(syncTopic, JSON.stringify(syncReq));
@@ -526,11 +907,10 @@
                         
                         // 1. 处理来自新设备的握手同步请求
                         if (data.type === "sync_request") {
-                            // 若是其他设备请求，并且本设备拥有本地数据，则代替全网重播最新数据
-                            if (data.requester !== myClientId && db.players.length > 0) {
+                            if (data.requester !== myClientId && db.players && db.players.length > 0) {
                                 setTimeout(() => {
                                     broadcastData();
-                                }, Math.random() * 400); // 随机微秒延迟防碰撞
+                                }, Math.random() * 400);
                             }
                             return;
                         }
@@ -539,10 +919,40 @@
                         if (data.timestamp && data.timestamp > db.timestamp) {
                             isReceiving = true; 
                             db = data; 
+                            if (!db.players) db.players = [];
+                            if (!db.matches) db.matches = [];
+                            if (!db.bets) db.bets = {};
                             if (!db.logs) db.logs = [];
                             if (db.lockBets15Min === undefined) db.lockBets15Min = false;
+                            
+                            // 背景图动态安全轮播状态恢复
+                            if (!db.slideshow) {
+                                db.slideshow = {
+                                    urls: [
+                                        "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=1200",
+                                        "https://images.unsplash.com/photo-1543351611-58f69d7c1781?q=80&w=1200",
+                                        "https://images.unsplash.com/photo-1522778119026-d647f0596c20?q=80&w=1200"
+                                    ],
+                                    stayTime: 5000,
+                                    fadeTime: 1000,
+                                    opacity: 0.2
+                                };
+                            }
+
+                            initUISettings();
+                            
                             localStorage.setItem(`wc_db_v4_${roomId}`, JSON.stringify(db));
+                            
+                            // 更新并应用实时底层 UI 动态生成样式与交互
+                            updateDynamicStyles();
+                            syncUIInputsFromDB();
+
                             refreshAllUI(); 
+
+                            // 同步执行背景板重绘
+                            updateLocalSlideshowOpacity(db.slideshow.opacity);
+                            startSlideshowLoop();
+                            
                             setTimeout(() => isReceiving = false, 100);
                         }
                     } catch (e) { }
@@ -552,6 +962,7 @@
 
         function broadcastData() {
             if (isReceiving) return;
+            calculateAdvancedStats(); // 持久化及同步前自愈式分析，保障跨端数据在底层高度一致
             db.timestamp = Date.now(); localStorage.setItem(`wc_db_v4_${roomId}`, JSON.stringify(db));
             if (mqttClient && mqttClient.connected) mqttClient.publish(syncTopic, JSON.stringify(db), { retain: true });
         }
@@ -565,17 +976,21 @@
         // 全局标签追踪与默认今日日期
         let currentTab = 'dashboard';
         let activeTodayDate = '';
+        let activeHistoryDate = 'all'; // 日志默认按全部展示
 
         // 日期处理助手
         function getUniqueDates() {
             const dates = new Set();
             db.matches.forEach(m => {
-                const match = m.date.match(/\d+月\d+日/);
-                if (match) dates.add(match[0]);
+                if (m && m.date) {
+                    const match = m.date.match(/\d+月\d+日/);
+                    if (match) dates.add(match[0]);
+                }
             });
             return Array.from(dates).sort((a, b) => {
                 const ma = a.match(/(\d+)月(\d+)日/);
                 const mb = b.match(/(\d+)月(\d+)日/);
+                if (!ma || !mb) return 0;
                 const da = parseInt(ma[1]) * 100 + parseInt(ma[2]);
                 const dbVal = parseInt(mb[1]) * 100 + parseInt(mb[2]);
                 return da - dbVal;
@@ -590,6 +1005,21 @@
             const d = new Date(2026, month, day);
             const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
             return weekdays[d.getDay()];
+        }
+
+        // 提取日志里的所有唯一日期 (格式：MM-DD)
+        function getLogDates() {
+            const dates = new Set();
+            if (!db.logs) return [];
+            db.logs.forEach(log => {
+                if (log && log.time) {
+                    const match = log.time.match(/^(\d{4})-(\d{2})-(\d{2})/);
+                    if (match) {
+                        dates.add(`${match[2]}-${match[3]}`);
+                    }
+                }
+            });
+            return Array.from(dates).sort();
         }
 
         // 追加日志工具函数
@@ -609,13 +1039,12 @@
                 time: timeStr,
                 text: text
             });
-            // 保持日志最多200条以防数据包过大
             if (db.logs.length > 200) {
                 db.logs = db.logs.slice(0, 200);
             }
         }
 
-        // 解析日期并判断是否在开赛15分钟之内或已过开赛时间
+        // 解析日期并判断是否在开赛15分钟之内
         function isMatchWithin15Mins(matchDateStr) {
             try {
                 const regex = /(\d+)月(\d+)日\s+(\d+):(\d+)/;
@@ -626,14 +1055,12 @@
                 const hours = parseInt(match[3]);
                 const minutes = parseInt(match[4]);
                 
-                // 默认 2026 年
                 const matchDate = new Date(2026, month, day, hours, minutes);
                 const now = new Date();
                 
                 const diffMs = matchDate.getTime() - now.getTime();
                 const diffMins = diffMs / 1000 / 60;
                 
-                // 赛事开赛前15分钟，或者已经开赛 (即 diffMins <= 15) 返回 true
                 return diffMins <= 15;
             } catch (e) {
                 return false;
@@ -675,6 +1102,16 @@
             }
         }
 
+        // 密码核验添加玩家
+        function triggerAddPlayerWithPassword() {
+            const pwd = prompt("请输入安全验证密码以添加新玩家：");
+            if (pwd !== "260612") {
+                alert("密码错误，安全核验失败！");
+                return;
+            }
+            openModal('addPlayerModal');
+        }
+
         // 安全密码删除玩家
         function deletePlayer(playerId) {
             const p = db.players.find(x => x.id === playerId);
@@ -702,11 +1139,56 @@
         // 初始化
         window.onload = () => {
             initMQTT();
-            try { const saved = localStorage.getItem(`wc_db_v4_${roomId}`); if (saved) db = JSON.parse(saved); } catch(e) {}
-            if (!db.matches || db.matches.length < 100) { db.matches = generateMatches(); broadcastData(); }
+            try { 
+                const saved = localStorage.getItem(`wc_db_v4_${roomId}`); 
+                if (saved) {
+                    db = JSON.parse(saved); 
+                }
+            } catch(e) {}
+            
+            // 安全性初始化修复：确保基础属性始终存在
+            if (!db || typeof db !== 'object') {
+                db = { players: [], matches: [], bets: {}, logs: [], lockBets15Min: false, timestamp: 0 };
+            }
+            if (!db.players) db.players = [];
+            if (!db.matches || db.matches.length < 104) { 
+                db.matches = generateMatches(); 
+            }
+            if (!db.bets) db.bets = {};
             if (!db.logs) db.logs = [];
             if (db.lockBets15Min === undefined) db.lockBets15Min = false;
             
+            // 背景轮播图默认值挂载
+            if (!db.slideshow) {
+                db.slideshow = {
+                    urls: [
+                        "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=1200",
+                        "https://images.unsplash.com/photo-1543351611-58f69d7c1781?q=80&w=1200",
+                        "https://images.unsplash.com/photo-1522778119026-d647f0596c20?q=80&w=1200"
+                    ],
+                    stayTime: 5000,
+                    fadeTime: 1000,
+                    opacity: 0.2
+                };
+            }
+            if (!db.timestamp) db.timestamp = Date.now();
+            
+            // 房号显示元素设置
+            document.getElementById('room-id-display').innerText = `房号: ${roomId}`;
+            
+            initUISettings();
+
+            // 安全控制隐藏/显示
+            if (!SHOW_HIDDEN_ADMIN_CONTROLS) {
+                document.getElementById('raw-db-card')?.classList.add('hidden');
+                document.getElementById('clear-logs-btn')?.classList.add('hidden');
+                document.getElementById('reset-db-btn')?.classList.add('col-span-2');
+            } else {
+                document.getElementById('raw-db-card')?.classList.remove('hidden');
+                document.getElementById('clear-logs-btn')?.classList.remove('hidden');
+                document.getElementById('reset-db-btn')?.classList.remove('col-span-2');
+            }
+
             // 初始化今日日期
             const uniqueDates = getUniqueDates();
             const today = new Date();
@@ -730,7 +1212,15 @@
                 activeTodayDate = nearestDate || uniqueDates[0];
             }
 
+            // 初始化并渲染底层动态 CSS 设定
+            updateDynamicStyles();
+            syncUIInputsFromDB();
+
+            calculateAdvancedStats();
             refreshAllUI();
+
+            // 启动背景动态轮播
+            initSlideshow();
         };
 
         // 按需渲染控制中心
@@ -752,10 +1242,15 @@
                 loadRawDbToTextarea();
                 const chk = document.getElementById('lock-bets-toggle');
                 if (chk) chk.checked = !!db.lockBets15Min;
+                
+                // 加载背景及 UI 设置到控制面板
+                loadSlideshowSettingsToAdmin();
+                syncUIInputsFromDB();
             }
         }
 
         function refreshAllUI() { 
+            calculateAdvancedStats(); // 全局刷新时首行重绘分析，实现完美实时闭环
             renderActiveTabUI(); 
         }
 
@@ -773,32 +1268,169 @@
             if (targetView) targetView.classList.remove('hidden');
             if (targetNav) targetNav.classList.add('active');
             
+            // 房号和云同步显示切换逻辑：仅在后台管理(admin)中显示
+            const syncHeader = document.getElementById('sync-info-header');
+            if (syncHeader) {
+                if (tabId === 'admin') {
+                    syncHeader.classList.remove('hidden');
+                } else {
+                    syncHeader.classList.add('hidden');
+                }
+            }
+            
             renderActiveTabUI();
         }
 
         function openModal(id) { document.getElementById(id).classList.remove('hidden'); document.getElementById(id).children[0].classList.add('modal-enter'); }
         function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
 
-        // --- 核心底层计算逻辑：高级数据统计 (连胜/连败等) ---
+        // --- 核心底层计算逻辑 (动态计算引擎) ---
         function calculateAdvancedStats() {
+            if (!db.players) return;
+            
             db.players.forEach(p => {
-                p.currentStreak = 0; p.maxWinStreak = 0; p.maxLossStreak = 0; p.netWins = 0;
-                let currentW = 0, currentL = 0;
-                
-                db.matches.filter(m => m.status === 'finished').sort((a,b)=>a.id-b.id).forEach(m => {
+                // 重置基础计算字段
+                p.totalInvest = 0;
+                p.balance = 0;
+                p.correctGuesses = 0;
+                p.totalBets = 0;
+                p.netWins = 0;
+                p.currentStreak = 0;
+                p.maxWinStreak = 0;
+                p.maxLossStreak = 0;
+                p.biggestWin = 0;
+                p.biggestLoss = 0;
+
+                // 用于球队维度的累计汇总临时容器
+                const teamProfits = {};          // 球队净利润，key: 球队名, value: 累积获益/亏损
+                const correctWins = {};          // 猜胜成功的球队，key: 球队名, value: 正确猜胜次数
+                const correctLosses = {};        // 猜负成功的球队，key: 球队名, value: 正确猜负次数
+
+                let currentW = 0;
+                let currentL = 0;
+
+                // 筛选所有已完赛的比赛并按 ID 排序（确保连胜连输顺序符合时间轴）
+                db.matches.filter(m => m.status === 'finished').sort((a, b) => a.id - b.id).forEach(m => {
                     const b = db.bets[m.id];
                     if (b && b.predictions && b.predictions[p.id] && b.predictions[p.id] !== 'none') {
-                        if (b.predictions[p.id] === m.result) {
-                            currentW++; currentL = 0; p.netWins++;
+                        p.totalBets++;
+                        p.totalInvest += b.stake;
+                        p.balance -= b.stake; // 先假定支出本金
+
+                        const prediction = b.predictions[p.id]; // 'home', 'draw', 'away'
+                        const isCorrect = (prediction === m.result);
+
+                        // 计算单场赛事总参赌信息及赢家分成
+                        let matchParticipants = [];
+                        let matchWinners = [];
+                        for (let pid in b.predictions) {
+                            if (b.predictions[pid] !== 'none') {
+                                matchParticipants.push(pid);
+                                if (b.predictions[pid] === m.result) {
+                                    matchWinners.push(pid);
+                                }
+                            }
+                        }
+
+                        let pool = matchParticipants.length * b.stake;
+                        let winAmt = 0;
+                        let netProfit = -b.stake; // 该玩家在这场比赛里的最终盈亏，初始为负本金
+
+                        if (isCorrect) {
+                            winAmt = pool / matchWinners.length;
+                            netProfit = winAmt - b.stake;
+                            p.balance += winAmt; // 返还赢取的奖金
+                            p.correctGuesses++;
+
+                            currentW++;
+                            currentL = 0;
+                            p.netWins++;
                             p.maxWinStreak = Math.max(p.maxWinStreak, currentW);
                             p.currentStreak = currentW;
+                            p.biggestWin = Math.max(p.biggestWin, netProfit);
                         } else {
-                            currentL++; currentW = 0; p.netWins--;
+                            currentL++;
+                            currentW = 0;
+                            p.netWins--;
                             p.maxLossStreak = Math.max(p.maxLossStreak, currentL);
                             p.currentStreak = -currentL;
+                            p.biggestLoss = Math.max(p.biggestLoss, b.stake);
+                        }
+
+                        // --- 深度球队玄学属性计算 ---
+                        // A. 统计每个被下注球队的利润累积情况
+                        if (prediction === 'home') {
+                            teamProfits[m.home] = (teamProfits[m.home] || 0) + netProfit;
+                        } else if (prediction === 'away') {
+                            teamProfits[m.away] = (teamProfits[m.away] || 0) + netProfit;
+                        } else if (prediction === 'draw') {
+                            // 平局则双方球队各承担一半的盈亏责任
+                            teamProfits[m.home] = (teamProfits[m.home] || 0) + (netProfit / 2);
+                            teamProfits[m.away] = (teamProfits[m.away] || 0) + (netProfit / 2);
+                        }
+
+                        // B. 猜胜最多的球队（买它胜并且真的赢了）
+                        if (isCorrect) {
+                            if (prediction === 'home') {
+                                correctWins[m.home] = (correctWins[m.home] || 0) + 1;
+                            } else if (prediction === 'away') {
+                                correctWins[m.away] = (correctWins[m.away] || 0) + 1;
+                            }
+                        }
+
+                        // C. 猜负最多的球队
+                        if (isCorrect) {
+                            if (prediction === 'away') {
+                                correctLosses[m.home] = (correctLosses[m.home] || 0) + 1; // 买客胜且猜中，意为主队[m.home]被成功猜负
+                            } else if (prediction === 'home') {
+                                correctLosses[m.away] = (correctLosses[m.away] || 0) + 1; // 买主胜且猜中，客队[m.away]被成功猜负
+                            }
                         }
                     }
                 });
+
+                // --- 球队极值运算与展示文本格式化 ---
+                let luckyTeam = '无';
+                let luckyVal = -Infinity;
+                let unluckyTeam = '无';
+                let unluckyVal = Infinity;
+
+                for (let t in teamProfits) {
+                    const profit = teamProfits[t];
+                    if (profit > 0 && profit > luckyVal) {
+                        luckyVal = profit;
+                        luckyTeam = t;
+                    }
+                    if (profit < 0 && profit < unluckyVal) {
+                        unluckyVal = profit;
+                        unluckyTeam = t;
+                    }
+                }
+
+                p.luckyTeamStr = luckyTeam !== '无' ? `${luckyTeam} (+$${luckyVal.toFixed(0)})` : '无';
+                p.unluckyTeamStr = unluckyTeam !== '无' ? `${unluckyTeam} (-$${Math.abs(unluckyVal).toFixed(0)})` : '无';
+
+                // 最多猜胜
+                let maxCWTeam = '无';
+                let maxCWCount = 0;
+                for (let t in correctWins) {
+                    if (correctWins[t] > maxCWCount) {
+                        maxCWCount = correctWins[t];
+                        maxCWTeam = t;
+                    }
+                }
+                p.mostWinPredictStr = maxCWTeam !== '无' ? `${maxCWTeam} (${maxCWCount}次)` : '无';
+
+                // 最多猜负
+                let maxCLTeam = '无';
+                let maxCLCount = 0;
+                for (let t in correctLosses) {
+                    if (correctLosses[t] > maxCLCount) {
+                        maxCLCount = correctLosses[t];
+                        maxCLTeam = t;
+                    }
+                }
+                p.mostLossPredictStr = maxCLTeam !== '无' ? `${maxCLTeam} (${maxCLCount}次)` : '无';
             });
         }
 
@@ -819,7 +1451,7 @@
                               `<span class="text-white/50 font-black text-lg w-6 text-center">${i+1}</span>`;
                 
                 html += `
-                    <div class="bg-black/40 backdrop-blur-md rounded-2xl p-3 flex items-center gap-3 border border-white/10 shadow-lg relative overflow-hidden">
+                    <div class="leaderboard-card-item marquee-lb backdrop-blur-md rounded-2xl p-3 flex items-center gap-3 shadow-lg relative overflow-hidden">
                         ${i===0 ? '<div class="absolute inset-0 bg-gradient-to-r from-yellow-500/20 to-transparent"></div>' : ''}
                         <div class="w-8 text-center z-10">${rankStr}</div>
                         <img src="${p.avatar}" class="w-12 h-12 rounded-full border-2 border-white/20 z-10 bg-black/50 object-cover">
@@ -876,9 +1508,12 @@
             }, 100);
         }
 
+        const colorClasses = ['match-card-item-bg-yellow', 'match-card-item-bg-blue', 'match-card-item-bg-red', 'match-card-item-bg-green'];
+
         function renderTodayMatches() {
             const container = document.getElementById('today-matches-container');
             const list = db.matches.filter(m => {
+                if (!m || !m.date) return false;
                 const match = m.date.match(/\d+月\d+日/);
                 return match && match[0] === activeTodayDate;
             });
@@ -895,15 +1530,16 @@
                 let parts = Object.values(bet.predictions).filter(v => v !== 'none').length;
                 let pool = (bet.stake || 0) * parts;
                 
-                let themeClass = isFin ? 'bg-gray-300' : colorClasses[index % colorClasses.length];
+                let themeClass = isFin ? 'match-card-item-bg-gray' : colorClasses[index % colorClasses.length];
 
                 let winnerHTML = '';
-                if(isFin && m.winners && m.winners.length > 0) {
-                    m.winners.slice(0, 4).forEach(pid => {
+                const matchWinners = m.winners || [];
+                if(isFin && matchWinners.length > 0) {
+                    matchWinners.slice(0, 4).forEach(pid => {
                         let p = db.players.find(x => x.id === pid);
                         if(p) winnerHTML += `<img src="${p.avatar}" class="inline-block h-6 w-6 rounded-full ring-2 ring-white object-cover bg-black">`;
                     });
-                    if(m.winners.length > 4) winnerHTML += `<div class="inline-flex items-center justify-center h-6 w-6 rounded-full bg-white ring-2 ring-gray-300 text-[10px] font-bold text-black">+${m.winners.length-4}</div>`;
+                    if(matchWinners.length > 4) winnerHTML += `<div class="inline-flex items-center justify-center h-6 w-6 rounded-full bg-white ring-2 ring-gray-300 text-[10px] font-bold text-black">+${matchWinners.length-4}</div>`;
                 } else if(isFin) winnerHTML = `<span class="text-xs text-black/50 font-bold">无人生还</span>`;
 
                 let centerUI = isFin 
@@ -911,7 +1547,7 @@
                     : `<div class="text-xs font-black text-black/40 italic">VS</div>`;
 
                 html += `
-                    <div class="match-card ${themeClass} p-3 flex flex-col gap-2">
+                    <div class="match-card match-card-item marquee-mc ${themeClass} p-3 flex flex-col gap-2">
                         <div class="flex justify-between items-center text-[10px] font-bold text-black/60 border-b border-black/10 pb-1">
                             <div class="flex gap-2">
                                 <span class="bg-black/10 px-2 py-0.5 rounded">${m.group}</span>
@@ -926,7 +1562,7 @@
                             <!-- 主队区 -->
                             <div class="flex flex-col items-end w-[40%] justify-center">
                                 <div class="flex items-center gap-1.5 justify-end w-full">
-                                    <input type="text" placeholder="让球" value="${m.homeHandicap || ''}" onchange="updateHandicap(${m.id}, 'home', this.value)" class="w-11 text-[9px] text-center bg-black/15 hover:bg-black/25 focus:bg-black/30 border border-black/10 rounded px-1 py-0.5 text-black font-bold outline-none placeholder-black/30 truncate">
+                                    <input type="text" placeholder="让球" value="${m.homeHandicap || ''}" onchange="updateHandicap(${m.id}, 'home', this.value)" ${isFin ? 'disabled' : ''} class="w-11 text-[9px] text-center bg-black/15 hover:bg-black/25 focus:bg-black/30 border border-black/10 rounded px-1 py-0.5 text-black font-bold outline-none placeholder-black/30 truncate">
                                     <span class="font-black text-xs md:text-sm truncate drop-shadow-md text-right flex-1">${m.home}</span>
                                     <div class="soccer-icon shrink-0">${getFlag(m.home)}</div>
                                 </div>
@@ -939,17 +1575,21 @@
                                 <div class="flex items-center gap-1.5 justify-start w-full">
                                     <div class="soccer-icon shrink-0">${getFlag(m.away)}</div>
                                     <span class="font-black text-xs md:text-sm truncate drop-shadow-md text-left flex-1">${m.away}</span>
-                                    <input type="text" placeholder="让球" value="${m.awayHandicap || ''}" onchange="updateHandicap(${m.id}, 'away', this.value)" class="w-11 text-[9px] text-center bg-black/15 hover:bg-black/25 focus:bg-black/30 border border-black/10 rounded px-1 py-0.5 text-black font-bold outline-none placeholder-black/30 truncate">
+                                    <input type="text" placeholder="让球" value="${m.awayHandicap || ''}" onchange="updateHandicap(${m.id}, 'away', this.value)" ${isFin ? 'disabled' : ''} class="w-11 text-[9px] text-center bg-black/15 hover:bg-black/25 focus:bg-black/30 border border-black/10 rounded px-1 py-0.5 text-black font-bold outline-none placeholder-black/30 truncate">
                                 </div>
                             </div>
                         </div>
 
                         <div class="flex justify-between items-center pt-1">
                             <div class="flex -space-x-2 overflow-hidden min-w-[70px]">${winnerHTML}</div>
-                            <div class="text-xs font-black text-black/60 text-center flex-1">奖池: <span class="text-orange-600">$${pool}</span></div>
-                            <div class="flex shrink-0">
+                            <div class="text-xs font-black text-black/60 text-center flex-1">奖池: <span class="text-yellow-600">$${pool}</span></div>
+                            <div class="flex shrink-0 items-center">
                                 ${isFin 
-                                    ? `<button disabled class="px-4 py-1.5 text-xs rounded-full text-white/80 bg-black/30 font-bold">已结算</button>`
+                                    ? `<div class="flex flex-col items-end mr-1.5 text-right">
+                                           <span class="px-2 py-0.5 rounded-full text-[10px] text-white bg-black/40 font-bold whitespace-nowrap">已结算 | ${m.score || m.result.replace('home','主胜').replace('away','客胜').replace('draw','平局')}</span>
+                                           <span class="text-[9px] text-black/60 font-extrabold mt-0.5">让: 主(${m.homeHandicap || '无'}) 客(${m.awayHandicap || '无'})</span>
+                                       </div>
+                                       <button onclick="triggerReSettle(${m.id}); playAudio('click')" class="btn-3d bg-gradient-to-b from-yellow-500 to-amber-700 shadow-md px-2.5 py-1 text-[10px] font-bold">修改赛果</button>`
                                     : `<button onclick="openBetModal(${m.id}); playAudio('click')" class="btn-3d btn-blue px-3 py-1.5 text-xs mr-1">下注</button>
                                        <button onclick="openSettleModal(${m.id}); playAudio('click')" class="btn-3d px-3 py-1.5 text-xs">开奖</button>`
                                 }
@@ -958,6 +1598,12 @@
                     </div>`;
             });
             container.innerHTML = html;
+        }
+
+        function selectTodayDate(dStr) {
+            activeTodayDate = dStr;
+            renderTodayDateSelector();
+            renderTodayMatches();
         }
 
         // --- View 3: 赛事中心 ---
@@ -969,8 +1615,6 @@
             document.getElementById(map[f]).className = 'flex-1 py-1.5 rounded-full text-xs font-bold bg-white text-blue-900 shadow-md transition';
             renderMatches(); 
         }
-
-        const colorClasses = ['card-yellow', 'card-blue', 'card-red', 'card-green'];
 
         function renderMatches() {
             const c = document.getElementById('matches-container');
@@ -986,15 +1630,16 @@
                 let parts = Object.values(bet.predictions).filter(v => v !== 'none').length;
                 let pool = (bet.stake || 0) * parts;
                 
-                let themeClass = isFin ? 'bg-gray-300' : colorClasses[index % colorClasses.length];
+                let themeClass = isFin ? 'match-card-item-bg-gray' : colorClasses[index % colorClasses.length];
 
                 let winnerHTML = '';
-                if(isFin && m.winners && m.winners.length > 0) {
-                    m.winners.slice(0, 4).forEach(pid => {
+                const matchWinners = m.winners || [];
+                if(isFin && matchWinners.length > 0) {
+                    matchWinners.slice(0, 4).forEach(pid => {
                         let p = db.players.find(x => x.id === pid);
                         if(p) winnerHTML += `<img src="${p.avatar}" class="inline-block h-6 w-6 rounded-full ring-2 ring-white object-cover bg-black">`;
                     });
-                    if(m.winners.length > 4) winnerHTML += `<div class="inline-flex items-center justify-center h-6 w-6 rounded-full bg-white ring-2 ring-gray-300 text-[10px] font-bold text-black">+${m.winners.length-4}</div>`;
+                    if(matchWinners.length > 4) winnerHTML += `<div class="inline-flex items-center justify-center h-6 w-6 rounded-full bg-white ring-2 ring-gray-300 text-[10px] font-bold text-black">+${matchWinners.length-4}</div>`;
                 } else if(isFin) winnerHTML = `<span class="text-xs text-black/50 font-bold">无人生还</span>`;
 
                 let centerUI = isFin 
@@ -1002,7 +1647,7 @@
                     : `<div class="text-xs font-black text-black/40 italic">VS</div>`;
 
                 html += `
-                    <div class="match-card ${themeClass} p-3 flex flex-col gap-2">
+                    <div class="match-card match-card-item marquee-mc ${themeClass} p-3 flex flex-col gap-2">
                         <div class="flex justify-between items-center text-[10px] font-bold text-black/60 border-b border-black/10 pb-1">
                             <div class="flex gap-2">
                                 <span class="bg-black/10 px-2 py-0.5 rounded">${m.group}</span>
@@ -1017,7 +1662,7 @@
                             <!-- 主队区 -->
                             <div class="flex flex-col items-end w-[40%] justify-center">
                                 <div class="flex items-center gap-1.5 justify-end w-full">
-                                    <input type="text" placeholder="让球" value="${m.homeHandicap || ''}" onchange="updateHandicap(${m.id}, 'home', this.value)" class="w-11 text-[9px] text-center bg-black/15 hover:bg-black/25 focus:bg-black/30 border border-black/10 rounded px-1 py-0.5 text-black font-bold outline-none placeholder-black/30 truncate">
+                                    <input type="text" placeholder="让球" value="${m.homeHandicap || ''}" onchange="updateHandicap(${m.id}, 'home', this.value)" ${isFin ? 'disabled' : ''} class="w-11 text-[9px] text-center bg-black/15 hover:bg-black/25 focus:bg-black/30 border border-black/10 rounded px-1 py-0.5 text-black font-bold outline-none placeholder-black/30 truncate">
                                     <span class="font-black text-xs md:text-sm truncate drop-shadow-md text-right flex-1">${m.home}</span>
                                     <div class="soccer-icon shrink-0">${getFlag(m.home)}</div>
                                 </div>
@@ -1030,17 +1675,21 @@
                                 <div class="flex items-center gap-1.5 justify-start w-full">
                                     <div class="soccer-icon shrink-0">${getFlag(m.away)}</div>
                                     <span class="font-black text-xs md:text-sm truncate drop-shadow-md text-left flex-1">${m.away}</span>
-                                    <input type="text" placeholder="让球" value="${m.awayHandicap || ''}" onchange="updateHandicap(${m.id}, 'away', this.value)" class="w-11 text-[9px] text-center bg-black/15 hover:bg-black/25 focus:bg-black/30 border border-black/10 rounded px-1 py-0.5 text-black font-bold outline-none placeholder-black/30 truncate">
+                                    <input type="text" placeholder="让球" value="${m.awayHandicap || ''}" onchange="updateHandicap(${m.id}, 'away', this.value)" ${isFin ? 'disabled' : ''} class="w-11 text-[9px] text-center bg-black/15 hover:bg-black/25 focus:bg-black/30 border border-black/10 rounded px-1 py-0.5 text-black font-bold outline-none placeholder-black/30 truncate">
                                 </div>
                             </div>
                         </div>
 
                         <div class="flex justify-between items-center pt-1">
                             <div class="flex -space-x-2 overflow-hidden min-w-[70px]">${winnerHTML}</div>
-                            <div class="text-xs font-black text-black/60 text-center flex-1">奖池: <span class="text-orange-600">$${pool}</span></div>
-                            <div class="flex shrink-0">
+                            <div class="text-xs font-black text-black/60 text-center flex-1">奖池: <span class="text-yellow-600">$${pool}</span></div>
+                            <div class="flex shrink-0 items-center">
                                 ${isFin 
-                                    ? `<button disabled class="px-4 py-1.5 text-xs rounded-full text-white/80 bg-black/30 font-bold">已结算</button>`
+                                    ? `<div class="flex flex-col items-end mr-1.5 text-right">
+                                           <span class="px-2 py-0.5 rounded-full text-[10px] text-white bg-black/40 font-bold whitespace-nowrap">已结算 | ${m.score || m.result.replace('home','主胜').replace('away','客胜').replace('draw','平局')}</span>
+                                           <span class="text-[9px] text-black/60 font-extrabold mt-0.5">让: 主(${m.homeHandicap || '无'}) 客(${m.awayHandicap || '无'})</span>
+                                       </div>
+                                       <button onclick="triggerReSettle(${m.id}); playAudio('click')" class="btn-3d bg-gradient-to-b from-yellow-500 to-amber-700 shadow-md px-2.5 py-1 text-[10px] font-bold">修改赛果</button>`
                                     : `<button onclick="openBetModal(${m.id}); playAudio('click')" class="btn-3d btn-blue px-3 py-1.5 text-xs mr-1">下注</button>
                                        <button onclick="openSettleModal(${m.id}); playAudio('click')" class="btn-3d px-3 py-1.5 text-xs">开奖</button>`
                                 }
@@ -1055,61 +1704,148 @@
         function renderPlayerStatsList() {
             calculateAdvancedStats();
             const c = document.getElementById('stats-list-container');
-            if(db.players.length === 0) { c.innerHTML = '<div class="text-center text-white/50">暂无数据</div>'; return; }
+            if(db.players.length === 0) { 
+                c.innerHTML = '<div class="text-center text-white/50 py-10 text-sm">暂无数据，请先前往「阵营」添加玩家</div>'; 
+                return; 
+            }
             
             let html = '';
-            [...db.players].sort((a,b)=>b.balance-a.balance).forEach(p => {
+            [...db.players].sort((a,b)=>b.balance-a.balance).forEach((p, idx) => {
                 let roi = p.totalInvest > 0 ? ((p.balance / p.totalInvest) * 100).toFixed(1) : 0;
-                let avgBet = p.totalBets > 0 ? (p.totalInvest / p.totalBets).toFixed(0) : 0;
                 
-                let tStats = p.teamStats || {}, bestT = '-', worstT = '-', maxP = 0, minP = 0;
-                for(let t in tStats) { 
-                    if(tStats[t] > maxP) { maxP = tStats[t]; bestT = t; } 
-                    if(tStats[t] < minP) { minP = tStats[t]; worstT = t; } 
-                }
+                let roiClass = roi >= 0 ? 'text-green-400' : 'text-red-400';
+                let balanceClass = p.balance >= 0 ? 'text-green-400' : 'text-red-400';
+                let balanceSign = p.balance >= 0 ? '+' : '';
                 
-                let streakText = p.currentStreak > 0 ? `<span class="text-red-400">${p.currentStreak}连胜🔥</span>` : 
-                                 (p.currentStreak < 0 ? `<span class="text-green-400">${Math.abs(p.currentStreak)}连败❄️</span>` : '无');
-
+                let winRate = p.totalBets > 0 ? Math.round(p.correctGuesses / p.totalBets * 100) : 0;
+                
+                let winStreakText = p.maxWinStreak > 0 ? `${p.maxWinStreak} 局` : '0 局';
+                let lossStreakText = p.maxLossStreak > 0 ? `${p.maxLossStreak} 局` : '0 局';
+                
                 html += `
-                    <div class="bg-black/30 border border-white/10 rounded-2xl p-4 shadow-xl backdrop-blur-md">
-                        <!-- Header -->
-                        <div class="flex items-center gap-3 mb-4 pb-3 border-b border-white/10">
-                            <img src="${p.avatar}" class="w-14 h-14 rounded-full border-2 border-neonBlue bg-black object-cover">
-                            <div class="flex-1">
-                                <h3 class="text-xl font-black text-white">${p.name}</h3>
-                                <p class="text-xs text-white/60 mt-1">总投资: $${p.totalInvest}</p>
+                    <div class="stats-card-item marquee-st border border-white/10 rounded-2xl p-4 shadow-xl backdrop-blur-md space-y-4">
+                        <!-- 头像及名字，净利润大字醒目呈现 -->
+                        <div class="flex items-center gap-3 pb-3 border-b border-white/10">
+                            <div class="relative">
+                                <img src="${p.avatar}" class="w-14 h-14 rounded-full border-2 border-yellow-400 bg-black object-cover shadow-md">
+                                <span class="absolute -top-1 -left-1 bg-yellow-400 text-blue-950 font-black text-[10px] px-1.5 py-0.5 rounded-full shadow">#${idx + 1}</span>
                             </div>
-                            <div class="text-right">
-                                <p class="text-[10px] text-white/50 mb-0.5">净利润</p>
-                                <p class="${p.balance>=0?'text-green-400':'text-red-400'} font-black text-2xl font-mono">${p.balance>=0?'+':''}${p.balance.toFixed(0)}</p>
+                            <div class="flex-1 min-w-0">
+                                <h3 class="text-lg font-black text-white truncate">${p.name}</h3>
+                                <div class="flex gap-1.5 mt-1">
+                                    <span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                                        胜率 ${winRate}%
+                                    </span>
+                                    <span class="px-1.5 py-0.5 rounded text-[9px] font-bold ${roi >= 0 ? 'bg-green-500/20 text-green-300 border-green-500/30' : 'bg-red-500/20 text-red-300 border-red-500/30'} border">
+                                        ROI ${roi}%
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="text-right shrink-0">
+                                <p class="text-[9px] text-white/50 mb-0.5 font-bold uppercase tracking-wider">净利润 (Net Profit)</p>
+                                <p class="${balanceClass} font-mono font-black text-2xl tracking-tight drop-shadow-sm mb-1.5">
+                                    ${balanceSign}${p.balance.toFixed(0)}
+                                </p>
+                                <button onclick="openLedger('${p.id}'); playAudio('click')" class="btn-3d bg-gradient-to-b from-cyan-500 to-blue-800 shadow-sm px-2.5 py-1 text-[10px] font-bold">
+                                    <i class="fa-solid fa-book mr-1"></i>记账本
+                                </button>
                             </div>
                         </div>
                         
-                        <!-- Grid 核心数据 -->
-                        <div class="grid grid-cols-3 gap-2 mb-3">
-                            <div class="data-card text-center"><p class="text-[10px] text-white/50">ROI 回报率</p><p class="text-sm font-black mt-1 ${roi>=0?'text-green-400':'text-red-400'}">${roi}%</p></div>
-                            <div class="data-card text-center"><p class="text-[10px] text-white/50">胜率</p><p class="text-sm font-black mt-1 text-blue-300">${p.totalBets>0?Math.round(p.correctGuesses/p.totalBets*100):0}%</p></div>
-                            <div class="data-card text-center"><p class="text-[10px] text-white/50">净胜场</p><p class="text-sm font-black mt-1 ${p.netWins>=0?'text-yellow-400':'text-gray-400'}">${p.netWins>0?'+':''}${p.netWins||0}</p></div>
-                        </div>
-                        
-                        <!-- Grid 进阶数据 -->
-                        <div class="grid grid-cols-4 gap-2 mb-3">
-                            <div class="bg-white/5 rounded-lg p-2 text-center"><p class="text-[9px] text-white/40">当前状态</p><p class="text-xs font-bold mt-1">${streakText}</p></div>
-                            <div class="bg-white/5 rounded-lg p-2 text-center"><p class="text-[9px] text-white/40">最高连胜</p><p class="text-xs font-bold mt-1 text-red-300">${p.maxWinStreak||0}</p></div>
-                            <div class="bg-white/5 rounded-lg p-2 text-center"><p class="text-[9px] text-white/40">单注均额</p><p class="text-xs font-bold mt-1 text-white">$${avgBet}</p></div>
-                            <div class="bg-white/5 rounded-lg p-2 text-center"><p class="text-[9px] text-white/40">最大盈利</p><p class="text-xs font-bold mt-1 text-green-300">+$${p.biggestWin||0}</p></div>
+                        <!-- 核心表现数据 -->
+                        <div>
+                            <p class="text-[10px] text-yellow-400/80 font-black mb-2 flex items-center gap-1.5 uppercase tracking-wider">
+                                <i class="fa-solid fa-chart-bar text-[11px]"></i> 核心表现数据
+                            </p>
+                            <div class="grid grid-cols-4 gap-2">
+                                <div class="bg-white/5 rounded-xl p-2 text-center border border-white/5">
+                                    <p class="text-[9px] text-white/40 font-bold">总投资</p>
+                                    <p class="text-sm font-extrabold text-white font-mono mt-0.5">$${p.totalInvest}</p>
+                                </div>
+                                <div class="bg-white/5 rounded-xl p-2 text-center border border-white/5">
+                                    <p class="text-[9px] text-white/40 font-bold">参与局数</p>
+                                    <p class="text-sm font-extrabold text-blue-300 font-mono mt-0.5">${p.totalBets} 局</p>
+                                </div>
+                                <div class="bg-white/5 rounded-xl p-2 text-center border border-white/5">
+                                    <p class="text-[9px] text-white/40 font-bold">回报率</p>
+                                    <p class="text-sm font-extrabold ${roiClass} font-mono mt-0.5">${roi}%</p>
+                                </div>
+                                <div class="bg-white/5 rounded-xl p-2 text-center border border-white/5">
+                                    <p class="text-[9px] text-white/40 font-bold">胜率</p>
+                                    <p class="text-sm font-extrabold text-yellow-400 font-mono mt-0.5">${winRate}%</p>
+                                </div>
+                            </div>
                         </div>
 
-                        <!-- 趣味底栏 -->
-                        <div class="flex gap-2">
-                            <div class="flex-1 bg-gradient-to-r from-red-900/40 to-transparent p-2 rounded-lg border border-red-500/20">
-                                <p class="text-[9px] text-red-300 mb-0.5"><i class="fa-solid fa-fire"></i> 幸运星 (赢最多)</p>
-                                <p class="text-xs font-black text-white truncate">${maxP>0?bestT:'无'}</p>
+                        <!-- 进阶状态分析 -->
+                        <div class="grid grid-cols-2 gap-2">
+                            <!-- 连击区 -->
+                            <div class="bg-white/5 rounded-xl p-2.5 border border-white/5 flex flex-col justify-between">
+                                <p class="text-[9px] text-white/40 font-bold mb-1.5">连胜与连输记录</p>
+                                <div class="flex justify-between items-center text-xs">
+                                    <span class="text-white/60 font-medium">最高连胜:</span>
+                                    <span class="text-red-400 font-black font-mono">${winStreakText} 🔥</span>
+                                </div>
+                                <div class="flex justify-between items-center text-xs mt-1">
+                                    <span class="text-white/60 font-medium">最高连输:</span>
+                                    <span class="text-blue-300 font-black font-mono">${lossStreakText} ❄️</span>
+                                </div>
                             </div>
-                            <div class="flex-1 bg-gradient-to-r from-green-900/40 to-transparent p-2 rounded-lg border border-green-500/20">
-                                <p class="text-[9px] text-green-300 mb-0.5"><i class="fa-solid fa-poop"></i> 灾星 (输最多)</p>
-                                <p class="text-xs font-black text-white truncate">${minP<0?worstT:'无'}</p>
+
+                            <!-- 盈亏细节区 -->
+                            <div class="bg-white/5 rounded-xl p-2.5 border border-white/5 flex flex-col justify-between">
+                                <p class="text-[9px] text-white/40 font-bold mb-1.5">单局及场次表现</p>
+                                <div class="flex justify-between items-center text-xs">
+                                    <span class="text-white/60">净胜场:</span>
+                                    <span class="font-extrabold font-mono ${p.netWins >= 0 ? 'text-yellow-400' : 'text-gray-400'}">
+                                        ${p.netWins >= 0 ? '+' : ''}${p.netWins} 场
+                                    </span>
+                                </div>
+                                <div class="flex justify-between items-center text-xs mt-1">
+                                    <span class="text-white/60">单局最赚:</span>
+                                    <span class="text-green-400 font-extrabold font-mono">+$${p.biggestWin || 0}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 球队倾向与玄学运势 -->
+                        <div class="pt-1">
+                            <p class="text-[10px] text-yellow-400/80 font-black mb-2 flex items-center gap-1.5 uppercase tracking-wider">
+                                <i class="fa-solid fa-wand-magic-sparkles text-[11px]"></i> 球队倾向与运势分析
+                            </p>
+                            <div class="grid grid-cols-2 gap-2">
+                                <!-- 猜胜最多 -->
+                                <div class="bg-white/5 rounded-xl p-2 border border-white/5 flex items-center gap-2">
+                                    <div class="text-yellow-400 text-lg shrink-0 w-6 text-center"><i class="fa-solid fa-trophy"></i></div>
+                                    <div class="min-w-0">
+                                        <p class="text-[9px] text-white/40 font-bold">猜胜最多</p>
+                                        <p class="text-xs font-black text-white truncate mt-0.5">${p.mostWinPredictStr}</p>
+                                    </div>
+                                </div>
+                                <!-- 猜负最多 -->
+                                <div class="bg-white/5 rounded-xl p-2 border border-white/5 flex items-center gap-2">
+                                    <div class="text-blue-400 text-lg shrink-0 w-6 text-center"><i class="fa-solid fa-shield-halved"></i></div>
+                                    <div class="min-w-0">
+                                        <p class="text-[9px] text-white/40 font-bold">猜负最多</p>
+                                        <p class="text-xs font-black text-white truncate mt-0.5">${p.mostLossPredictStr}</p>
+                                    </div>
+                                </div>
+                                <!-- 幸运球队 -->
+                                <div class="bg-green-500/5 rounded-xl p-2 border border-green-500/10 flex items-center gap-2">
+                                    <div class="text-green-400 text-lg shrink-0 w-6 text-center"><i class="fa-solid fa-face-smile-beam"></i></div>
+                                    <div class="min-w-0">
+                                        <p class="text-[9px] text-green-300/60 font-bold">幸运球队</p>
+                                        <p class="text-xs font-black text-green-300 truncate mt-0.5">${p.luckyTeamStr}</p>
+                                    </div>
+                                </div>
+                                <!-- 厄运球队 -->
+                                <div class="bg-red-500/5 rounded-xl p-2 border border-red-500/10 flex items-center gap-2">
+                                    <div class="text-red-400 text-lg shrink-0 w-6 text-center"><i class="fa-solid fa-face-frown"></i></div>
+                                    <div class="min-w-0">
+                                        <p class="text-[9px] text-red-300/60 font-bold">厄运球队</p>
+                                        <p class="text-xs font-black text-red-300 truncate mt-0.5">${p.unluckyTeamStr}</p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>`;
@@ -1145,7 +1881,7 @@
             let html = '';
             db.players.forEach(p => {
                 html += `
-                    <div class="bg-black/30 border border-white/10 p-4 rounded-2xl text-center relative group backdrop-blur-md">
+                    <div class="player-card-item marquee-pc border border-white/10 p-4 rounded-2xl text-center relative group backdrop-blur-md">
                         <img onclick="editPlayerAvatar('${p.id}'); playAudio('click')" src="${p.avatar}" class="w-16 h-16 mx-auto rounded-full bg-black/50 border-2 border-white/20 mb-3 object-cover shadow-lg cursor-pointer hover:scale-110 active:scale-95 transition-all" title="点击修改头像">
                         
                         <div class="flex items-center justify-center gap-1.5 mb-1">
@@ -1161,18 +1897,67 @@
         }
 
         // --- View 7: 历史操作区 ---
+        function renderHistoryDateSelector() {
+            const container = document.getElementById('history-date-scroll');
+            if (!container) return;
+            const dates = getLogDates();
+            if (dates.length === 0) {
+                container.innerHTML = '<div class="text-[10px] text-white/30 text-center py-2">暂无历史记录日期分类</div>';
+                return;
+            }
+            
+            let html = `
+                <button onclick="selectHistoryDate('all'); playAudio('click')" class="shrink-0 px-3 py-1 rounded-full text-[10px] font-bold border transition ${activeHistoryDate === 'all' ? 'bg-yellow-400 text-blue-950 border-yellow-400 shadow-[0_0_5px_rgba(250,204,21,0.4)]' : 'bg-black/40 text-gray-400 border-white/10 hover:border-white/20'}">
+                    全部
+                </button>
+            `;
+            
+            dates.forEach(dStr => {
+                const isActive = dStr === activeHistoryDate;
+                html += `
+                    <button onclick="selectHistoryDate('${dStr}'); playAudio('click')" class="shrink-0 px-3 py-1 rounded-full text-[10px] font-bold border transition ${isActive ? 'bg-yellow-400 text-blue-950 border-yellow-400 shadow-[0_0_5px_rgba(250,204,21,0.4)]' : 'bg-black/40 text-gray-400 border-white/10 hover:border-white/20'}">
+                        ${dStr}
+                    </button>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        function selectHistoryDate(dStr) {
+            activeHistoryDate = dStr;
+            renderHistoryDateSelector();
+            renderLogs();
+        }
+
         function renderLogs() {
+            renderHistoryDateSelector(); 
             const container = document.getElementById('logs-container');
             if (!container) return;
             if (!db.logs || db.logs.length === 0) {
                 container.innerHTML = '<div class="text-center text-white/50 py-10 text-xs">暂无任何历史操作记录</div>';
                 return;
             }
+            
+            // 按日期过滤逻辑
+            let filteredLogs = db.logs;
+            if (activeHistoryDate !== 'all') {
+                filteredLogs = db.logs.filter(log => {
+                    if (!log || !log.time) return false;
+                    const match = log.time.match(/^(\d{4})-(\d{2})-(\d{2})/);
+                    return match && `${match[2]}-${match[3]}` === activeHistoryDate;
+                });
+            }
+            
+            if (filteredLogs.length === 0) {
+                container.innerHTML = '<div class="text-center text-white/50 py-10 text-xs">该日期下无操作日志记录</div>';
+                return;
+            }
+            
             let html = '';
-            db.logs.forEach(log => {
+            filteredLogs.forEach(log => {
                 html += `
                     <div class="bg-black/30 border border-white/5 rounded-xl p-3 flex flex-col gap-1 text-[11px] backdrop-blur-md">
-                        <div class="flex justify-between items-center text-white/40">
+                        <div class="flex justify-between items-center text-white/40 font-semibold">
                             <span class="font-mono text-[10px]"><i class="fa-regular fa-clock mr-1"></i>${log.time}</span>
                         </div>
                         <p class="text-white/80 leading-relaxed font-semibold">${log.text}</p>
@@ -1187,9 +1972,10 @@
                 alert("密码错误，安全验证失败！操作已撤销。");
                 return;
             }
-            if (confirm("确定要清空所有的历史操作日志吗？")) {
+            if (confirm("确定要清空所有的历史操作日志吗？清空后将无法挽回！")) {
                 db.logs = [];
-                addLog("系统日志已被清空");
+                activeHistoryDate = 'all'; // 重置过滤
+                addLog("系统日志已被管理员清空");
                 broadcastData();
                 refreshAllUI();
             }
@@ -1226,20 +2012,32 @@
                 if (!db.logs) db.logs = [];
                 if (db.lockBets15Min === undefined) db.lockBets15Min = false;
                 
+                initUISettings();
+                updateDynamicStyles();
+                syncUIInputsFromDB();
+
                 addLog("管理人员直接修改了底层 JSON 原始数据库");
                 broadcastData();
                 refreshAllUI();
-                alert("✅ 数据库成功保存！修改信息已实时发布，旧设备正在同步更新！");
+                alert("原始数据库修改成功并已进行广播同步！");
             } catch(e) {
                 alert("保存失败：您输入的 JSON 存在语法错误，请检查后再行保存！\n" + e.message);
             }
         }
 
         function exportDatabase() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const finishedCount = db.matches.filter(m => m.status === 'finished').length;
+            
+            const fileName = `${year}（年）/${month}（月）/${day}（日）-已进行${finishedCount}场比赛.json`;
             const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db, null, 4));
+            
             const downloadAnchor = document.createElement('a');
             downloadAnchor.setAttribute("href", dataStr);
-            downloadAnchor.setAttribute("download", `wc2026_db_backup_${Date.now()}.json`);
+            downloadAnchor.setAttribute("download", fileName);
             document.body.appendChild(downloadAnchor);
             downloadAnchor.click();
             downloadAnchor.remove();
@@ -1260,11 +2058,15 @@
                         if (!db.logs) db.logs = [];
                         if (db.lockBets15Min === undefined) db.lockBets15Min = false;
                         
+                        initUISettings();
+                        updateDynamicStyles();
+                        syncUIInputsFromDB();
+
                         addLog("成功导入外部数据备份");
                         broadcastData();
                         refreshAllUI();
                         loadRawDbToTextarea();
-                        alert("✅ 数据库备份导入成功，已实时广播同步全网！");
+                        alert("数据库备份导入成功，已实时广播同步全网！");
                     }
                 } catch(err) {
                     alert("导入失败：该文件并不是合法的 JSON 格式文本。");
@@ -1277,12 +2079,12 @@
         function copyDbToClipboard() {
             const txt = JSON.stringify(db, null, 4);
             navigator.clipboard.writeText(txt).then(() => {
-                alert("📋 数据 JSON 已成功复制到您的剪贴板，可前往其他设备进行粘贴！");
+                alert("数据 JSON 已成功复制到您的剪贴板，可前往其他设备进行粘贴！");
             }).catch(() => {
                 const ta = document.createElement('textarea');
                 ta.value = txt; document.body.appendChild(ta); ta.select();
                 document.execCommand('copy'); document.body.removeChild(ta);
-                alert("📋 数据 JSON 已成功复制到您的剪贴板！");
+                alert("数据 JSON 已成功复制到您的剪贴板！");
             });
         }
 
@@ -1298,11 +2100,15 @@
                 if (!db.logs) db.logs = [];
                 if (db.lockBets15Min === undefined) db.lockBets15Min = false;
                 
+                initUISettings();
+                updateDynamicStyles();
+                syncUIInputsFromDB();
+
                 addLog("通过剪贴板导入并同步了数据库数据");
                 broadcastData();
                 refreshAllUI();
                 loadRawDbToTextarea();
-                alert("✅ 剪贴板导入成功！数据已实时向所有在线设备进行广播！");
+                alert("剪贴板导入成功！数据已实时向所有在线设备进行广播！");
             } catch(e) {
                 alert("导入失败：错误的 JSON 语法表达格式！\n" + e.message);
             }
@@ -1315,16 +2121,42 @@
                 return;
             }
             if (confirm("🚨 警告：这会清空本房所有玩家记录、所有历史注单、清空操作日志并重置全部104场比赛！确定执行此项毁灭性重置吗？")) {
-                db = { players: [], matches: generateMatches(), bets: {}, logs: [], lockBets15Min: false, timestamp: Date.now() };
+                db = { 
+                    players: [], 
+                    matches: generateMatches(), 
+                    bets: {}, 
+                    logs: [], 
+                    lockBets15Min: false, 
+                    slideshow: {
+                        urls: [
+                            "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=1200",
+                            "https://images.unsplash.com/photo-1543351611-58f69d7c1781?q=80&w=1200",
+                            "https://images.unsplash.com/photo-1522778119026-d647f0596c20?q=80&w=1200"
+                        ],
+                        stayTime: 5000,
+                        fadeTime: 1000,
+                        opacity: 0.2
+                    },
+                    timestamp: Date.now() 
+                };
+
+                initUISettings();
+                updateDynamicStyles();
+                syncUIInputsFromDB();
+
                 addLog("数据库被毁灭性初始化重置");
                 broadcastData();
                 refreshAllUI();
                 loadRawDbToTextarea();
-                alert("✅ 数据库已被初始化归零！");
+                
+                // 重置后重新渲染背景板
+                updateLocalSlideshowOpacity(db.slideshow.opacity);
+                startSlideshowLoop();
+                alert("数据库已被初始化归零！");
             }
         }
 
-        // --- 交互业务 (下注 & 结算) ---
+        // --- 交互业务 ---
         function openEditMatch(id) {
             const m = db.matches.find(x => x.id === id); document.getElementById('editMatchId').value = id;
             document.getElementById('editHome').value = m.home; document.getElementById('editAway').value = m.away;
@@ -1386,7 +2218,6 @@
                     if(r.checked) { 
                         preds[p.id] = r.value; 
                         
-                        // 详细对比并记录谁在什么时间在什么赛事下注了什么
                         const oldSelection = oldBetObj.predictions[p.id] || 'none';
                         if (oldSelection !== r.value) {
                             const sideText = r.value === 'home' ? '主胜' : (r.value === 'away' ? '客胜' : (r.value === 'draw' ? '平局' : '撤单'));
@@ -1463,7 +2294,6 @@
                     }
                 });
 
-                // 结算开奖记录进历史日志
                 const resultText = res === 'home' ? '主胜' : (res === 'away' ? '客胜' : '平局');
                 const scoreDesc = finalScoreText ? `，比分为 [${finalScoreText}]` : '';
                 addLog(`赛事 [${m.home} VS ${m.away}] 完成结算。赛果为: [${resultText}]${scoreDesc}`);
@@ -1473,14 +2303,623 @@
                     if(typeof confetti !== 'undefined') confetti({particleCount: 200, spread: 100, origin:{y:0.6}, zIndex: 9999, colors: ['#FFD700', '#FF8C00', '#00F3FF']});
                     const winnerNames = wins.map(pid => db.players.find(x => x.id === pid)?.name).join(', ');
                     addLog(`[${m.home} VS ${m.away}] 结算赢家: [${winnerNames}]，各赢得奖池分享金 $${(pool/wins.length).toFixed(1)}`);
-                    setTimeout(() => alert(`🎊 结算完成!\n赢家: ${wins.map(pid=>db.players.find(x=>x.id===pid).name).join(', ')}\n各分得: $${(pool/wins.length).toFixed(1)}`), 500);
+                    setTimeout(() => alert(`结算完成!\n赢家: ${wins.map(pid=>db.players.find(x=>x.id===pid).name).join(', ')}\n各分得: $${(pool/wins.length).toFixed(1)}`), 500);
                 } else {
                     addLog(`[${m.home} VS ${m.away}] 结算结果：冷门降临，无人猜中，奖金池 $${pool} 归庄家`);
-                    alert(`💸 爆冷！全军覆没，庄家吃掉 $${pool}`);
+                    alert(`爆冷！全军覆没，庄家吃掉 $${pool}`);
                 }
             }
             m.status = 'finished'; m.result = res; m.score = finalScoreText; m.winners = wins;
             broadcastData(); closeModal('settleModal'); refreshAllUI();
+        }
+
+        // --- 回退并重新结算逻辑 (编辑已开奖比赛) ---
+        function revertSettle(id) {
+            const m = db.matches.find(x => x.id == id);
+            if (!m || m.status !== 'finished') return;
+            const b = db.bets[id];
+            if (!b) return;
+
+            let parts = [];
+            let oldWins = m.winners || [];
+
+            for (let pid in b.predictions) {
+                if (b.predictions[pid] !== 'none') {
+                    parts.push(pid);
+                }
+            }
+
+            if (parts.length > 0) {
+                let pool = parts.length * b.stake;
+                parts.forEach(pid => {
+                    let p = db.players.find(x => x.id === pid);
+                    if (p) {
+                        // 还原投注场次和总投入
+                        p.totalBets = Math.max(0, p.totalBets - 1);
+                        p.totalInvest = Math.max(0, p.totalInvest - b.stake);
+                        // 退回投注本金
+                        p.balance += b.stake;
+
+                        let predTeam = b.predictions[pid] === 'home' ? m.home : (b.predictions[pid] === 'away' ? m.away : '平局');
+
+                        if (oldWins.includes(pid)) {
+                            p.correctGuesses = Math.max(0, p.correctGuesses - 1);
+                            let winAmt = pool / oldWins.length;
+                            // 扣回当时分得的奖金
+                            p.balance -= winAmt;
+                            
+                            // 扣回统计数据
+                            let netProfit = winAmt - b.stake;
+                            if (p.teamStats && p.teamStats[predTeam] !== undefined) {
+                                p.teamStats[predTeam] -= netProfit;
+                            }
+                        } else {
+                            // 还原非赢家的亏损
+                            if (p.teamStats && p.teamStats[predTeam] !== undefined) {
+                                p.teamStats[predTeam] += b.stake;
+                            }
+                        }
+                    }
+                });
+            }
+            
+            // 还原比赛状态为未完赛
+            m.status = 'upcoming';
+            m.result = null;
+            m.score = null;
+            m.winners = [];
+        }
+
+        function triggerReSettle(id) {
+            const m = db.matches.find(x => x.id === id);
+            if (!m) return;
+            const pwd = prompt(`🚨 敏感操作：重新编辑已结算赛事 🚨\n请输入安全验证密码以重置赛事「${m.home} VS ${m.away}」的赛果：`);
+            if (pwd !== "260612") {
+                alert("密码错误，安全核验失败！操作已撤销。");
+                return;
+            }
+            
+            const oldScore = m.score || '无';
+            const oldResultText = m.result === 'home' ? '主胜' : (m.result === 'away' ? '客胜' : '平局');
+            
+            // 执行精准回滚
+            revertSettle(id);
+            
+            // 写入操作历史日志
+            addLog(`管理员重置并编辑了已结算赛事 [${m.home} VS ${m.away}]（原比分: ${oldScore}，原赛果: ${oldResultText}）`);
+            
+            // 实时云同步与本地UI重渲染
+            broadcastData();
+            refreshAllUI();
+            
+            // 立刻唤起结算窗口以供重新录入
+            openSettleModal(id);
+        }
+
+        // --- 记账本核心系统 ---
+        let activeLedgerPlayerId = null;
+        let activeLedgerFilter = 'all';
+
+        function openLedger(playerId) {
+            activeLedgerPlayerId = playerId;
+            activeLedgerFilter = 'all';
+            
+            const p = db.players.find(x => x.id === playerId);
+            if (!p) return;
+            
+            document.getElementById('ledger-title').innerText = `「${p.name}」的记账本`;
+            
+            // 提取该玩家下注过的所有已完赛比赛的日期
+            const datesSet = new Set();
+            db.matches.filter(m => m.status === 'finished').forEach(m => {
+                const b = db.bets[m.id];
+                if (b && b.predictions && b.predictions[playerId] && b.predictions[playerId] !== 'none') {
+                    const match = m.date.match(/\d+月\d+日/);
+                    if (match) datesSet.add(match[0]);
+                }
+            });
+            
+            const uniqueDates = Array.from(datesSet).sort((a, b) => {
+                const ma = a.match(/(\d+)月(\d+)日/);
+                const mb = b.match(/(\d+)月(\d+)日/);
+                if (!ma || !mb) return 0;
+                const da = parseInt(ma[1]) * 100 + parseInt(ma[2]);
+                const dbVal = parseInt(mb[1]) * 100 + parseInt(mb[2]);
+                return da - dbVal;
+            });
+            
+            const selectEl = document.getElementById('ledger-date-select');
+            selectEl.innerHTML = '';
+            if (uniqueDates.length === 0) {
+                selectEl.innerHTML = '<option value="">暂无投注日期</option>';
+            } else {
+                uniqueDates.forEach(d => {
+                    const opt = document.createElement('option');
+                    opt.value = d;
+                    opt.innerText = d;
+                    selectEl.appendChild(opt);
+                });
+            }
+            
+            filterLedgerTab('all');
+            openModal('ledgerModal');
+        }
+
+        function filterLedgerTab(type) {
+            activeLedgerFilter = type;
+            const btnAll = document.getElementById('lt-all');
+            const btnDate = document.getElementById('lt-date');
+            const dateContainer = document.getElementById('ledger-date-select-container');
+            
+            if (type === 'all') {
+                btnAll.className = 'flex-1 py-1 rounded-full text-xs font-bold bg-white text-blue-950 shadow-md transition';
+                btnDate.className = 'flex-1 py-1 rounded-full text-xs font-bold text-white hover:bg-white/10 transition';
+                dateContainer.classList.add('hidden');
+            } else {
+                btnAll.className = 'flex-1 py-1 rounded-full text-xs font-bold text-white hover:bg-white/10 transition';
+                btnDate.className = 'flex-1 py-1 rounded-full text-xs font-bold bg-white text-blue-950 shadow-md transition';
+                dateContainer.classList.remove('hidden');
+            }
+            renderLedgerDetails();
+        }
+
+        function renderLedgerDetails() {
+            const container = document.getElementById('ledger-list-container');
+            const countEl = document.getElementById('ledger-total-count');
+            const profitEl = document.getElementById('ledger-total-profit');
+            
+            if (!activeLedgerPlayerId) return;
+            const p = db.players.find(x => x.id === activeLedgerPlayerId);
+            if (!p) return;
+            
+            let records = [];
+            
+            db.matches.filter(m => m.status === 'finished').sort((a,b) => a.id - b.id).forEach(m => {
+                const b = db.bets[m.id];
+                if (b && b.predictions && b.predictions[p.id] && b.predictions[p.id] !== 'none') {
+                    const prediction = b.predictions[p.id];
+                    const isCorrect = (prediction === m.result);
+                    
+                    let matchParticipants = [];
+                    let matchWinners = [];
+                    for (let pid in b.predictions) {
+                        if (b.predictions[pid] !== 'none') {
+                            matchParticipants.push(pid);
+                            if (b.predictions[pid] === m.result) {
+                                matchWinners.push(pid);
+                            }
+                        }
+                    }
+                    
+                    let pool = matchParticipants.length * b.stake;
+                    let netProfit = -b.stake;
+                    if (isCorrect) {
+                        let winAmt = pool / matchWinners.length;
+                        netProfit = winAmt - b.stake;
+                    }
+                    
+                    let predText = '无';
+                    if (prediction === 'home') predText = `${m.home}胜`;
+                    else if (prediction === 'away') predText = `${m.away}胜`;
+                    else if (prediction === 'draw') predText = '平局';
+                    
+                    const matchDate = m.date.match(/\d+月\d+日/);
+                    const dateStr = matchDate ? matchDate[0] : '未知日期';
+                    
+                    records.push({
+                        id: m.id,
+                        home: m.home,
+                        away: m.away,
+                        date: dateStr,
+                        predText: predText,
+                        netProfit: netProfit,
+                        score: m.score || m.result.replace('home','主胜').replace('away','客胜').replace('draw','平局')
+                    });
+                }
+            });
+            
+            if (activeLedgerFilter === 'date') {
+                const selectedDate = document.getElementById('ledger-date-select').value;
+                records = records.filter(r => r.date === selectedDate);
+            }
+            
+            let totalProfit = 0;
+            records.forEach(r => totalProfit += r.netProfit);
+            
+            countEl.innerText = `${records.length} 场`;
+            profitEl.innerText = `${totalProfit >= 0 ? '+' : ''}${totalProfit.toFixed(0)}分`;
+            profitEl.className = `font-mono font-black ${totalProfit >= 0 ? 'text-green-400' : 'text-red-400'}`;
+            
+            if (records.length === 0) {
+                container.innerHTML = '<div class="text-center text-white/30 py-10 text-xs">暂无相关对账记录</div>';
+                return;
+            }
+            
+            let html = '';
+            records.forEach(r => {
+                const isWin = r.netProfit >= 0;
+                html += `
+                    <div class="bg-black/20 border border-white/5 p-3 rounded-2xl flex justify-between items-center text-xs backdrop-blur-sm">
+                        <div class="min-w-0 flex-1 pr-2">
+                            <div class="font-extrabold text-white truncate flex items-center gap-1.5">
+                                <span class="bg-blue-500/10 text-blue-400 px-1.5 py-0.5 rounded text-[9px] font-mono shrink-0">第${r.id}场</span>
+                                <span class="truncate">${r.home} VS ${r.away}</span>
+                            </div>
+                            <div class="text-[10px] text-gray-400 mt-1 flex flex-wrap gap-x-2 gap-y-1">
+                                <span>下注: <span class="text-yellow-400 font-bold">“${r.predText}”</span></span>
+                                <span>|</span>
+                                <span>比分: <span class="text-white font-bold">${r.score}</span></span>
+                                <span>|</span>
+                                <span class="font-mono">${r.date}</span>
+                            </div>
+                        </div>
+                        <div class="shrink-0 text-right">
+                            <span class="${isWin ? 'text-green-400' : 'text-red-400'} font-black font-mono text-sm">
+                                ${isWin ? '+' : ''}${r.netProfit.toFixed(0)}分
+                            </span>
+                        </div>
+                </div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        // --- 网页背景图动态轮播逻辑 ---
+        let slideshowTimer = null;
+        let currentSlideIndex = 0;
+        let currentSlideActiveLayer = 1; // 交替图层指针 (1 或 2)
+
+        function initSlideshow() {
+            if (!db.slideshow) {
+                db.slideshow = {
+                    urls: [
+                        "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=1200",
+                        "https://images.unsplash.com/photo-1543351611-58f69d7c1781?q=80&w=1200",
+                        "https://images.unsplash.com/photo-1522778119026-d647f0596c20?q=80&w=1200"
+                    ],
+                    stayTime: 5000,
+                    fadeTime: 1000,
+                    opacity: 0.2
+                };
+            }
+            
+            // 应用加载背景面板的基础透明度
+            const container = document.getElementById('bg-slideshow-container');
+            if (container) {
+                container.style.opacity = db.slideshow.opacity;
+            }
+            
+            startSlideshowLoop();
+        }
+
+        function startSlideshowLoop() {
+            if (slideshowTimer) clearInterval(slideshowTimer);
+            
+            const urls = db.slideshow.urls || [];
+            if (urls.length === 0) {
+                document.getElementById('bg-slide-1').style.opacity = 0;
+                document.getElementById('bg-slide-2').style.opacity = 0;
+                return;
+            }
+            
+            // 初始化第一张图
+            currentSlideIndex = 0;
+            const slide1 = document.getElementById('bg-slide-1');
+            const slide2 = document.getElementById('bg-slide-2');
+            
+            if (slide1 && slide2) {
+                const fadeSec = (db.slideshow.fadeTime || 1000) / 1000;
+                slide1.style.transition = `opacity ${fadeSec}s ease-in-out`;
+                slide2.style.transition = `opacity ${fadeSec}s ease-in-out`;
+                
+                slide1.style.backgroundImage = `url('${urls[0]}')`;
+                slide1.style.opacity = 1;
+                slide2.style.opacity = 0;
+                currentSlideActiveLayer = 1;
+            }
+            
+            if (urls.length <= 1) return; // 单图无须循环
+
+            const cycleInterval = (db.slideshow.stayTime || 5000) + (db.slideshow.fadeTime || 1000);
+            
+            slideshowTimer = setInterval(() => {
+                const nextIndex = (currentSlideIndex + 1) % urls.length;
+                const activeEl = currentSlideActiveLayer === 1 ? document.getElementById('bg-slide-1') : document.getElementById('bg-slide-2');
+                const inactiveEl = currentSlideActiveLayer === 1 ? document.getElementById('bg-slide-2') : document.getElementById('bg-slide-1');
+                
+                if (activeEl && inactiveEl) {
+                    const fadeSec = (db.slideshow.fadeTime || 1000) / 1000;
+                    activeEl.style.transition = `opacity ${fadeSec}s ease-in-out`;
+                    inactiveEl.style.transition = `opacity ${fadeSec}s ease-in-out`;
+                    
+                    // 加载并过渡
+                    inactiveEl.style.backgroundImage = `url('${urls[nextIndex]}')`;
+                    inactiveEl.style.opacity = 1;
+                    activeEl.style.opacity = 0;
+                    
+                    currentSlideActiveLayer = currentSlideActiveLayer === 1 ? 2 : 1;
+                    currentSlideIndex = nextIndex;
+                }
+            }, cycleInterval);
+        }
+
+        function updateLocalSlideshowOpacity(val) {
+            const container = document.getElementById('bg-slideshow-container');
+            if (container) {
+                container.style.opacity = val;
+            }
+        }
+
+        function loadSlideshowSettingsToAdmin() {
+            if (!db.slideshow) return;
+            const urlsTextarea = document.getElementById('admin-bg-urls');
+            const stayInput = document.getElementById('admin-bg-stay');
+            const fadeInput = document.getElementById('admin-bg-fade');
+            const opacityInput = document.getElementById('admin-bg-opacity');
+            const opacityVal = document.getElementById('admin-bg-opacity-val');
+            
+            if (urlsTextarea) urlsTextarea.value = (db.slideshow.urls || []).join('\n');
+            if (stayInput) stayInput.value = (db.slideshow.stayTime || 5000) / 1000;
+            if (fadeInput) fadeInput.value = (db.slideshow.fadeTime || 1000) / 1000;
+            if (opacityInput) opacityInput.value = db.slideshow.opacity !== undefined ? db.slideshow.opacity : 0.2;
+            if (opacityVal) opacityVal.innerText = db.slideshow.opacity !== undefined ? db.slideshow.opacity : 0.2;
+        }
+
+        function saveSlideshowSettings() {
+            const urlsTextarea = document.getElementById('admin-bg-urls');
+            const stayInput = document.getElementById('admin-bg-stay');
+            const fadeInput = document.getElementById('admin-bg-fade');
+            const opacityInput = document.getElementById('admin-bg-opacity');
+            
+            if (!urlsTextarea || !stayInput || !fadeInput || !opacityInput) return;
+            
+            const urls = urlsTextarea.value.split('\n').map(u => u.trim()).filter(u => u.length > 0);
+            const stayTime = parseFloat(stayInput.value) * 1000;
+            const fadeTime = parseFloat(fadeInput.value) * 1000;
+            const opacity = parseFloat(opacityInput.value);
+            
+            db.slideshow = {
+                urls: urls,
+                stayTime: isNaN(stayTime) || stayTime < 500 ? 5000 : stayTime,
+                fadeTime: isNaN(fadeTime) || fadeTime < 100 ? 1000 : fadeTime,
+                opacity: isNaN(opacity) ? 0.2 : opacity
+            };
+            
+            addLog("管理员修改并同步了动态背景轮播面板设置");
+            broadcastData();
+            
+            // 实时应用本地端变化
+            updateLocalSlideshowOpacity(db.slideshow.opacity);
+            startSlideshowLoop();
+            alert("动态轮播背景板保存成功，并已同步广播全网！");
+        }
+
+        // --- UI 设置初始化与动态渲染引擎 ---
+        function initUISettings() {
+            if (!db.uiSettings) {
+                db.uiSettings = {
+                    opacities: { leaderboard: 40, match: 30, stats: 30, player: 30 },
+                    marquee: {
+                        leaderboard: { enabled: false, speed: 3, thickness: 2, opacity: 80 },
+                        match: { enabled: false, speed: 3, thickness: 2, opacity: 80 },
+                        stats: { enabled: false, speed: 3, thickness: 2, opacity: 80 },
+                        player: { enabled: false, speed: 3, thickness: 2, opacity: 80 }
+                    },
+                    fonts: {
+                        leaderboard: { size: 14, color: '#ffffff', strokeEnabled: false, strokeWidth: 1, strokeColor: '#000000' },
+                        match: { size: 14, color: '#1a1a1a', strokeEnabled: false, strokeWidth: 1, strokeColor: '#000000' },
+                        stats: { size: 14, color: '#ffffff', strokeEnabled: false, strokeWidth: 1, strokeColor: '#000000' },
+                        player: { size: 14, color: '#ffffff', strokeEnabled: false, strokeWidth: 1, strokeColor: '#000000' }
+                    }
+                };
+            }
+            // 向后兼容补齐机制
+            if (!db.uiSettings.opacities) db.uiSettings.opacities = { leaderboard: 40, match: 30, stats: 30, player: 30 };
+            if (!db.uiSettings.marquee) db.uiSettings.marquee = {
+                leaderboard: { enabled: false, speed: 3, thickness: 2, opacity: 80 },
+                match: { enabled: false, speed: 3, thickness: 2, opacity: 80 },
+                stats: { enabled: false, speed: 3, thickness: 2, opacity: 80 },
+                player: { enabled: false, speed: 3, thickness: 2, opacity: 80 }
+            };
+            if (!db.uiSettings.fonts) db.uiSettings.fonts = {
+                leaderboard: { size: 14, color: '#ffffff', strokeEnabled: false, strokeWidth: 1, strokeColor: '#000000' },
+                match: { size: 14, color: '#1a1a1a', strokeEnabled: false, strokeWidth: 1, strokeColor: '#000000' },
+                stats: { size: 14, color: '#ffffff', strokeEnabled: false, strokeWidth: 1, strokeColor: '#000000' },
+                player: { size: 14, color: '#ffffff', strokeEnabled: false, strokeWidth: 1, strokeColor: '#000000' }
+            };
+        }
+
+        function updateDynamicStyles() {
+            let styleEl = document.getElementById('dynamic-ui-styles');
+            if (!styleEl) {
+                styleEl = document.createElement('style');
+                styleEl.id = 'dynamic-ui-styles';
+                document.head.appendChild(styleEl);
+            }
+            const ui = db.uiSettings;
+            if (!ui) return;
+
+            styleEl.innerHTML = `
+                /* 积分排行榜样式设置 */
+                .leaderboard-card-item {
+                    background-color: rgba(0, 0, 0, ${ui.opacities.leaderboard / 100}) !important;
+                    font-size: ${ui.fonts.leaderboard.size}px !important;
+                    color: ${ui.fonts.leaderboard.color} !important;
+                    ${ui.fonts.leaderboard.strokeEnabled ? `-webkit-text-stroke: ${ui.fonts.leaderboard.strokeWidth}px ${ui.fonts.leaderboard.strokeColor}; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);` : '-webkit-text-stroke: 0px !important; text-shadow: none !important;'}
+                }
+                .leaderboard-card-item h3 {
+                    font-size: ${ui.fonts.leaderboard.size}px !important;
+                    color: inherit !important;
+                }
+
+                /* 赛程卡片样式设置 */
+                .match-card-item {
+                    font-size: ${ui.fonts.match.size}px !important;
+                    color: ${ui.fonts.match.color} !important;
+                    ${ui.fonts.match.strokeEnabled ? `-webkit-text-stroke: ${ui.fonts.match.strokeWidth}px ${ui.fonts.match.strokeColor}; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);` : '-webkit-text-stroke: 0px !important; text-shadow: none !important;'}
+                }
+                .match-card-item span, .match-card-item div, .match-card-item input {
+                    color: inherit !important;
+                }
+                .match-card-item-bg-yellow { background: linear-gradient(135deg, rgba(255, 251, 230, ${ui.opacities.match / 100}) 0%, rgba(255, 214, 102, ${ui.opacities.match / 100}) 100%) !important; }
+                .match-card-item-bg-blue { background: linear-gradient(135deg, rgba(230, 247, 255, ${ui.opacities.match / 100}) 0%, rgba(105, 192, 255, ${ui.opacities.match / 100}) 100%) !important; }
+                .match-card-item-bg-red { background: linear-gradient(135deg, rgba(255, 240, 246, ${ui.opacities.match / 100}) 0%, rgba(255, 133, 192, ${ui.opacities.match / 100}) 100%) !important; }
+                .match-card-item-bg-green { background: linear-gradient(135deg, rgba(246, 255, 237, ${ui.opacities.match / 100}) 0%, rgba(149, 222, 100, ${ui.opacities.match / 100}) 100%) !important; }
+                .match-card-item-bg-gray { background: linear-gradient(135deg, rgba(200, 200, 200, ${ui.opacities.match / 100}) 0%, rgba(140, 140, 140, ${ui.opacities.match / 100}) 100%) !important; }
+
+                /* 玩家数据总览卡片设置 */
+                .stats-card-item {
+                    background-color: rgba(0, 0, 0, ${ui.opacities.stats / 100}) !important;
+                    font-size: ${ui.fonts.stats.size}px !important;
+                    color: ${ui.fonts.stats.color} !important;
+                    ${ui.fonts.stats.strokeEnabled ? `-webkit-text-stroke: ${ui.fonts.stats.strokeWidth}px ${ui.fonts.stats.strokeColor}; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);` : '-webkit-text-stroke: 0px !important; text-shadow: none !important;'}
+                }
+                .stats-card-item h3 {
+                    font-size: calc(${ui.fonts.stats.size}px + 4px) !important;
+                    color: inherit !important;
+                }
+
+                /* 玩家阵营卡片设置 */
+                .player-card-item {
+                    background-color: rgba(0, 0, 0, ${ui.opacities.player / 100}) !important;
+                    font-size: ${ui.fonts.player.size}px !important;
+                    color: ${ui.fonts.player.color} !important;
+                    ${ui.fonts.player.strokeEnabled ? `-webkit-text-stroke: ${ui.fonts.player.strokeWidth}px ${ui.fonts.player.strokeColor}; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);` : '-webkit-text-stroke: 0px !important; text-shadow: none !important;'}
+                }
+                .player-card-item h4 {
+                    font-size: ${ui.fonts.player.size}px !important;
+                    color: inherit !important;
+                }
+
+                /* 跑马灯效果动态 CSS 生成器 */
+                ${['leaderboard', 'match', 'stats', 'player'].map(sec => {
+                    const m = ui.marquee[sec];
+                    const prefix = sec === 'leaderboard' ? 'marquee-lb' : sec === 'match' ? 'marquee-mc' : sec === 'stats' ? 'marquee-st' : 'marquee-pc';
+                    if (!m.enabled) {
+                        return `.${prefix}::after { display: none !important; } .${prefix} { border: 1px solid rgba(255,255,255,0.1) !important; }`;
+                    }
+                    return `
+                        .${prefix} {
+                            position: relative;
+                        }
+                        .${prefix}::after {
+                            content: '';
+                            position: absolute;
+                            inset: 0;
+                            border-radius: inherit;
+                            padding: ${m.thickness}px;
+                            background: linear-gradient(90deg, #ff007f, #00f3ff, #e600ff, #ff007f);
+                            background-size: 200% auto;
+                            animation: borderRotate ${m.speed}s linear infinite;
+                            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+                            -webkit-mask-composite: destination-out;
+                            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+                            mask-composite: exclude;
+                            opacity: ${m.opacity / 100};
+                            pointer-events: none;
+                            z-index: 5;
+                        }
+                    `;
+                }).join('\n')}
+            `;
+        }
+
+        function updateUIConfig(category, subCategory, val, property = null) {
+            initUISettings();
+            const ui = db.uiSettings;
+            
+            let parsedVal = val;
+            if (typeof val === 'string' && !val.startsWith('#') && !isNaN(val) && val.trim() !== '') {
+                parsedVal = parseFloat(val);
+            } else if (val === 'true' || val === true) {
+                parsedVal = true;
+            } else if (val === 'false' || val === false) {
+                parsedVal = false;
+            }
+
+            if (property) {
+                if (!ui[category][subCategory]) ui[category][subCategory] = {};
+                ui[category][subCategory][property] = parsedVal;
+            } else {
+                ui[category][subCategory] = parsedVal;
+            }
+
+            updateDynamicStyles();
+            syncUIInputsFromDB();
+            broadcastData();
+        }
+
+        function syncUIInputsFromDB() {
+            initUISettings();
+            const ui = db.uiSettings;
+
+            // 透明度同步
+            const opL = document.getElementById('cfg-op-lb'); if (opL) opL.value = ui.opacities.leaderboard;
+            const opM = document.getElementById('cfg-op-mc'); if (opM) opM.value = ui.opacities.match;
+            const opS = document.getElementById('cfg-op-st'); if (opS) opS.value = ui.opacities.stats;
+            const opP = document.getElementById('cfg-op-pc'); if (opP) opP.value = ui.opacities.player;
+
+            const valOpL = document.getElementById('val-op-lb'); if (valOpL) valOpL.innerText = ui.opacities.leaderboard;
+            const valOpM = document.getElementById('val-op-mc'); if (valOpM) valOpM.innerText = ui.opacities.match;
+            const valOpS = document.getElementById('val-op-st'); if (valOpS) valOpS.innerText = ui.opacities.stats;
+            const valOpP = document.getElementById('val-op-pc'); if (valOpP) valOpP.innerText = ui.opacities.player;
+
+            // 跑马灯同步
+            ['leaderboard', 'match', 'stats', 'player'].forEach(sec => {
+                const m = ui.marquee[sec];
+                const code = sec === 'leaderboard' ? 'lb' : sec === 'match' ? 'mc' : sec === 'stats' ? 'st' : 'pc';
+
+                const en = document.getElementById(`cfg-mq-${code}-en`); if (en) en.checked = !!m.enabled;
+                const sp = document.getElementById(`cfg-mq-${code}-sp`); if (sp) sp.value = m.speed;
+                const th = document.getElementById(`cfg-mq-${code}-th`); if (th) th.value = m.thickness;
+                const op = document.getElementById(`cfg-mq-${code}-op`); if (op) op.value = m.opacity;
+
+                const valSp = document.getElementById(`val-mq-${code}-sp`); if (valSp) valSp.innerText = m.speed;
+                const valTh = document.getElementById(`val-mq-${code}-th`); if (valTh) valTh.innerText = m.thickness;
+                const valOp = document.getElementById(`val-mq-${code}-op`); if (valOp) valOp.innerText = m.opacity;
+            });
+
+            // 字体独立调节设定同步
+            ['leaderboard', 'match', 'stats', 'player'].forEach(sec => {
+                const f = ui.fonts[sec];
+                const code = sec === 'leaderboard' ? 'lb' : sec === 'match' ? 'mc' : sec === 'stats' ? 'st' : 'pc';
+
+                const sz = document.getElementById(`cfg-ft-${code}-sz`); if (sz) sz.value = f.size;
+                const cl = document.getElementById(`cfg-ft-${code}-cl`); if (cl) cl.value = f.color;
+                const clT = document.getElementById(`cfg-ft-${code}-cl-txt`); if (clT) clT.value = f.color;
+
+                const stEn = document.getElementById(`cfg-ft-${code}-st-en`); if (stEn) stEn.checked = !!f.strokeEnabled;
+                const stWi = document.getElementById(`cfg-ft-${code}-st-wi`); if (stWi) stWi.value = f.strokeWidth;
+                const stCl = document.getElementById(`cfg-ft-${code}-st-cl`); if (stCl) stCl.value = f.strokeColor;
+                const stClT = document.getElementById(`cfg-ft-${code}-st-cl-txt`); if (stClT) stClT.value = f.strokeColor;
+
+                const valSz = document.getElementById(`val-ft-${code}-sz`); if (valSz) valSz.innerText = f.size;
+                const valStWi = document.getElementById(`val-ft-${code}-st-wi`); if (valStWi) valStWi.innerText = f.strokeWidth;
+            });
+        }
+
+        // --- 风琴式折叠面板控制核心 ---
+        function toggleAccordion(id) {
+            const content = document.getElementById(`${id}-content`);
+            const icon = document.getElementById(`${id}-icon`);
+            if (content && icon) {
+                const isHidden = content.classList.contains('hidden');
+                if (isHidden) {
+                    if (id === 'admin-ui-settings') {
+                        const pwd = prompt("请输入安全验证密码以展开UI配置面板：");
+                        if (pwd !== "260612") {
+                            alert("密码错误，安全核验失败！");
+                            return;
+                        }
+                    }
+                    content.classList.remove('hidden');
+                    icon.classList.remove('fa-chevron-down');
+                    icon.classList.add('fa-chevron-up');
+                } else {
+                    content.classList.add('hidden');
+                    icon.classList.remove('fa-chevron-up');
+                    icon.classList.add('fa-chevron-down');
+                }
+            }
         }
     </script>
 </body>

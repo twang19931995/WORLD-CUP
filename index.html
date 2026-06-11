@@ -45,17 +45,19 @@
             font-family: 'Noto Sans SC', sans-serif; 
             background: #003a8c;
             background-image: radial-gradient(circle at 50% 0%, #007bff 0%, #001529 80%);
+            background-attachment: fixed; /* 解决长屏幕滚动时的背景平铺分割线问题 */
             color: #fff; 
             overflow-x: hidden;
             -webkit-tap-highlight-color: transparent;
             padding-bottom: 80px; /* 留出底部导航栏高度 */
+            -webkit-overflow-scrolling: touch;
         }
         
         h1, h2, h3, .brand-font { font-family: 'Orbitron', 'Noto Sans SC', sans-serif; }
         
         /* 隐藏滚动条 */
         ::-webkit-scrollbar { width: 0px; height: 0px; display: none; } 
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
 
         /* 3D 高光卡片样式 */
@@ -74,20 +76,24 @@
         .card-red { background: linear-gradient(135deg, #fff0f6 0%, #ff85c0 100%); }
         .card-green { background: linear-gradient(135deg, #f6ffed 0%, #95de64 100%); }
         
-        /* 发光足球边框 */
-        .soccer-icon {
-            width: 48px; height: 48px;
-            border-radius: 50%;
-            background: #fff;
-            box-shadow: 0 0 15px rgba(255,255,255,0.8), inset 0 2px 5px rgba(0,0,0,0.1);
-            display: flex; justify-content: center; align-items: center;
-            font-size: 28px;
+        /* 像素级复刻：大国旗正方形容器 */
+        .flag-box {
+            /* ======================================================== */
+            /* 【修改国旗大小提示】                                    */
+            /* 1. 下方的 width 和 height 控制国旗外框容器的宽度和高度。 */
+            /* 2. 下方的 font-size 控制国旗 Emoji 图标本身的大小。     */
+            /* ======================================================== */
+            width: 76px;        /* 👈 这里调整国旗外框宽度（可直接修改数字，如改为 90px） */
+            height: 76px;       /* 👈 这里调整国旗外框高度（可直接修改数字，如改为 90px） */
+            font-size: 80px;    /* 👈 这里调整国旗图标大小（可直接修改数字，如改为 64px） */
+            /* ======================================================== */
+            
+            background: transparent; /* 去掉白底，使用纯透明通道 */
+            display: flex; 
+            justify-content: center; 
+            align-items: center;
             position: relative;
-        }
-        .soccer-icon::after {
-            content: ''; position: absolute; inset: -4px;
-            border-radius: 50%; border: 2px solid rgba(255,255,255,0.6);
-            border-top-color: transparent; animation: spin 2s linear infinite;
+            overflow: visible;  /* 允许大国旗边缘自然展露，防止被截断 */
         }
 
         /* 3D 胶囊按钮 */
@@ -129,6 +135,21 @@
             50% { background-position: 100% 50%; }
             100% { background-position: 0% 50%; }
         }
+
+        /* 强制GPU渲染加速，保障极致丝滑60帧体验 */
+        .leaderboard-card-item, .match-card-item, .stats-card-item, .player-card-item, .marquee-gb, #bg-slideshow-container, #bg-slide-1, #bg-slide-2 {
+            transform: translate3d(0, 0, 0);
+            -webkit-transform: translate3d(0, 0, 0);
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+            will-change: transform;
+        }
+
+        /* 启用iOS及部分安卓端的弹性原生滚动，极大增强操作跟手感 */
+        .no-scrollbar, #logs-container, #bet-players-list, #ledger-list-container, #md-players-list {
+            -webkit-overflow-scrolling: touch;
+            will-change: scroll-position;
+        }
     </style>
 </head>
 <body>
@@ -158,11 +179,11 @@
         <!-- View 1: 首页 (排行榜) -->
         <section id="view-dashboard" class="space-y-4 animate-bounce-in">
             <!-- 头图 Banner -->
-            <div class="relative w-full h-40 rounded-2xl overflow-hidden shadow-2xl border border-white/20 flex items-center justify-center bg-gradient-to-br from-blue-600 to-indigo-900">
+            <div id="global-money-banner" class="relative w-full h-40 rounded-2xl overflow-hidden shadow-2xl border border-white/20 flex items-center justify-center marquee-gb">
                 <i class="fa-solid fa-futbol text-8xl text-white/20 absolute -right-4 -bottom-4 animate-spin-slow"></i>
                 <div class="z-10 text-center">
-                    <p class="text-sm text-blue-200 font-bold mb-1">积分池总量</p>
-                    <p class="text-4xl font-black text-yellow-400 drop-shadow-[0_0_10px_rgba(250,204,21,0.8)] font-mono" id="global-money">$0</p>
+                    <p class="text-sm text-blue-200 font-bold mb-1" id="global-money-label">积分池总量</p>
+                    <p class="text-4xl font-black text-yellow-400 drop-shadow-[0_0_10px_rgba(250,204,21,0.8)] font-mono" id="global-money">0</p>
                 </div>
             </div>
 
@@ -289,6 +310,11 @@
                                 <label class="text-[10px] text-gray-400 block mb-1">玩家阵营卡片: <span id="val-op-pc">30</span>%</label>
                                 <input type="range" min="0" max="100" value="30" id="cfg-op-pc" oninput="updateUIConfig('opacities', 'player', this.value)" class="w-full accent-cyan-400 cursor-pointer">
                             </div>
+                            <!-- 积分池总量头图透明度控制 -->
+                            <div class="col-span-2">
+                                <label class="text-[10px] text-gray-400 block mb-1">积分池总量头图: <span id="val-op-gb">100</span>%</label>
+                                <input type="range" min="0" max="100" value="100" id="cfg-op-gb" oninput="updateUIConfig('opacities', 'banner', this.value)" class="w-full accent-cyan-400 cursor-pointer">
+                            </div>
                         </div>
                     </div>
 
@@ -298,6 +324,28 @@
                             <i class="fa-solid fa-spinner animate-spin"></i> 卡片边缘跑马灯描边设置
                         </h4>
                         
+                        <!-- 积分池总量跑马灯 -->
+                        <div class="bg-black/20 p-2.5 rounded-xl border border-white/5 space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[10px] text-gray-300 font-bold">积分池总量头图跑马灯</span>
+                                <input type="checkbox" id="cfg-mq-gb-en" onchange="updateUIConfig('marquee', 'banner', this.checked, 'enabled')" class="accent-cyan-400">
+                            </div>
+                            <div class="grid grid-cols-3 gap-2">
+                                <div>
+                                    <label class="text-[9px] text-gray-400 block">速度: <span id="val-mq-gb-sp">3</span>s</label>
+                                    <input type="range" min="1" max="10" step="0.5" id="cfg-mq-gb-sp" oninput="updateUIConfig('marquee', 'banner', this.value, 'speed')" class="w-full accent-cyan-400 cursor-pointer">
+                                </div>
+                                <div>
+                                    <label class="text-[9px] text-gray-400 block">粗细: <span id="val-mq-gb-th">2</span>px</label>
+                                    <input type="range" min="1" max="8" id="cfg-mq-gb-th" oninput="updateUIConfig('marquee', 'banner', this.value, 'thickness')" class="w-full accent-cyan-400 cursor-pointer">
+                                </div>
+                                <div>
+                                    <label class="text-[9px] text-gray-400 block">透明度: <span id="val-mq-gb-op">80</span>%</label>
+                                    <input type="range" min="0" max="100" id="cfg-mq-gb-op" oninput="updateUIConfig('marquee', 'banner', this.value, 'opacity')" class="w-full accent-cyan-400 cursor-pointer">
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- 排行榜跑马灯 -->
                         <div class="bg-black/20 p-2.5 rounded-xl border border-white/5 space-y-2">
                             <div class="flex items-center justify-between">
@@ -338,6 +386,28 @@
                                 <div>
                                     <label class="text-[9px] text-gray-400 block">透明度: <span id="val-mq-mc-op">80</span>%</label>
                                     <input type="range" min="0" max="100" id="cfg-mq-mc-op" oninput="updateUIConfig('marquee', 'match', this.value, 'opacity')" class="w-full accent-cyan-400 cursor-pointer">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 国旗跑马灯 -->
+                        <div class="bg-black/20 p-2.5 rounded-xl border border-white/5 space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[10px] text-gray-300 font-bold">国旗边缘跑马灯</span>
+                                <input type="checkbox" id="cfg-mq-fl-en" onchange="updateUIConfig('marquee', 'flag', this.checked, 'enabled')" class="accent-cyan-400">
+                            </div>
+                            <div class="grid grid-cols-3 gap-2">
+                                <div>
+                                    <label class="text-[9px] text-gray-400 block">速度: <span id="val-mq-fl-sp">3</span>s</label>
+                                    <input type="range" min="1" max="10" step="0.5" id="cfg-mq-fl-sp" oninput="updateUIConfig('marquee', 'flag', this.value, 'speed')" class="w-full accent-cyan-400 cursor-pointer">
+                                </div>
+                                <div>
+                                    <label class="text-[9px] text-gray-400 block">粗细: <span id="val-mq-fl-th">2</span>px</label>
+                                    <input type="range" min="1" max="8" id="cfg-mq-fl-th" oninput="updateUIConfig('marquee', 'flag', this.value, 'thickness')" class="w-full accent-cyan-400 cursor-pointer">
+                                </div>
+                                <div>
+                                    <label class="text-[9px] text-gray-400 block">透明度: <span id="val-mq-fl-op">80</span>%</label>
+                                    <input type="range" min="0" max="100" id="cfg-mq-fl-op" oninput="updateUIConfig('marquee', 'flag', this.value, 'opacity')" class="w-full accent-cyan-400 cursor-pointer">
                                 </div>
                             </div>
                         </div>
@@ -393,6 +463,42 @@
                             <i class="fa-solid fa-font"></i> 板块字体独立控制与文字描边
                         </h4>
                         
+                        <!-- 积分池总量头图字体 -->
+                        <div class="bg-black/20 p-2.5 rounded-xl border border-white/5 space-y-2">
+                            <span class="text-[10px] text-gray-300 font-bold block">积分池总量头图字体</span>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="text-[9px] text-gray-400 block">标语大小: <span id="val-ft-gbl-sz">14</span>px</label>
+                                    <input type="range" min="10" max="30" id="cfg-ft-gbl-sz" oninput="updateUIConfig('fonts', 'bannerLabel', this.value, 'size')" class="w-full accent-cyan-400 cursor-pointer">
+                                </div>
+                                <div>
+                                    <label class="text-[9px] text-gray-400 block">标语颜色</label>
+                                    <div class="flex gap-1 items-center">
+                                        <input type="color" id="cfg-ft-gbl-cl" onchange="updateUIConfig('fonts', 'bannerLabel', this.value, 'color')" class="w-6 h-6 bg-transparent border-0 cursor-pointer">
+                                        <input type="text" id="cfg-ft-gbl-cl-txt" onchange="updateUIConfig('fonts', 'bannerLabel', this.value, 'color')" class="bg-black/40 text-white text-[10px] px-1 rounded w-full border border-white/10 font-mono py-0.5 outline-none">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2 border-t border-white/5 pt-1.5 mt-1">
+                                <div>
+                                    <label class="text-[9px] text-gray-400 block">金额大小: <span id="val-ft-gbv-sz">36</span>px</label>
+                                    <input type="range" min="16" max="60" id="cfg-ft-gbv-sz" oninput="updateUIConfig('fonts', 'bannerValue', this.value, 'size')" class="w-full accent-cyan-400 cursor-pointer">
+                                </div>
+                                <div>
+                                    <label class="text-[9px] text-gray-400 block">金额颜色</label>
+                                    <div class="flex gap-1 items-center">
+                                        <input type="color" id="cfg-ft-gbv-cl" onchange="updateUIConfig('fonts', 'bannerValue', this.value, 'color')" class="w-6 h-6 bg-transparent border-0 cursor-pointer">
+                                        <input type="text" id="cfg-ft-gbv-cl-txt" onchange="updateUIConfig('fonts', 'bannerValue', this.value, 'color')" class="bg-black/40 text-white text-[10px] px-1 rounded w-full border border-white/10 font-mono py-0.5 outline-none">
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- 标语与数值间距控制 -->
+                            <div class="border-t border-white/5 pt-1.5 mt-1">
+                                <label class="text-[9px] text-gray-400 block">标语与分数间距: <span id="val-sp-banner-gap">4</span>px</label>
+                                <input type="range" min="0" max="40" id="cfg-sp-banner-gap" oninput="updateUIConfig('spacing', 'bannerGap', this.value)" class="w-full accent-cyan-400 cursor-pointer">
+                            </div>
+                        </div>
+
                         <!-- 排行榜字体 -->
                         <div class="bg-black/20 p-2.5 rounded-xl border border-white/5 space-y-2">
                             <span class="text-[10px] text-gray-300 font-bold block">积分排行榜字体</span>
@@ -459,6 +565,17 @@
                                         <input type="color" id="cfg-ft-mc-st-cl" onchange="updateUIConfig('fonts', 'match', this.value, 'strokeColor')" class="w-6 h-6 bg-transparent border-0 cursor-pointer">
                                         <input type="text" id="cfg-ft-mc-st-cl-txt" onchange="updateUIConfig('fonts', 'match', this.value, 'strokeColor')" class="bg-black/40 text-white text-[10px] px-1 rounded w-full border border-white/10 font-mono py-0.5 outline-none">
                                     </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 赛程卡片奖池字体大小 -->
+                        <div class="bg-black/20 p-2.5 rounded-xl border border-white/5 space-y-2">
+                            <span class="text-[10px] text-gray-300 font-bold block">赛程卡片奖池字体</span>
+                            <div class="grid grid-cols-1 gap-2">
+                                <div>
+                                    <label class="text-[9px] text-gray-400 block">字体大小: <span id="val-ft-jk-sz">10</span>px</label>
+                                    <input type="range" min="8" max="20" id="cfg-ft-jk-sz" oninput="updateUIConfig('fonts', 'jackpot', this.value, 'size')" class="w-full accent-cyan-400 cursor-pointer">
                                 </div>
                             </div>
                         </div>
@@ -701,7 +818,6 @@
             <div class="p-4 bg-black/40 flex items-center justify-between shrink-0">
                 <span class="font-bold text-blue-300">本场单注积分 <i class="fa-solid fa-coins text-yellow-400"></i></span>
                 <div class="flex items-center gap-2 bg-black rounded-lg p-1 border border-white/20">
-                    <span class="text-yellow-400 font-black pl-2">$</span>
                     <input type="number" id="matchStake" class="w-20 bg-transparent text-center text-white font-black text-lg outline-none" value="100">
                 </div>
             </div>
@@ -770,6 +886,31 @@
         </div>
     </div>
 
+    <!-- 已经开奖赛程的历史数据弹窗 -->
+    <div id="matchDetailsModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden flex justify-center items-center z-50 p-4">
+        <div class="bg-[#0f172a] p-6 rounded-3xl border border-white/20 w-full max-w-sm relative shadow-2xl flex flex-col max-h-[80vh] text-center font-semibold">
+            <button onclick="closeModal('matchDetailsModal'); playAudio('click')" class="absolute top-4 right-4 text-white/50 hover:text-white"><i class="fa-solid fa-times text-xl"></i></button>
+            <h3 class="text-lg font-black mb-1 text-yellow-400" id="md-title">比赛投注详情</h3>
+            <p class="text-[10px] text-white/40 mb-4" id="md-meta"></p>
+            
+            <div class="bg-black/30 border border-white/10 rounded-2xl p-3.5 mb-4 text-left space-y-2 shrink-0">
+                <div class="flex justify-between items-center border-b border-white/5 pb-2">
+                    <span class="text-xs text-white/60">最终赛果</span>
+                    <span class="text-sm font-black text-red-500 font-mono" id="md-score">-</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-xs text-white/60">参赌人数</span>
+                    <span class="text-xs font-mono font-bold text-yellow-400" id="md-bets-count">0 人</span>
+                </div>
+            </div>
+
+            <div class="text-left mb-2 shrink-0">
+                <span class="text-[10px] font-black text-yellow-400/80 uppercase tracking-wider"><i class="fa-solid fa-user-tag mr-1"></i>下注对账名册</span>
+            </div>
+            <div class="flex-1 overflow-y-auto space-y-2 pr-1 text-left" id="md-players-list"></div>
+        </div>
+    </div>
+
     <!-- Web Audio API 音效合成引擎 -->
     <script>
         const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -832,7 +973,7 @@
                 ["Group C", "6月25日 06:00", "第3轮", "迈阿密", "苏格兰", "巴西"], ["Group C", "6月25日 06:00", "第3轮", "亚特兰大", "摩洛哥", "海地"],
                 ["Group D", "6月13日 09:00", "第1轮", "洛杉矶", "美国", "巴拉圭"], ["Group D", "6月14日 12:00", "第1轮", "温哥华", "澳大利亚", "土耳其"],
                 ["Group D", "6月20日 03:00", "第2轮", "西雅图", "美国", "澳大利亚"], ["Group D", "6月20日 12:00", "第2轮", "旧金山湾区", "土耳其", "巴拉圭"],
-                ["Group D", "6月26日 10:00", "第3轮", "洛杉矶", "土耳其", "美国"], ["Group D", "6月26日 10:00", "第3轮", "旧金山湾区", "巴拉圭", "澳大利亚"],
+                ["Group6月26日 10:00", "第3轮", "洛杉矶", "土耳其", "美国"], ["Group D", "6月26日 10:00", "第3轮", "旧金山湾区", "巴拉圭", "澳大利亚"],
                 ["Group E", "6月15日 01:00", "第1轮", "休斯敦", "德国", "库拉索"], ["Group E", "6月15日 07:00", "第1轮", "费城", "科特迪瓦", "厄瓜多尔"],
                 ["Group E", "6月21日 04:00", "第2轮", "多伦多", "德国", "科特迪瓦"], ["Group E", "6月21日 08:00", "第2轮", "堪萨斯城", "厄瓜多尔", "库拉索"],
                 ["Group E", "6月26日 04:00", "第3轮", "纽约/新泽西", "厄瓜多尔", "德国"], ["Group E", "6月26日 04:00", "第3轮", "费城", "库拉索", "科特迪瓦"],
@@ -840,12 +981,12 @@
                 ["Group F", "6月21日 01:00", "第2轮", "休斯敦", "荷兰", "瑞典"], ["Group F", "6月21日 12:00", "第2轮", "蒙特雷", "突尼斯", "日本"],
                 ["Group F", "6月26日 07:00", "第3轮", "达拉斯", "日本", "瑞典"], ["Group F", "6月26日 07:00", "第3轮", "堪萨斯城", "突尼斯", "荷兰"],
                 ["Group G", "6月16日 03:00", "第1轮", "西雅图", "比利时", "埃及"], ["Group G", "6月16日 09:00", "第1轮", "洛杉矶", "伊朗", "新西兰"],
-                ["Group G", "6月22日 03:00", "第2轮", "洛杉矶", "比利时", "伊朗"], ["Group G", "6月22日 09:00", "第2轮", "温哥华", "新西兰", "埃及"],
+                ["Group G", "6月22日 03:00", "第2轮", "洛杉矶", "比利时", "伊朗"], ["Group G", "6月22日 09:00", "第2轮", "温哥飞", "新西兰", "埃及"],
                 ["Group G", "6月27日 11:00", "第3轮", "西雅图", "埃及", "伊朗"], ["Group G", "6月27日 11:00", "第3轮", "温哥华", "新西兰", "比利时"],
                 ["Group H", "6月16日 00:00", "第1轮", "亚特兰大", "西班牙", "佛得角"], ["Group H", "6月16日 06:00", "第1轮", "沙特阿拉伯", "乌拉圭"],
                 ["Group H", "6月22日 00:00", "第2轮", "亚特兰大", "西班牙", "沙特阿拉伯"], ["Group H", "6月22日 06:00", "第2轮", "迈阿密", "乌拉圭", "佛得角"],
                 ["Group H", "6月27日 08:00", "第3轮", "休斯敦", "佛得角", "沙特阿拉伯"], ["Group H", "6月27日 08:00", "第3轮", "瓜达拉哈拉", "乌拉圭", "西班牙"],
-                ["Group I", "6月17日 03:00", "第1轮", "纽约/新泽西", "法国", "塞内加尔"], ["Group I", "6月17日 06:00", "第1轮", "波士顿", "伊拉克", "挪威"],
+                ["Group I", "6月17日 03:00", "第1轮", "纽约/新泽西", "法国", "塞内加尔"], ["Group I", "6月17日 06:00", "第1轮", "伊拉克", "挪威"],
                 ["Group I", "6月23日 05:00", "第2轮", "费城", "法国", "伊拉克"], ["Group I", "6月23日 08:00", "第2轮", "纽约/新泽西", "挪威", "塞内加尔"],
                 ["Group I", "6月27日 03:00", "第3轮", "波士顿", "挪威", "法国"], ["Group I", "6月27日 03:00", "第3轮", "多伦多", "塞内加尔", "伊拉克"],
                 ["Group J", "6月17日 09:00", "第1轮", "堪萨斯城", "阿根廷", "阿尔及利亚"], ["Group J", "6月17日 12:00", "第1轮", "旧金山湾区", "奥地利", "约旦"],
@@ -866,7 +1007,7 @@
                 [85,"1/16决赛","7月03日 11:00","温哥华","B1","E3/F3/G3/I3/J3"], [86,"1/16决赛","7月04日 06:00","迈阿密","J1","H2"], [87,"1/16决赛","7月04日 09:30","堪萨斯城","K1","D3/E3/I3/J3/L3"], [88,"1/16决赛","7月04日 02:00","达拉斯","D2","G2"],
                 [89,"1/8决赛","7月05日 05:00","费城","74胜者","77胜者"], [90,"1/8决赛","7月05日 01:00","休斯敦","73胜者","75胜者"], [91,"1/8决赛","7月06日 04:00","纽约/新泽西","76胜者","78胜者"],
                 [92,"1/8决赛","7月06日 08:00","墨西哥城","79胜者","80胜者"], [93,"1/8决赛","7月07日 03:00","达拉斯","83胜者","84胜者"], [94,"1/8决赛","7月07日 08:00","西雅图","81胜者","82胜者"],
-                [95,"1/8决赛","7月08日 00:00","亚特兰大","86胜者","88胜者"], [96,"1/8决赛","7月08日 04:00","温哥华","85胜者","87胜者"],
+                [95,"1/8决赛","7月08日 00:00","亚特兰大","86胜者","88胜者"], [96,"1/8决赛","7月08日 04:00","温哥华","85胜者","87胜7者"],
                 [97,"1/4决赛","7月10日 04:00","波士顿","89胜者","90胜者"], [98,"1/4决赛","7月11日 03:00","洛杉矶","93胜者","94胜者"], [99,"1/4决赛","7月12日 05:00","迈阿密","91胜者","92胜者"], [100,"1/4决赛","7月12日 09:00","堪萨斯城","95胜者","96胜者"],
                 [101,"半决赛","7月15日 03:00","达拉斯","97胜者","98胜者"], [102,"半决赛","7月16日 03:00","亚特兰大","99胜者","100胜者"],
                 [103,"季军赛","7月19日 05:00","迈阿密","半决负1","半决负2"], [104,"决赛","7月20日 03:00","纽约/新泽西","半决胜1","半决胜2"]
@@ -1083,6 +1224,19 @@
                     addLog(`更新了 [${m.home} VS ${m.away}] 客队 [${m.away}] 让球数为: "${trimmed || '无'}"`);
                 }
                 broadcastData();
+            }
+        }
+
+        // 交互修改让球数 (精细化像素级保留，无需外部输入框)
+        function triggerEditHandicap(matchId, side) {
+            const m = db.matches.find(x => x.id === matchId);
+            if (!m || m.status === 'finished') return;
+            const currentVal = side === 'home' ? m.homeHandicap : m.awayHandicap;
+            const sideName = side === 'home' ? m.home : m.away;
+            const newVal = prompt(`请输入 [${sideName}] 的让球数描述 (当前: ${currentVal || '无'}):`, currentVal || '');
+            if (newVal !== null) {
+                updateHandicap(matchId, side, newVal);
+                refreshAllUI();
             }
         }
 
@@ -1407,8 +1561,8 @@
                     }
                 }
 
-                p.luckyTeamStr = luckyTeam !== '无' ? `${luckyTeam} (+$${luckyVal.toFixed(0)})` : '无';
-                p.unluckyTeamStr = unluckyTeam !== '无' ? `${unluckyTeam} (-$${Math.abs(unluckyVal).toFixed(0)})` : '无';
+                p.luckyTeamStr = luckyTeam !== '无' ? `${luckyTeam} (+${luckyVal.toFixed(0)})` : '无';
+                p.unluckyTeamStr = unluckyTeam !== '无' ? `${unluckyTeam} (-${Math.abs(unluckyVal).toFixed(0)})` : '无';
 
                 // 最多猜胜
                 let maxCWTeam = '无';
@@ -1439,7 +1593,7 @@
             const c = document.getElementById('leaderboard-container');
             if (db.players.length === 0) {
                 c.innerHTML = '<div class="text-center text-white/50 py-10 text-sm">暂无数据，请先前往「阵营」添加玩家</div>';
-                document.getElementById('global-money').innerText = `$0`;
+                document.getElementById('global-money').innerText = `0`;
                 return;
             }
             
@@ -1451,7 +1605,7 @@
                               `<span class="text-white/50 font-black text-lg w-6 text-center">${i+1}</span>`;
                 
                 html += `
-                    <div class="leaderboard-card-item marquee-lb backdrop-blur-md rounded-2xl p-3 flex items-center gap-3 shadow-lg relative overflow-hidden">
+                    <div class="leaderboard-card-item marquee-lb rounded-2xl p-3 flex items-center gap-3 shadow-lg relative overflow-hidden">
                         ${i===0 ? '<div class="absolute inset-0 bg-gradient-to-r from-yellow-500/20 to-transparent"></div>' : ''}
                         <div class="w-8 text-center z-10">${rankStr}</div>
                         <img src="${p.avatar}" class="w-12 h-12 rounded-full border-2 border-white/20 z-10 bg-black/50 object-cover">
@@ -1472,7 +1626,7 @@
                     totalM += db.bets[mId].stake * Object.values(db.bets[mId].predictions).filter(v => v !== 'none').length;
                 }
             }
-            document.getElementById('global-money').innerText = `$${totalM}`;
+            document.getElementById('global-money').innerText = totalM;
         }
 
         // --- View 2: 今日赛程 ---
@@ -1510,6 +1664,200 @@
 
         const colorClasses = ['match-card-item-bg-yellow', 'match-card-item-bg-blue', 'match-card-item-bg-red', 'match-card-item-bg-green'];
 
+        // 已经开奖的赛程卡，点击空白可查看具体下注历史记录
+        function showMatchDetails(matchId, event) {
+            if (event.target.closest('button') || event.target.closest('input') || event.target.closest('.fa-pen-to-square') || event.target.closest('[onclick*="triggerEditHandicap"]')) {
+                return; // 阻断冒泡，避免误触其它按钮
+            }
+            const m = db.matches.find(x => x.id === matchId);
+            if (!m || m.status !== 'finished') return;
+
+            document.getElementById('md-title').innerText = `${m.home} vs ${m.away}`;
+            document.getElementById('md-meta').innerText = `${m.group} | ${m.round} | 📍 ${m.venue} | ${m.date}`;
+            document.getElementById('md-score').innerText = m.score || m.result.replace('home','主胜').replace('away','客胜').replace('draw','平局');
+
+            const b = db.bets[m.id] || { stake: 0, predictions: {} };
+            const preds = b.predictions || {};
+            let html = '';
+            let betCount = 0;
+
+            for (let pid in preds) {
+                if (preds[pid] !== 'none') {
+                    betCount++;
+                    const p = db.players.find(x => x.id === pid);
+                    if (p) {
+                        const predVal = preds[pid];
+                        const isCorrect = (predVal === m.result);
+                        let predText = predVal === 'home' ? '主胜' : (predVal === 'away' ? '客胜' : '平局');
+                        
+                        let winners = m.winners || [];
+                        let pool = Object.values(preds).filter(v => v !== 'none').length * b.stake;
+                        let netProfit = -b.stake;
+                        if (isCorrect) {
+                            netProfit = (pool / winners.length) - b.stake;
+                        }
+
+                        html += `
+                            <div class="bg-black/40 border border-white/5 p-2 rounded-xl flex justify-between items-center text-xs">
+                                <div class="flex items-center gap-2">
+                                    <img src="${p.avatar}" class="w-6 h-6 rounded-full bg-black object-cover">
+                                    <div>
+                                        <p class="font-bold text-white">${p.name}</p>
+                                        <p class="text-[9px] text-gray-400">选择: <span class="text-yellow-400 font-bold">“${predText}”</span></p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <p class="${netProfit >= 0 ? 'text-green-400' : 'text-red-400'} font-mono font-bold">
+                                        ${netProfit >= 0 ? '+' : ''}${netProfit.toFixed(0)}分
+                                    </p>
+                                </div>
+                            </div>
+                        `;
+                    }
+                }
+            }
+
+            if (html === '') {
+                html = '<div class="text-center text-white/30 py-6 text-xs">暂无下注历史记录</div>';
+            }
+
+            document.getElementById('md-bets-count').innerText = `${betCount} 人`;
+            document.getElementById('md-players-list').innerHTML = html;
+            openModal('matchDetailsModal');
+        }
+
+        // 渲染对阵卡片（支持今日赛程、赛事中心，统一像素级高保真卡片规范）
+        function renderSingleMatchCard(m, index) {
+            let isFin = m.status === 'finished';
+            let bet = db.bets[m.id] || { stake: 0, predictions: {} };
+            let matchWinners = m.winners || [];
+            let parts = Object.values(bet.predictions).filter(v => v !== 'none').length;
+            let pool = (bet.stake || 0) * parts;
+            
+            let themeClass = isFin ? 'match-card-item-bg-gray' : colorClasses[index % colorClasses.length];
+
+            // 赢得积分的玩家列表以标签胶囊药丸形式平铺呈现
+            let winnerHTML = '';
+            if (isFin && matchWinners.length > 0) {
+                winnerHTML += `
+                    <div class="flex flex-wrap gap-1.5 items-center justify-center border-t border-black/5 pt-2 mt-1 w-full">
+                        <span class="text-[9px] font-black text-black/50 mr-1 flex items-center gap-0.5"><i class="fa-solid fa-coins"></i> 斩获积分:</span>
+                `;
+                matchWinners.forEach(pid => {
+                    let p = db.players.find(x => x.id === pid);
+                    if (p) {
+                        winnerHTML += `
+                            <span class="inline-flex items-center gap-1 bg-green-600/15 border border-green-600/30 text-green-900 px-1.5 py-0.5 rounded-full text-[10px] font-extrabold shadow-sm">
+                                <img src="${p.avatar}" class="w-3.5 h-3.5 rounded-full object-cover bg-black">
+                                <span class="truncate max-w-[50px]">${p.name}</span>
+                            </span>
+                        `;
+                    }
+                });
+                winnerHTML += `</div>`;
+            } else if (isFin) {
+                winnerHTML = `
+                    <div class="flex flex-wrap gap-1.5 items-center justify-center border-t border-black/5 pt-2 mt-1 w-full">
+                        <span class="text-[9px] font-black text-black/40">无人生还，庄家吃掉奖池 🤫</span>
+                    </div>`;
+            }
+
+            // 胜利者 WIN 标签覆盖
+            let homeWinCover = (isFin && m.result === 'home') ? `
+                <div class="absolute inset-0 bg-black/40 flex items-center justify-center pointer-events-none">
+                    <span class="bg-yellow-400 text-blue-950 font-black text-[9px] px-1 py-0.5 rounded skew-x-12 animate-pulse border border-yellow-300 shadow-[0_0_8px_rgba(250,204,21,0.8)]">WIN</span>
+                </div>` : '';
+            let awayWinCover = (isFin && m.result === 'away') ? `
+                <div class="absolute inset-0 bg-black/40 flex items-center justify-center pointer-events-none">
+                    <span class="bg-yellow-400 text-blue-950 font-black text-[9px] px-1 py-0.5 rounded skew-x-12 animate-pulse border border-yellow-300 shadow-[0_0_8px_rgba(250,204,21,0.8)]">WIN</span>
+                </div>` : '';
+
+            return `
+                <div onclick="showMatchDetails(${m.id}, event)" class="match-card match-card-item marquee-mc ${themeClass} p-3 flex flex-col gap-1 cursor-pointer relative">
+                    <div class="flex justify-between items-center text-[10px] font-bold text-black/60 border-b border-black/10 pb-1.5 mb-1">
+                        <div class="flex gap-2">
+                            <span class="bg-black/10 px-2 py-0.5 rounded">${m.group}</span>
+                            <span>${m.round}</span>
+                        </div>
+                        <div class="flex items-center gap-1"><i class="fa-solid fa-location-dot"></i> ${m.venue} | ${m.date}</div>
+                    </div>
+                    
+                    <!-- 上半部：国旗 与 中央比分 (通过 items-center 实现中心线绝对对齐) -->
+                    <div class="flex items-center justify-between py-1 relative">
+                        <!-- 主队国旗容器 -->
+                        <div class="flex flex-col items-center w-[30%] relative">
+                            <div class="flag-box">
+                                ${getFlag(m.home)}
+                                ${homeWinCover}
+                            </div>
+                        </div>
+                        
+                        <!-- 中央比分及上面的奖池 (完美对齐国旗纵向中心) -->
+                        <div class="flex flex-col items-center justify-center w-[40%] text-center">
+                            <!-- 奖池 (置于比分上方) -->
+                            <div class="bg-black/5 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full text-yellow-800 mb-1 font-jackpot-size">
+                                奖池: <span class="font-mono font-bold text-yellow-700">${pool}</span>
+                            </div>
+                            <!-- 比分 -->
+                            <div class="text-3xl font-black text-slate-800 tracking-wider font-mono leading-none">
+                                ${m.score || "0 : 0"}
+                            </div>
+                        </div>
+                        
+                        <!-- 客队国旗容器 -->
+                        <div class="flex flex-col items-center w-[30%] relative">
+                            <div class="flag-box">
+                                ${getFlag(m.away)}
+                                ${awayWinCover}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 下半部：队名 与 操作/让球配置 (结构分离，完美呈现) -->
+                    <div class="flex items-start justify-between py-1 mt-1 border-t border-black/5 pt-2">
+                        <!-- 主队队名 -->
+                        <div class="flex flex-col items-center w-[30%]">
+                            <span class="bg-black/10 text-black font-extrabold text-[11px] px-2 py-0.5 rounded-lg truncate max-w-full text-center">${m.home}</span>
+                        </div>
+
+                        <!-- 中央让球与下注开奖控制区 -->
+                        <div class="flex flex-col items-center justify-center w-[40%] text-center gap-1.5">
+                            <!-- 让球配置 -->
+                            <div class="flex gap-1.5 justify-center">
+                                <span onclick="triggerEditHandicap(${m.id}, 'home'); event.stopPropagation();" class="bg-black/10 hover:bg-black/15 text-[9px] font-extrabold px-1.5 py-0.5 rounded text-black transition-all cursor-pointer">
+                                    让球 ${m.homeHandicap || '+0'}
+                                </span>
+                                <span onclick="triggerEditHandicap(${m.id}, 'away'); event.stopPropagation();" class="bg-black/10 hover:bg-black/15 text-[9px] font-extrabold px-1.5 py-0.5 rounded text-black transition-all cursor-pointer">
+                                    让球 ${m.awayHandicap || '+0'}
+                                </span>
+                            </div>
+
+                            <!-- 投注/结算控制按钮 -->
+                            <div class="flex gap-1.5 justify-center">
+                                ${isFin 
+                                    ? `<button onclick="triggerReSettle(${m.id}); event.stopPropagation(); playAudio('click')" class="btn-3d bg-gradient-to-b from-yellow-500 to-amber-700 shadow-md px-2 py-0.5 text-[9px] font-bold">修改赛果</button>`
+                                    : `<button onclick="openBetModal(${m.id}); event.stopPropagation(); playAudio('click')" class="btn-3d btn-blue px-3 py-1 text-xs whitespace-nowrap">下注</button>
+                                       <button onclick="openSettleModal(${m.id}); event.stopPropagation(); playAudio('click')" class="btn-3d px-3 py-1 text-xs whitespace-nowrap">开奖</button>`
+                                }
+                            </div>
+                        </div>
+
+                        <!-- 客队队名 -->
+                        <div class="flex flex-col items-center w-[30%]">
+                            <span class="bg-black/10 text-black font-extrabold text-[11px] px-2 py-0.5 rounded-lg truncate max-w-full text-center">${m.away}</span>
+                        </div>
+                    </div>
+
+                    <!-- 赢得积分玩家标签平铺渲染 -->
+                    ${winnerHTML}
+
+                    <!-- 底部右下角编辑画笔 -->
+                    ${!isFin ? `
+                        <i onclick="openEditMatch(${m.id}); event.stopPropagation(); playAudio('click')" class="fa-solid fa-pen-to-square absolute bottom-2 right-2 text-black/20 hover:text-black transition-colors cursor-pointer p-1 text-xs"></i>
+                    ` : ''}
+                </div>`;
+        }
+
         function renderTodayMatches() {
             const container = document.getElementById('today-matches-container');
             const list = db.matches.filter(m => {
@@ -1525,77 +1873,7 @@
             
             let html = '';
             list.forEach((m, index) => {
-                let isFin = m.status === 'finished';
-                let bet = db.bets[m.id] || { stake: 0, predictions: {} };
-                let parts = Object.values(bet.predictions).filter(v => v !== 'none').length;
-                let pool = (bet.stake || 0) * parts;
-                
-                let themeClass = isFin ? 'match-card-item-bg-gray' : colorClasses[index % colorClasses.length];
-
-                let winnerHTML = '';
-                const matchWinners = m.winners || [];
-                if(isFin && matchWinners.length > 0) {
-                    matchWinners.slice(0, 4).forEach(pid => {
-                        let p = db.players.find(x => x.id === pid);
-                        if(p) winnerHTML += `<img src="${p.avatar}" class="inline-block h-6 w-6 rounded-full ring-2 ring-white object-cover bg-black">`;
-                    });
-                    if(matchWinners.length > 4) winnerHTML += `<div class="inline-flex items-center justify-center h-6 w-6 rounded-full bg-white ring-2 ring-gray-300 text-[10px] font-bold text-black">+${matchWinners.length-4}</div>`;
-                } else if(isFin) winnerHTML = `<span class="text-xs text-black/50 font-bold">无人生还</span>`;
-
-                let centerUI = isFin 
-                    ? `<div class="text-lg font-black text-red-600 bg-white/80 px-3 py-0.5 rounded-lg shadow-inner">${m.score || m.result.replace('home','主胜').replace('away','客胜').replace('draw','平局')}</div>`
-                    : `<div class="text-xs font-black text-black/40 italic">VS</div>`;
-
-                html += `
-                    <div class="match-card match-card-item marquee-mc ${themeClass} p-3 flex flex-col gap-2">
-                        <div class="flex justify-between items-center text-[10px] font-bold text-black/60 border-b border-black/10 pb-1">
-                            <div class="flex gap-2">
-                                <span class="bg-black/10 px-2 py-0.5 rounded">${m.group}</span>
-                                <span>${m.round}</span>
-                            </div>
-                            <div class="flex items-center gap-1"><i class="fa-solid fa-location-dot"></i> ${m.venue} | ${m.date}</div>
-                        </div>
-                        
-                        <div class="flex items-center justify-between py-1 relative">
-                            ${!isFin ? `<i onclick="openEditMatch(${m.id}); playAudio('click')" class="fa-solid fa-pen-to-square absolute right-0 top-0 text-black/30 hover:text-black cursor-pointer p-1"></i>` : ''}
-                            
-                            <!-- 主队区 -->
-                            <div class="flex flex-col items-end w-[40%] justify-center">
-                                <div class="flex items-center gap-1.5 justify-end w-full">
-                                    <input type="text" placeholder="让球" value="${m.homeHandicap || ''}" onchange="updateHandicap(${m.id}, 'home', this.value)" ${isFin ? 'disabled' : ''} class="w-11 text-[9px] text-center bg-black/15 hover:bg-black/25 focus:bg-black/30 border border-black/10 rounded px-1 py-0.5 text-black font-bold outline-none placeholder-black/30 truncate">
-                                    <span class="font-black text-xs md:text-sm truncate drop-shadow-md text-right flex-1">${m.home}</span>
-                                    <div class="soccer-icon shrink-0">${getFlag(m.home)}</div>
-                                </div>
-                            </div>
-                            
-                            <div class="w-[20%] text-center px-1 flex justify-center shrink-0">${centerUI}</div>
-                            
-                            <!-- 客队区 -->
-                            <div class="flex flex-col items-start w-[40%] justify-center">
-                                <div class="flex items-center gap-1.5 justify-start w-full">
-                                    <div class="soccer-icon shrink-0">${getFlag(m.away)}</div>
-                                    <span class="font-black text-xs md:text-sm truncate drop-shadow-md text-left flex-1">${m.away}</span>
-                                    <input type="text" placeholder="让球" value="${m.awayHandicap || ''}" onchange="updateHandicap(${m.id}, 'away', this.value)" ${isFin ? 'disabled' : ''} class="w-11 text-[9px] text-center bg-black/15 hover:bg-black/25 focus:bg-black/30 border border-black/10 rounded px-1 py-0.5 text-black font-bold outline-none placeholder-black/30 truncate">
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="flex justify-between items-center pt-1">
-                            <div class="flex -space-x-2 overflow-hidden min-w-[70px]">${winnerHTML}</div>
-                            <div class="text-xs font-black text-black/60 text-center flex-1">奖池: <span class="text-yellow-600">$${pool}</span></div>
-                            <div class="flex shrink-0 items-center">
-                                ${isFin 
-                                    ? `<div class="flex flex-col items-end mr-1.5 text-right">
-                                           <span class="px-2 py-0.5 rounded-full text-[10px] text-white bg-black/40 font-bold whitespace-nowrap">已结算 | ${m.score || m.result.replace('home','主胜').replace('away','客胜').replace('draw','平局')}</span>
-                                           <span class="text-[9px] text-black/60 font-extrabold mt-0.5">让: 主(${m.homeHandicap || '无'}) 客(${m.awayHandicap || '无'})</span>
-                                       </div>
-                                       <button onclick="triggerReSettle(${m.id}); playAudio('click')" class="btn-3d bg-gradient-to-b from-yellow-500 to-amber-700 shadow-md px-2.5 py-1 text-[10px] font-bold">修改赛果</button>`
-                                    : `<button onclick="openBetModal(${m.id}); playAudio('click')" class="btn-3d btn-blue px-3 py-1.5 text-xs mr-1">下注</button>
-                                       <button onclick="openSettleModal(${m.id}); playAudio('click')" class="btn-3d px-3 py-1.5 text-xs">开奖</button>`
-                                }
-                            </div>
-                        </div>
-                    </div>`;
+                html += renderSingleMatchCard(m, index);
             });
             container.innerHTML = html;
         }
@@ -1625,77 +1903,7 @@
 
             let html = '';
             list.forEach((m, index) => {
-                let isFin = m.status === 'finished';
-                let bet = db.bets[m.id] || { stake: 0, predictions: {} };
-                let parts = Object.values(bet.predictions).filter(v => v !== 'none').length;
-                let pool = (bet.stake || 0) * parts;
-                
-                let themeClass = isFin ? 'match-card-item-bg-gray' : colorClasses[index % colorClasses.length];
-
-                let winnerHTML = '';
-                const matchWinners = m.winners || [];
-                if(isFin && matchWinners.length > 0) {
-                    matchWinners.slice(0, 4).forEach(pid => {
-                        let p = db.players.find(x => x.id === pid);
-                        if(p) winnerHTML += `<img src="${p.avatar}" class="inline-block h-6 w-6 rounded-full ring-2 ring-white object-cover bg-black">`;
-                    });
-                    if(matchWinners.length > 4) winnerHTML += `<div class="inline-flex items-center justify-center h-6 w-6 rounded-full bg-white ring-2 ring-gray-300 text-[10px] font-bold text-black">+${matchWinners.length-4}</div>`;
-                } else if(isFin) winnerHTML = `<span class="text-xs text-black/50 font-bold">无人生还</span>`;
-
-                let centerUI = isFin 
-                    ? `<div class="text-lg font-black text-red-600 bg-white/80 px-3 py-0.5 rounded-lg shadow-inner">${m.score || m.result.replace('home','主胜').replace('away','客胜').replace('draw','平局')}</div>`
-                    : `<div class="text-xs font-black text-black/40 italic">VS</div>`;
-
-                html += `
-                    <div class="match-card match-card-item marquee-mc ${themeClass} p-3 flex flex-col gap-2">
-                        <div class="flex justify-between items-center text-[10px] font-bold text-black/60 border-b border-black/10 pb-1">
-                            <div class="flex gap-2">
-                                <span class="bg-black/10 px-2 py-0.5 rounded">${m.group}</span>
-                                <span>${m.round}</span>
-                            </div>
-                            <div class="flex items-center gap-1"><i class="fa-solid fa-location-dot"></i> ${m.venue} | ${m.date}</div>
-                        </div>
-                        
-                        <div class="flex items-center justify-between py-1 relative">
-                            ${!isFin ? `<i onclick="openEditMatch(${m.id}); playAudio('click')" class="fa-solid fa-pen-to-square absolute right-0 top-0 text-black/30 hover:text-black cursor-pointer p-1"></i>` : ''}
-                            
-                            <!-- 主队区 -->
-                            <div class="flex flex-col items-end w-[40%] justify-center">
-                                <div class="flex items-center gap-1.5 justify-end w-full">
-                                    <input type="text" placeholder="让球" value="${m.homeHandicap || ''}" onchange="updateHandicap(${m.id}, 'home', this.value)" ${isFin ? 'disabled' : ''} class="w-11 text-[9px] text-center bg-black/15 hover:bg-black/25 focus:bg-black/30 border border-black/10 rounded px-1 py-0.5 text-black font-bold outline-none placeholder-black/30 truncate">
-                                    <span class="font-black text-xs md:text-sm truncate drop-shadow-md text-right flex-1">${m.home}</span>
-                                    <div class="soccer-icon shrink-0">${getFlag(m.home)}</div>
-                                </div>
-                            </div>
-                            
-                            <div class="w-[20%] text-center px-1 flex justify-center shrink-0">${centerUI}</div>
-                            
-                            <!-- 客队区 -->
-                            <div class="flex flex-col items-start w-[40%] justify-center">
-                                <div class="flex items-center gap-1.5 justify-start w-full">
-                                    <div class="soccer-icon shrink-0">${getFlag(m.away)}</div>
-                                    <span class="font-black text-xs md:text-sm truncate drop-shadow-md text-left flex-1">${m.away}</span>
-                                    <input type="text" placeholder="让球" value="${m.awayHandicap || ''}" onchange="updateHandicap(${m.id}, 'away', this.value)" ${isFin ? 'disabled' : ''} class="w-11 text-[9px] text-center bg-black/15 hover:bg-black/25 focus:bg-black/30 border border-black/10 rounded px-1 py-0.5 text-black font-bold outline-none placeholder-black/30 truncate">
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="flex justify-between items-center pt-1">
-                            <div class="flex -space-x-2 overflow-hidden min-w-[70px]">${winnerHTML}</div>
-                            <div class="text-xs font-black text-black/60 text-center flex-1">奖池: <span class="text-yellow-600">$${pool}</span></div>
-                            <div class="flex shrink-0 items-center">
-                                ${isFin 
-                                    ? `<div class="flex flex-col items-end mr-1.5 text-right">
-                                           <span class="px-2 py-0.5 rounded-full text-[10px] text-white bg-black/40 font-bold whitespace-nowrap">已结算 | ${m.score || m.result.replace('home','主胜').replace('away','客胜').replace('draw','平局')}</span>
-                                           <span class="text-[9px] text-black/60 font-extrabold mt-0.5">让: 主(${m.homeHandicap || '无'}) 客(${m.awayHandicap || '无'})</span>
-                                       </div>
-                                       <button onclick="triggerReSettle(${m.id}); playAudio('click')" class="btn-3d bg-gradient-to-b from-yellow-500 to-amber-700 shadow-md px-2.5 py-1 text-[10px] font-bold">修改赛果</button>`
-                                    : `<button onclick="openBetModal(${m.id}); playAudio('click')" class="btn-3d btn-blue px-3 py-1.5 text-xs mr-1">下注</button>
-                                       <button onclick="openSettleModal(${m.id}); playAudio('click')" class="btn-3d px-3 py-1.5 text-xs">开奖</button>`
-                                }
-                            </div>
-                        </div>
-                    </div>`;
+                html += renderSingleMatchCard(m, index);
             });
             c.innerHTML = html;
         }
@@ -1723,7 +1931,7 @@
                 let lossStreakText = p.maxLossStreak > 0 ? `${p.maxLossStreak} 局` : '0 局';
                 
                 html += `
-                    <div class="stats-card-item marquee-st border border-white/10 rounded-2xl p-4 shadow-xl backdrop-blur-md space-y-4">
+                    <div class="stats-card-item marquee-st border border-white/10 rounded-2xl p-4 shadow-xl space-y-4">
                         <!-- 头像及名字，净利润大字醒目呈现 -->
                         <div class="flex items-center gap-3 pb-3 border-b border-white/10">
                             <div class="relative">
@@ -1760,14 +1968,13 @@
                             <div class="grid grid-cols-4 gap-2">
                                 <div class="bg-white/5 rounded-xl p-2 text-center border border-white/5">
                                     <p class="text-[9px] text-white/40 font-bold">总投资</p>
-                                    <p class="text-sm font-extrabold text-white font-mono mt-0.5">$${p.totalInvest}</p>
+                                    <p class="text-sm font-extrabold text-white font-mono mt-0.5">${p.totalInvest}</p>
                                 </div>
                                 <div class="bg-white/5 rounded-xl p-2 text-center border border-white/5">
                                     <p class="text-[9px] text-white/40 font-bold">参与局数</p>
                                     <p class="text-sm font-extrabold text-blue-300 font-mono mt-0.5">${p.totalBets} 局</p>
                                 </div>
                                 <div class="bg-white/5 rounded-xl p-2 text-center border border-white/5">
-                                    <p class="text-[9px] text-white/40 font-bold">回报率</p>
                                     <p class="text-sm font-extrabold ${roiClass} font-mono mt-0.5">${roi}%</p>
                                 </div>
                                 <div class="bg-white/5 rounded-xl p-2 text-center border border-white/5">
@@ -1803,7 +2010,7 @@
                                 </div>
                                 <div class="flex justify-between items-center text-xs mt-1">
                                     <span class="text-white/60">单局最赚:</span>
-                                    <span class="text-green-400 font-extrabold font-mono">+$${p.biggestWin || 0}</span>
+                                    <span class="text-green-400 font-extrabold font-mono">+${p.biggestWin || 0}</span>
                                 </div>
                             </div>
                         </div>
@@ -1859,7 +2066,7 @@
             if (!name) return alert("代号必填！");
             const avatar = avatarInput || `https://api.dicebear.com/6.x/bottts/svg?seed=${name}&backgroundColor=00f3ff`;
             db.players.push({ id: 'P_'+Date.now(), name, avatar, balance: 0, totalInvest: 0, correctGuesses: 0, totalBets: 0, highestBalance: 0, lowestBalance: 0, biggestWin: 0, biggestLoss: 0, teamStats: {} });
-            addLog(`新增了玩家: [${name}]`);
+            addLog("新增了玩家: [" + name + "]");
             broadcastData(); closeModal('addPlayerModal'); refreshAllUI();
         }
 
@@ -1881,7 +2088,7 @@
             let html = '';
             db.players.forEach(p => {
                 html += `
-                    <div class="player-card-item marquee-pc border border-white/10 p-4 rounded-2xl text-center relative group backdrop-blur-md">
+                    <div class="player-card-item marquee-pc border border-white/10 p-4 rounded-2xl text-center relative group">
                         <img onclick="editPlayerAvatar('${p.id}'); playAudio('click')" src="${p.avatar}" class="w-16 h-16 mx-auto rounded-full bg-black/50 border-2 border-white/20 mb-3 object-cover shadow-lg cursor-pointer hover:scale-110 active:scale-95 transition-all" title="点击修改头像">
                         
                         <div class="flex items-center justify-center gap-1.5 mb-1">
@@ -1889,7 +2096,7 @@
                             <button onclick="editPlayerName('${p.id}'); playAudio('click')" class="text-white/40 hover:text-white transition-colors" title="修改名字"><i class="fa-solid fa-pen text-[10px]"></i></button>
                         </div>
                         
-                        <p class="${p.balance>=0?'text-green-400':'text-red-400'} font-black text-sm">${p.balance>=0?'+':''}$${p.balance.toFixed(0)}</p>
+                        <p class="${p.balance>=0?'text-green-400':'text-red-400'} font-black text-sm">${p.balance>=0?'+':''}${p.balance.toFixed(0)}</p>
                         <button onclick="deletePlayer('${p.id}'); playAudio('click');" class="absolute top-2 right-2 text-white/30 hover:text-red-500 transition"><i class="fa-solid fa-trash text-sm"></i></button>
                     </div>`;
             });
@@ -1956,7 +2163,7 @@
             let html = '';
             filteredLogs.forEach(log => {
                 html += `
-                    <div class="bg-black/30 border border-white/5 rounded-xl p-3 flex flex-col gap-1 text-[11px] backdrop-blur-md">
+                    <div class="bg-black/30 border border-white/5 rounded-xl p-3 flex flex-col gap-1 text-[11px]">
                         <div class="flex justify-between items-center text-white/40 font-semibold">
                             <span class="font-mono text-[10px]"><i class="fa-regular fa-clock mr-1"></i>${log.time}</span>
                         </div>
@@ -1975,7 +2182,7 @@
             if (confirm("确定要清空所有的历史操作日志吗？清空后将无法挽回！")) {
                 db.logs = [];
                 activeHistoryDate = 'all'; // 重置过滤
-                addLog("系统日志已被管理员清空");
+                // 彻底清空，不在历史操作日志中记录清空的痕迹
                 broadcastData();
                 refreshAllUI();
             }
@@ -2169,7 +2376,7 @@
             m.home = document.getElementById('editHome').value.trim() || '主队'; 
             m.away = document.getElementById('editAway').value.trim() || '客队';
             
-            addLog(`编辑了对阵: [${oldHome} VS ${oldAway}] 变更为 [${m.home} VS ${m.away}]`);
+            addLog("编辑了对阵: [" + oldHome + " VS " + oldAway + "] 变更为 [" + m.home + " VS " + m.away + "]");
             broadcastData(); closeModal('editMatchModal'); refreshAllUI();
         }
 
@@ -2180,7 +2387,7 @@
             
             // 校验15分钟投注时间限制
             if (db.lockBets15Min && isMatchWithin15Mins(m.date)) {
-                alert(`⚠️ 操作受阻！\n该赛事 [${m.home} VS ${m.away}] 当前已进入临开赛前 15 分钟限制区或已经开赛，系统已锁定投注！`);
+                alert(`⚠️ 操作受阻！\n该赛事 [${m.home} vs ${m.away}] 当前已进入临开赛前 15 分钟限制区或已经开赛，系统已锁定投注！`);
                 return;
             }
             
@@ -2222,9 +2429,9 @@
                         if (oldSelection !== r.value) {
                             const sideText = r.value === 'home' ? '主胜' : (r.value === 'away' ? '客胜' : (r.value === 'draw' ? '平局' : '撤单'));
                             if (r.value !== 'none') {
-                                addLog(`玩家 [${p.name}] 针对比赛 [${m.home} VS ${m.away}] 进行了投注: 预测 [${sideText}]，单注金额 $${stake}`);
+                                addLog("玩家 [" + p.name + "] 针对比赛 [" + m.home + " VS " + m.away + "] 进行了投注: 预测 [" + sideText + "]，单注金额 " + stake);
                             } else {
-                                addLog(`玩家 [${p.name}] 取消了对比赛 [${m.home} VS ${m.away}] 的投注`);
+                                addLog("玩家 [" + p.name + "] 取消了对比赛 [" + m.home + " VS " + m.away + "] 的投注");
                             }
                         }
                         break; 
@@ -2296,17 +2503,17 @@
 
                 const resultText = res === 'home' ? '主胜' : (res === 'away' ? '客胜' : '平局');
                 const scoreDesc = finalScoreText ? `，比分为 [${finalScoreText}]` : '';
-                addLog(`赛事 [${m.home} VS ${m.away}] 完成结算。赛果为: [${resultText}]${scoreDesc}`);
+                addLog("赛事 [" + m.home + " VS " + m.away + "] 完成结算。赛果为: [" + resultText + "]" + scoreDesc);
 
                 if (wins.length > 0) {
                     playAudio('win');
                     if(typeof confetti !== 'undefined') confetti({particleCount: 200, spread: 100, origin:{y:0.6}, zIndex: 9999, colors: ['#FFD700', '#FF8C00', '#00F3FF']});
                     const winnerNames = wins.map(pid => db.players.find(x => x.id === pid)?.name).join(', ');
-                    addLog(`[${m.home} VS ${m.away}] 结算赢家: [${winnerNames}]，各赢得奖池分享金 $${(pool/wins.length).toFixed(1)}`);
-                    setTimeout(() => alert(`结算完成!\n赢家: ${wins.map(pid=>db.players.find(x=>x.id===pid).name).join(', ')}\n各分得: $${(pool/wins.length).toFixed(1)}`), 500);
+                    addLog("[" + m.home + " VS " + m.away + "] 结算赢家: [" + winnerNames + "]，各赢得奖池分享金 " + (pool/wins.length).toFixed(1));
+                    setTimeout(() => alert(`结算完成!\n赢家: ${wins.map(pid=>db.players.find(x=>x.id===pid).name).join(', ')}\n各分得: ${(pool/wins.length).toFixed(1)}`), 500);
                 } else {
-                    addLog(`[${m.home} VS ${m.away}] 结算结果：冷门降临，无人猜中，奖金池 $${pool} 归庄家`);
-                    alert(`爆冷！全军覆没，庄家吃掉 $${pool}`);
+                    addLog("[" + m.home + " VS " + m.away + "] 结算结果：冷门降临，无人猜中，奖金池 " + pool + " 归庄家");
+                    alert(`爆冷！全军覆没，庄家吃掉 ${pool}`);
                 }
             }
             m.status = 'finished'; m.result = res; m.score = finalScoreText; m.winners = wins;
@@ -2543,7 +2750,7 @@
                         <div class="min-w-0 flex-1 pr-2">
                             <div class="font-extrabold text-white truncate flex items-center gap-1.5">
                                 <span class="bg-blue-500/10 text-blue-400 px-1.5 py-0.5 rounded text-[9px] font-mono shrink-0">第${r.id}场</span>
-                                <span class="truncate">${r.home} VS ${r.away}</span>
+<span class="truncate">${r.home} VS ${r.away}</span>
                             </div>
                             <div class="text-[10px] text-gray-400 mt-1 flex flex-wrap gap-x-2 gap-y-1">
                                 <span>下注: <span class="text-yellow-400 font-bold">“${r.predText}”</span></span>
@@ -2558,7 +2765,7 @@
                                 ${isWin ? '+' : ''}${r.netProfit.toFixed(0)}分
                             </span>
                         </div>
-                </div>`;
+                    </div>`;
             });
             container.innerHTML = html;
         }
@@ -2697,35 +2904,59 @@
         function initUISettings() {
             if (!db.uiSettings) {
                 db.uiSettings = {
-                    opacities: { leaderboard: 40, match: 30, stats: 30, player: 30 },
+                    opacities: { leaderboard: 40, match: 30, stats: 30, player: 30, banner: 100 },
                     marquee: {
                         leaderboard: { enabled: false, speed: 3, thickness: 2, opacity: 80 },
                         match: { enabled: false, speed: 3, thickness: 2, opacity: 80 },
+                        flag: { enabled: false, speed: 3, thickness: 2, opacity: 80 },
                         stats: { enabled: false, speed: 3, thickness: 2, opacity: 80 },
-                        player: { enabled: false, speed: 3, thickness: 2, opacity: 80 }
+                        player: { enabled: false, speed: 3, thickness: 2, opacity: 80 },
+                        banner: { enabled: false, speed: 3, thickness: 2, opacity: 80 }
                     },
                     fonts: {
                         leaderboard: { size: 14, color: '#ffffff', strokeEnabled: false, strokeWidth: 1, strokeColor: '#000000' },
                         match: { size: 14, color: '#1a1a1a', strokeEnabled: false, strokeWidth: 1, strokeColor: '#000000' },
                         stats: { size: 14, color: '#ffffff', strokeEnabled: false, strokeWidth: 1, strokeColor: '#000000' },
-                        player: { size: 14, color: '#ffffff', strokeEnabled: false, strokeWidth: 1, strokeColor: '#000000' }
+                        player: { size: 14, color: '#ffffff', strokeEnabled: false, strokeWidth: 1, strokeColor: '#000000' },
+                        bannerLabel: { size: 14, color: '#bfdbfe' },
+                        bannerValue: { size: 36, color: '#facc15' },
+                        jackpot: { size: 10 }
+                    },
+                    spacing: {
+                        bannerGap: 4
                     }
                 };
             }
             // 向后兼容补齐机制
-            if (!db.uiSettings.opacities) db.uiSettings.opacities = { leaderboard: 40, match: 30, stats: 30, player: 30 };
+            if (!db.uiSettings.opacities) db.uiSettings.opacities = { leaderboard: 40, match: 30, stats: 30, player: 30, banner: 100 };
+            if (db.uiSettings.opacities.banner === undefined) db.uiSettings.opacities.banner = 100;
+
             if (!db.uiSettings.marquee) db.uiSettings.marquee = {
                 leaderboard: { enabled: false, speed: 3, thickness: 2, opacity: 80 },
                 match: { enabled: false, speed: 3, thickness: 2, opacity: 80 },
+                flag: { enabled: false, speed: 3, thickness: 2, opacity: 80 },
                 stats: { enabled: false, speed: 3, thickness: 2, opacity: 80 },
-                player: { enabled: false, speed: 3, thickness: 2, opacity: 80 }
+                player: { enabled: false, speed: 3, thickness: 2, opacity: 80 },
+                banner: { enabled: false, speed: 3, thickness: 2, opacity: 80 }
             };
+            if (db.uiSettings.marquee.banner === undefined) db.uiSettings.marquee.banner = { enabled: false, speed: 3, thickness: 2, opacity: 80 };
+            if (db.uiSettings.marquee.flag === undefined) db.uiSettings.marquee.flag = { enabled: false, speed: 3, thickness: 2, opacity: 80 };
+
             if (!db.uiSettings.fonts) db.uiSettings.fonts = {
                 leaderboard: { size: 14, color: '#ffffff', strokeEnabled: false, strokeWidth: 1, strokeColor: '#000000' },
                 match: { size: 14, color: '#1a1a1a', strokeEnabled: false, strokeWidth: 1, strokeColor: '#000000' },
                 stats: { size: 14, color: '#ffffff', strokeEnabled: false, strokeWidth: 1, strokeColor: '#000000' },
-                player: { size: 14, color: '#ffffff', strokeEnabled: false, strokeWidth: 1, strokeColor: '#000000' }
+                player: { size: 14, color: '#ffffff', strokeEnabled: false, strokeWidth: 1, strokeColor: '#000000' },
+                bannerLabel: { size: 14, color: '#bfdbfe' },
+                bannerValue: { size: 36, color: '#facc15' },
+                jackpot: { size: 10 }
             };
+            if (db.uiSettings.fonts.bannerLabel === undefined) db.uiSettings.fonts.bannerLabel = { size: 14, color: '#bfdbfe' };
+            if (db.uiSettings.fonts.bannerValue === undefined) db.uiSettings.fonts.bannerValue = { size: 36, color: '#facc15' };
+            if (db.uiSettings.fonts.jackpot === undefined) db.uiSettings.fonts.jackpot = { size: 10 };
+
+            if (!db.uiSettings.spacing) db.uiSettings.spacing = { bannerGap: 4 };
+            if (db.uiSettings.spacing.bannerGap === undefined) db.uiSettings.spacing.bannerGap = 4;
         }
 
         function updateDynamicStyles() {
@@ -2739,6 +2970,34 @@
             if (!ui) return;
 
             styleEl.innerHTML = `
+                /* 性能优化：为频繁滑动的卡片开启 GPU 独立合成与三维位移加速，彻底解决快速划动卡片不显示的问题 */
+                .leaderboard-card-item, .match-card-item, .stats-card-item, .player-card-item, .marquee-gb {
+                    transform: translate3d(0, 0, 0);
+                    -webkit-transform: translate3d(0, 0, 0);
+                    backface-visibility: hidden;
+                    -webkit-backface-visibility: hidden;
+                    will-change: transform;
+                }
+
+                /* 积分池头图 Banner 样式设置 */
+                .marquee-gb {
+                    background: linear-gradient(135deg, rgba(37, 99, 235, ${ui.opacities.banner / 100}) 0%, rgba(49, 46, 129, ${ui.opacities.banner / 100}) 100%) !important;
+                }
+                #global-money-label {
+                    font-size: ${ui.fonts.bannerLabel.size}px !important;
+                    color: ${ui.fonts.bannerLabel.color} !important;
+                    margin-bottom: ${ui.spacing.bannerGap}px !important;
+                }
+                #global-money {
+                    font-size: ${ui.fonts.bannerValue.size}px !important;
+                    color: ${ui.fonts.bannerValue.color} !important;
+                }
+
+                /* 奖池数字大小 */
+                .font-jackpot-size {
+                    font-size: ${ui.fonts.jackpot.size}px !important;
+                }
+
                 /* 积分排行榜样式设置 */
                 .leaderboard-card-item {
                     background-color: rgba(0, 0, 0, ${ui.opacities.leaderboard / 100}) !important;
@@ -2791,9 +3050,9 @@
                 }
 
                 /* 跑马灯效果动态 CSS 生成器 */
-                ${['leaderboard', 'match', 'stats', 'player'].map(sec => {
+                ${['leaderboard', 'match', 'flag', 'stats', 'player', 'banner'].map(sec => {
                     const m = ui.marquee[sec];
-                    const prefix = sec === 'leaderboard' ? 'marquee-lb' : sec === 'match' ? 'marquee-mc' : sec === 'stats' ? 'marquee-st' : 'marquee-pc';
+                    const prefix = sec === 'leaderboard' ? 'marquee-lb' : sec === 'match' ? 'marquee-mc' : sec === 'flag' ? 'marquee-fl' : sec === 'stats' ? 'marquee-st' : sec === 'player' ? 'marquee-pc' : 'marquee-gb';
                     if (!m.enabled) {
                         return `.${prefix}::after { display: none !important; } .${prefix} { border: 1px solid rgba(255,255,255,0.1) !important; }`;
                     }
@@ -2857,16 +3116,18 @@
             const opM = document.getElementById('cfg-op-mc'); if (opM) opM.value = ui.opacities.match;
             const opS = document.getElementById('cfg-op-st'); if (opS) opS.value = ui.opacities.stats;
             const opP = document.getElementById('cfg-op-pc'); if (opP) opP.value = ui.opacities.player;
+            const opB = document.getElementById('cfg-op-gb'); if (opB) opB.value = ui.opacities.banner;
 
             const valOpL = document.getElementById('val-op-lb'); if (valOpL) valOpL.innerText = ui.opacities.leaderboard;
             const valOpM = document.getElementById('val-op-mc'); if (valOpM) valOpM.innerText = ui.opacities.match;
             const valOpS = document.getElementById('val-op-st'); if (valOpS) valOpS.innerText = ui.opacities.stats;
             const valOpP = document.getElementById('val-op-pc'); if (valOpP) valOpP.innerText = ui.opacities.player;
+            const valOpB = document.getElementById('val-op-gb'); if (valOpB) valOpB.innerText = ui.opacities.banner;
 
             // 跑马灯同步
-            ['leaderboard', 'match', 'stats', 'player'].forEach(sec => {
+            ['leaderboard', 'match', 'flag', 'stats', 'player', 'banner'].forEach(sec => {
                 const m = ui.marquee[sec];
-                const code = sec === 'leaderboard' ? 'lb' : sec === 'match' ? 'mc' : sec === 'stats' ? 'st' : 'pc';
+                const code = sec === 'leaderboard' ? 'lb' : sec === 'match' ? 'mc' : sec === 'flag' ? 'fl' : sec === 'stats' ? 'st' : sec === 'player' ? 'pc' : 'gb';
 
                 const en = document.getElementById(`cfg-mq-${code}-en`); if (en) en.checked = !!m.enabled;
                 const sp = document.getElementById(`cfg-mq-${code}-sp`); if (sp) sp.value = m.speed;
@@ -2878,23 +3139,44 @@
                 const valOp = document.getElementById(`val-mq-${code}-op`); if (valOp) valOp.innerText = m.opacity;
             });
 
-            // 字体独立调节设定同步
-            ['leaderboard', 'match', 'stats', 'player'].forEach(sec => {
-                const f = ui.fonts[sec];
-                const code = sec === 'leaderboard' ? 'lb' : sec === 'match' ? 'mc' : sec === 'stats' ? 'st' : 'pc';
+            // 字体与间距同步
+            const mapFonts = [
+                {sec: 'leaderboard', code: 'lb'},
+                {sec: 'match', code: 'mc'},
+                {sec: 'stats', code: 'st'},
+                {sec: 'player', code: 'pc'},
+                {sec: 'bannerLabel', code: 'gbl'},
+                {sec: 'bannerValue', code: 'gbv'}
+            ];
+
+            mapFonts.forEach(item => {
+                const f = ui.fonts[item.sec];
+                const code = item.code;
 
                 const sz = document.getElementById(`cfg-ft-${code}-sz`); if (sz) sz.value = f.size;
                 const cl = document.getElementById(`cfg-ft-${code}-cl`); if (cl) cl.value = f.color;
                 const clT = document.getElementById(`cfg-ft-${code}-cl-txt`); if (clT) clT.value = f.color;
-
-                const stEn = document.getElementById(`cfg-ft-${code}-st-en`); if (stEn) stEn.checked = !!f.strokeEnabled;
-                const stWi = document.getElementById(`cfg-ft-${code}-st-wi`); if (stWi) stWi.value = f.strokeWidth;
-                const stCl = document.getElementById(`cfg-ft-${code}-st-cl`); if (stCl) stCl.value = f.strokeColor;
-                const stClT = document.getElementById(`cfg-ft-${code}-st-cl-txt`); if (stClT) stClT.value = f.strokeColor;
-
+                
                 const valSz = document.getElementById(`val-ft-${code}-sz`); if (valSz) valSz.innerText = f.size;
-                const valStWi = document.getElementById(`val-ft-${code}-st-wi`); if (valStWi) valStWi.innerText = f.strokeWidth;
+
+                // 排行、赛程、玩家数据与玩家阵营有额外的描边控制
+                if (['lb', 'mc', 'st', 'pc'].includes(code)) {
+                    const stEn = document.getElementById(`cfg-ft-${code}-st-en`); if (stEn) stEn.checked = !!f.strokeEnabled;
+                    const stWi = document.getElementById(`cfg-ft-${code}-st-wi`); if (stWi) stWi.value = f.strokeWidth;
+                    const stCl = document.getElementById(`cfg-ft-${code}-st-cl`); if (stCl) stCl.value = f.strokeColor;
+                    const stClT = document.getElementById(`cfg-ft-${code}-st-cl-txt`); if (stClT) stClT.value = f.strokeColor;
+
+                    const valStWi = document.getElementById(`val-ft-${code}-st-wi`); if (valStWi) valStWi.innerText = f.strokeWidth;
+                }
             });
+
+            // 奖池大小同步
+            const jkSz = document.getElementById('cfg-ft-jk-sz'); if (jkSz) jkSz.value = ui.fonts.jackpot.size;
+            const valJkSz = document.getElementById('val-ft-jk-sz'); if (valJkSz) valJkSz.innerText = ui.fonts.jackpot.size;
+
+            // 间距同步
+            const spBg = document.getElementById('cfg-sp-banner-gap'); if (spBg) spBg.value = ui.spacing.bannerGap;
+            const valSpBg = document.getElementById('val-sp-banner-gap'); if (valSpBg) valSpBg.innerText = ui.spacing.bannerGap;
         }
 
         // --- 风琴式折叠面板控制核心 ---

@@ -112,7 +112,7 @@
         }
         .nav-item {
             display: flex; flex-direction: column; align-items: center; gap: 4px;
-            color: #64748b; font-size: 10px; transition: all 0.2s; cursor: pointer;
+            color: #64748b; font-size: 9px; transition: all 0.2s; cursor: pointer;
         }
         .nav-item.active { color: #00f3ff; text-shadow: 0 0 10px rgba(0,243,255,0.5); transform: translateY(-2px); }
         .nav-icon { font-size: 20px; }
@@ -206,10 +206,38 @@
             <div class="grid grid-cols-2 gap-3" id="players-grid"></div>
         </section>
 
+        <!-- View 7: 历史操作区 (新增) -->
+        <section id="view-history" class="hidden space-y-4 animate-bounce-in pb-10">
+            <div class="flex items-center justify-between mb-2">
+                <h2 class="text-lg font-bold text-white border-l-4 border-yellow-400 pl-2">历史操作日志</h2>
+                <button onclick="clearLogs(); playAudio('click')" class="text-xs text-red-400 hover:text-red-300 transition flex items-center gap-1">
+                    <i class="fa-solid fa-trash-can"></i> 清空日志
+                </button>
+            </div>
+            <div id="logs-container" class="space-y-2 max-h-[70vh] overflow-y-auto pr-1"></div>
+        </section>
+
         <!-- View 6: 设置后台 (新增管理控制后台) -->
         <section id="view-admin" class="hidden space-y-6 animate-bounce-in pb-10">
             <div class="flex items-center justify-between mb-2">
                 <h2 class="text-lg font-bold text-white border-l-4 border-yellow-400 pl-2">管理控制台</h2>
+            </div>
+
+            <!-- 投注安全规则 -->
+            <div class="bg-black/30 border border-white/10 rounded-2xl p-4 shadow-xl backdrop-blur-md space-y-3">
+                <h3 class="text-sm font-black text-yellow-400 flex items-center gap-2">
+                    <i class="fa-solid fa-clock"></i> 赛事投注时间管理
+                </h3>
+                <div class="flex items-center justify-between bg-black/20 p-3 rounded-xl border border-white/5">
+                    <div>
+                        <p class="text-xs font-bold text-white">开赛前 15 分钟禁止下注</p>
+                        <p class="text-[9px] text-gray-400">开启后玩家将无法在比赛开赛前 15 分钟内下单及修改注单</p>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer select-none">
+                        <input type="checkbox" id="lock-bets-toggle" onchange="toggleLockBetsSetting(this.checked); playAudio('click')" class="sr-only peer">
+                        <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-400"></div>
+                    </label>
+                </div>
             </div>
             
             <!-- 导入导出卡片 -->
@@ -242,7 +270,7 @@
                     <h3 class="text-sm font-black text-yellow-400 flex items-center gap-2">
                         <i class="fa-solid fa-code"></i> 原始数据任意修改
                     </h3>
-                    <span class="text-[10px] text-gray-400">支持修改任一一句和任何字段</span>
+                    <span class="text-[10px] text-gray-400">支持修改任一数据和任何字段</span>
                 </div>
                 <textarea id="raw-db-textarea" class="w-full h-64 bg-black/60 border border-white/20 rounded-xl p-3 font-mono text-xs text-green-400 outline-none focus:border-yellow-400" placeholder="数据加载中..."></textarea>
                 <div class="flex gap-2">
@@ -280,6 +308,9 @@
         <div class="nav-item" id="nav-players" onclick="switchTab('players'); playAudio('click')">
             <i class="fa-solid fa-user-group nav-icon"></i><span>阵营</span>
         </div>
+        <div class="nav-item" id="nav-history" onclick="switchTab('history'); playAudio('click')">
+            <i class="fa-solid fa-clock-rotate-left nav-icon"></i><span>历史</span>
+        </div>
         <div class="nav-item" id="nav-admin" onclick="switchTab('admin'); playAudio('click')">
             <i class="fa-solid fa-gears nav-icon"></i><span>后台</span>
         </div>
@@ -301,7 +332,7 @@
 
     <!-- 设定对阵球队 -->
     <div id="editMatchModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden flex justify-center items-center z-50 p-4">
-        <div class="bg-gradient-to-b from-[#b45309] to-[#451a03] p-6 rounded-3xl border border-white/20 w-full max-w-sm relative shadow-2xl">
+        <div class="bg-gradient-to-b from-[#b45309] to-[#451a03] p-6 rounded-3xl border border-white/20 w-full max-w-sm relative shadow-2xl font-semibold">
             <button onclick="closeModal('editMatchModal'); playAudio('click')" class="absolute top-4 right-4 text-white/50 hover:text-white"><i class="fa-solid fa-times text-xl"></i></button>
             <h3 class="text-2xl font-black mb-6 text-center text-yellow-400">修改对阵</h3>
             <div class="space-y-4 flex flex-col items-center">
@@ -309,7 +340,7 @@
                 <input type="text" id="editHome" class="w-full bg-black/50 border border-white/20 rounded-xl p-3 text-white text-center font-black text-xl">
                 <span class="text-yellow-400 font-black text-xl italic">VS</span>
                 <input type="text" id="editAway" class="w-full bg-black/50 border border-white/20 rounded-xl p-3 text-white text-center font-black text-xl">
-                <button onclick="saveMatchEdit(); playAudio('click')" class="w-full btn-3d py-3 mt-4 text-lg">保存并同步</button>
+                <button onclick="saveMatchEdit(); playAudio('click')" class="w-full btn-3d py-3 mt-4 text-lg font-bold">保存并同步</button>
             </div>
         </div>
     </div>
@@ -317,7 +348,7 @@
     <!-- 下注界面 -->
     <div id="betModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden flex justify-center flex-col justify-end z-50">
         <div class="bg-[#0f172a] rounded-t-3xl border-t border-white/20 w-full h-[85vh] flex flex-col shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
-            <div class="flex justify-between items-center p-4 border-b border-white/10">
+            <div class="flex justify-between items-center p-4 border-b border-white/10 shrink-0">
                 <h3 class="text-lg font-black text-yellow-400 truncate" id="bet-match-title"></h3>
                 <button onclick="closeModal('betModal'); playAudio('click')" class="text-white/50 hover:text-white px-2"><i class="fa-solid fa-chevron-down text-xl"></i></button>
             </div>
@@ -340,7 +371,7 @@
 
     <!-- 开奖结算 -->
     <div id="settleModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden flex justify-center items-center z-50 p-4">
-        <div class="bg-gradient-to-b from-[#7f1d1d] to-[#450a0a] p-6 rounded-3xl border border-white/20 w-full max-w-sm relative shadow-2xl text-center">
+        <div class="bg-gradient-to-b from-[#7f1d1d] to-[#450a0a] p-6 rounded-3xl border border-white/20 w-full max-w-sm relative shadow-2xl text-center font-semibold">
             <button onclick="closeModal('settleModal'); playAudio('click')" class="absolute top-4 right-4 text-white/50"><i class="fa-solid fa-times text-xl"></i></button>
             <h3 class="text-xl font-black mb-2 text-white" id="settle-match-title"></h3>
             
@@ -361,7 +392,7 @@
             </div>
             
             <input type="hidden" id="settleMatchId"><input type="hidden" id="settleFinalResult">
-            <button onclick="confirmSettle()" class="w-full btn-3d bg-gradient-to-b from-red-500 to-red-800 shadow-[0_4px_15px_rgba(220,38,38,0.6)] py-3 text-lg">确认开奖</button>
+            <button onclick="confirmSettle()" class="w-full btn-3d bg-gradient-to-b from-red-500 to-red-800 shadow-[0_4px_15px_rgba(220,38,38,0.6)] py-3 text-lg font-bold">确认开奖</button>
         </div>
     </div>
 
@@ -428,7 +459,7 @@
                 ["Group F", "6月26日 07:00", "第3轮", "达拉斯", "日本", "瑞典"], ["Group F", "6月26日 07:00", "第3轮", "堪萨斯城", "突尼斯", "荷兰"],
                 ["Group G", "6月16日 03:00", "第1轮", "西雅图", "比利时", "埃及"], ["Group G", "6月16日 09:00", "第1轮", "洛杉矶", "伊朗", "新西兰"],
                 ["Group G", "6月22日 03:00", "第2轮", "洛杉矶", "比利时", "伊朗"], ["Group G", "6月22日 09:00", "第2轮", "温哥华", "新西兰", "埃及"],
-                ["Group G", "6月27日 11:00", "第3轮", "西雅图", "埃及", "伊朗"], ["Group G", "6月27日 11:00", "第3轮", "温哥华", "新西兰", "比利时"],
+                ["Group G", "67月27日 11:00", "第3轮", "西雅图", "埃及", "伊朗"], ["Group G", "6月27日 11:00", "第3轮", "温哥华", "新西兰", "比利时"],
                 ["Group H", "6月16日 00:00", "第1轮", "亚特兰大", "西班牙", "佛得角"], ["Group H", "6月16日 06:00", "第1轮", "沙特阿拉伯", "乌拉圭"],
                 ["Group H", "6月22日 00:00", "第2轮", "亚特兰大", "西班牙", "沙特阿拉伯"], ["Group H", "6月22日 06:00", "第2轮", "迈阿密", "乌拉圭", "佛得角"],
                 ["Group H", "6月27日 08:00", "第3轮", "休斯敦", "佛得角", "沙特阿拉伯"], ["Group H", "6月27日 08:00", "第3轮", "瓜达拉哈拉", "乌拉圭", "西班牙"],
@@ -454,19 +485,19 @@
                 [89,"1/8决赛","7月05日 05:00","费城","74胜者","77胜者"], [90,"1/8决赛","7月05日 01:00","休斯敦","73胜者","75胜者"], [91,"1/8决赛","7月06日 04:00","纽约/新泽西","76胜者","78胜者"],
                 [92,"1/8决赛","7月06日 08:00","墨西哥城","79胜者","80胜者"], [93,"1/8决赛","7月07日 03:00","达拉斯","83胜者","84胜者"], [94,"1/8决赛","7月07日 08:00","西雅图","81胜者","82胜者"],
                 [95,"1/8决赛","7月08日 00:00","亚特兰大","86胜者","88胜者"], [96,"1/8决赛","7月08日 04:00","温哥华","85胜者","87胜者"],
-                [97,"1/4决赛","7月10日 04:00","波士顿","89胜者","90胜者"], [98,"1/4决赛","7月11日 03:00","洛杉矶","93胜者","94胜者"], [99,"1/4决赛","7月12日 05:00","迈阿密","91胜者","92胜者"], [100,"1/4决赛","7月12日 09:00","堪萨斯城","95胜者","96胜者"],
+                [97,"1/4决赛","7月10日 04:00","波士顿","89胜者","90胜者"], [98,"1/4决赛","7月11日 03:00","洛杉矶","93胜者","94胜者"], [99,"1/4决赛","7月12日 05:00","迈阿密","91胜者","92胜者"], [100,"1/4决赛","7月12日 09:00","堪萨斯城","95胜者","96胜7"],
                 [101,"半决赛","7月15日 03:00","达拉斯","97胜者","98胜者"], [102,"半决赛","7月16日 03:00","亚特兰大","99胜者","100胜者"],
                 [103,"季军赛","7月19日 05:00","迈阿密","半决负1","半决负2"], [104,"决赛","7月20日 03:00","纽约/新泽西","半决胜1","半决胜2"]
             ];
             let res = [];
-            rawData.forEach((d, i) => { res.push({ id: i+1, group: d[0], date: d[1], round: d[2], venue: d[3], home: d[4], away: d[5], status: 'upcoming', result: null, score: null, winners: [] }); });
-            knockoutData.forEach(d => { res.push({ id: d[0], group: d[1], date: d[2], round: '淘汰赛', venue: d[3], home: d[4], away: d[5], status: 'upcoming', result: null, score: null, winners: [] }); });
+            rawData.forEach((d, i) => { res.push({ id: i+1, group: d[0], date: d[1], round: d[2], venue: d[3], home: d[4], away: d[5], status: 'upcoming', result: null, score: null, winners: [], homeHandicap: '', awayHandicap: '' }); });
+            knockoutData.forEach(d => { res.push({ id: d[0], group: d[1], date: d[2], round: '淘汰赛', venue: d[3], home: d[4], away: d[5], status: 'upcoming', result: null, score: null, winners: [], homeHandicap: '', awayHandicap: '' }); });
             return res;
         }
 
         // 分配本设备唯一 Client ID (用于握手同步判定)
         const myClientId = 'device_' + Math.random().toString(36).substr(2, 9);
-        let db = { players: [], matches: [], bets: {}, timestamp: 0 };
+        let db = { players: [], matches: [], bets: {}, logs: [], lockBets15Min: false, timestamp: 0 };
         const roomId = new URLSearchParams(window.location.search).get('room') || 'public_wc2026';
         document.getElementById('room-id-display').innerText = `房号: ${roomId}`;
 
@@ -482,7 +513,7 @@
                     mqttClient.subscribe(syncTopic); 
                     setSyncStatus(true); 
                     
-                    // 新设备主动握手机制：连接成功后立即向全局发送一个“请求同步最新信息”指令 [1]
+                    // 新设备主动握手机制：连接成功后立即向全局发送一个“请求同步最新信息”指令
                     setTimeout(() => {
                         const syncReq = { type: "sync_request", requester: myClientId };
                         mqttClient.publish(syncTopic, JSON.stringify(syncReq));
@@ -493,9 +524,9 @@
                     try {
                         const data = JSON.parse(message.toString());
                         
-                        // 1. 处理来自新设备的握手同步请求 [1]
+                        // 1. 处理来自新设备的握手同步请求
                         if (data.type === "sync_request") {
-                            // 若是其他设备请求，并且本设备拥有本地数据，则代替全网重播最新数据 [1]
+                            // 若是其他设备请求，并且本设备拥有本地数据，则代替全网重播最新数据
                             if (data.requester !== myClientId && db.players.length > 0) {
                                 setTimeout(() => {
                                     broadcastData();
@@ -504,10 +535,15 @@
                             return;
                         }
 
-                        // 2. 处理常规数据包同步流程 [1]
+                        // 2. 处理常规数据包同步流程
                         if (data.timestamp && data.timestamp > db.timestamp) {
-                            isReceiving = true; db = data; localStorage.setItem(`wc_db_v4_${roomId}`, JSON.stringify(db));
-                            refreshAllUI(); setTimeout(() => isReceiving = false, 100);
+                            isReceiving = true; 
+                            db = data; 
+                            if (!db.logs) db.logs = [];
+                            if (db.lockBets15Min === undefined) db.lockBets15Min = false;
+                            localStorage.setItem(`wc_db_v4_${roomId}`, JSON.stringify(db));
+                            refreshAllUI(); 
+                            setTimeout(() => isReceiving = false, 100);
                         }
                     } catch (e) { }
                 });
@@ -556,11 +592,120 @@
             return weekdays[d.getDay()];
         }
 
+        // 追加日志工具函数
+        function addLog(text) {
+            if (!db.logs) db.logs = [];
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = (now.getMonth() + 1).toString().padStart(2, '0');
+            const date = now.getDate().toString().padStart(2, '0');
+            const hours = now.getHours().toString().padStart(2, '0');
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+            const seconds = now.getSeconds().toString().padStart(2, '0');
+            const timeStr = `${year}-${month}-${date} ${hours}:${minutes}:${seconds}`;
+            
+            db.logs.unshift({
+                id: 'log_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+                time: timeStr,
+                text: text
+            });
+            // 保持日志最多200条以防数据包过大
+            if (db.logs.length > 200) {
+                db.logs = db.logs.slice(0, 200);
+            }
+        }
+
+        // 解析日期并判断是否在开赛15分钟之内或已过开赛时间
+        function isMatchWithin15Mins(matchDateStr) {
+            try {
+                const regex = /(\d+)月(\d+)日\s+(\d+):(\d+)/;
+                const match = matchDateStr.match(regex);
+                if (!match) return false;
+                const month = parseInt(match[1]) - 1;
+                const day = parseInt(match[2]);
+                const hours = parseInt(match[3]);
+                const minutes = parseInt(match[4]);
+                
+                // 默认 2026 年
+                const matchDate = new Date(2026, month, day, hours, minutes);
+                const now = new Date();
+                
+                const diffMs = matchDate.getTime() - now.getTime();
+                const diffMins = diffMs / 1000 / 60;
+                
+                // 赛事开赛前15分钟，或者已经开赛 (即 diffMins <= 15) 返回 true
+                return diffMins <= 15;
+            } catch (e) {
+                return false;
+            }
+        }
+
+        // 更新球队让球数
+        function updateHandicap(matchId, side, val) {
+            const m = db.matches.find(x => x.id === matchId);
+            if (m) {
+                const trimmed = val.trim();
+                const oldVal = side === 'home' ? m.homeHandicap : m.awayHandicap;
+                if (oldVal === trimmed) return;
+                
+                if (side === 'home') {
+                    m.homeHandicap = trimmed;
+                    addLog(`更新了 [${m.home} VS ${m.away}] 主队 [${m.home}] 让球数为: "${trimmed || '无'}"`);
+                } else {
+                    m.awayHandicap = trimmed;
+                    addLog(`更新了 [${m.home} VS ${m.away}] 客队 [${m.away}] 让球数为: "${trimmed || '无'}"`);
+                }
+                broadcastData();
+            }
+        }
+
+        // 修改玩家姓名
+        function editPlayerName(playerId) {
+            const p = db.players.find(x => x.id === playerId);
+            if (!p) return;
+            const newName = prompt(`请输入玩家「${p.name}」的新名字:`, p.name);
+            if (newName !== null) {
+                const trimmed = newName.trim();
+                if (!trimmed) return alert("姓名不能为空！");
+                const oldName = p.name;
+                p.name = trimmed;
+                addLog(`修改了玩家名: 「${oldName}」 已更名为 「${p.name}」`);
+                broadcastData();
+                refreshAllUI();
+            }
+        }
+
+        // 安全密码删除玩家
+        function deletePlayer(playerId) {
+            const p = db.players.find(x => x.id === playerId);
+            if (!p) return;
+            const pwd = prompt(`🚨 敏感操作提示 🚨\n请输入安全验证密码以删除玩家「${p.name}」：`);
+            if (pwd !== "260612") {
+                alert("密码错误，安全验证失败！操作已撤销。");
+                return;
+            }
+            if (confirm(`确定要彻底删除玩家「${p.name}」并移除其对应的数据资料吗？`)) {
+                db.players = db.players.filter(x => x.id !== playerId);
+                addLog(`删除了玩家: [${p.name}]`);
+                broadcastData();
+                refreshAllUI();
+            }
+        }
+
+        // 切换开赛限制开关
+        function toggleLockBetsSetting(checked) {
+            db.lockBets15Min = checked;
+            addLog(`设置: 开赛前15分钟投注限制规则已 [${checked ? '开启' : '关闭'}]`);
+            broadcastData();
+        }
+
         // 初始化
         window.onload = () => {
             initMQTT();
             try { const saved = localStorage.getItem(`wc_db_v4_${roomId}`); if (saved) db = JSON.parse(saved); } catch(e) {}
             if (!db.matches || db.matches.length < 100) { db.matches = generateMatches(); broadcastData(); }
+            if (!db.logs) db.logs = [];
+            if (db.lockBets15Min === undefined) db.lockBets15Min = false;
             
             // 初始化今日日期
             const uniqueDates = getUniqueDates();
@@ -601,8 +746,12 @@
                 renderPlayerStatsList();
             } else if (currentTab === 'players') {
                 renderPlayers();
+            } else if (currentTab === 'history') {
+                renderLogs();
             } else if (currentTab === 'admin') {
                 loadRawDbToTextarea();
+                const chk = document.getElementById('lock-bets-toggle');
+                if (chk) chk.checked = !!db.lockBets15Min;
             }
         }
 
@@ -613,7 +762,7 @@
         // 底部导航切换
         function switchTab(tabId) {
             currentTab = tabId;
-            ['dashboard', 'today', 'matches', 'stats', 'players', 'admin'].forEach(id => {
+            ['dashboard', 'today', 'matches', 'stats', 'players', 'admin', 'history'].forEach(id => {
                 const viewEl = document.getElementById(`view-${id}`);
                 const navEl = document.getElementById(`nav-${id}`);
                 if (viewEl) viewEl.classList.add('hidden');
@@ -774,16 +923,24 @@
                         <div class="flex items-center justify-between py-1 relative">
                             ${!isFin ? `<i onclick="openEditMatch(${m.id}); playAudio('click')" class="fa-solid fa-pen-to-square absolute right-0 top-0 text-black/30 hover:text-black cursor-pointer p-1"></i>` : ''}
                             
-                            <div class="flex items-center gap-2 w-[40%] justify-end">
-                                <span class="font-black text-sm md:text-base truncate drop-shadow-md text-right">${m.home}</span>
-                                <div class="soccer-icon shrink-0">${getFlag(m.home)}</div>
+                            <!-- 主队区 -->
+                            <div class="flex flex-col items-end w-[40%] justify-center">
+                                <div class="flex items-center gap-1.5 justify-end w-full">
+                                    <input type="text" placeholder="让球" value="${m.homeHandicap || ''}" onchange="updateHandicap(${m.id}, 'home', this.value)" class="w-11 text-[9px] text-center bg-black/15 hover:bg-black/25 focus:bg-black/30 border border-black/10 rounded px-1 py-0.5 text-black font-bold outline-none placeholder-black/30 truncate">
+                                    <span class="font-black text-xs md:text-sm truncate drop-shadow-md text-right flex-1">${m.home}</span>
+                                    <div class="soccer-icon shrink-0">${getFlag(m.home)}</div>
+                                </div>
                             </div>
                             
-                            <div class="w-[20%] text-center px-1 flex justify-center">${centerUI}</div>
+                            <div class="w-[20%] text-center px-1 flex justify-center shrink-0">${centerUI}</div>
                             
-                            <div class="flex items-center gap-2 w-[40%] justify-start">
-                                <div class="soccer-icon shrink-0">${getFlag(m.away)}</div>
-                                <span class="font-black text-sm md:text-base truncate drop-shadow-md text-left">${m.away}</span>
+                            <!-- 客队区 -->
+                            <div class="flex flex-col items-start w-[40%] justify-center">
+                                <div class="flex items-center gap-1.5 justify-start w-full">
+                                    <div class="soccer-icon shrink-0">${getFlag(m.away)}</div>
+                                    <span class="font-black text-xs md:text-sm truncate drop-shadow-md text-left flex-1">${m.away}</span>
+                                    <input type="text" placeholder="让球" value="${m.awayHandicap || ''}" onchange="updateHandicap(${m.id}, 'away', this.value)" class="w-11 text-[9px] text-center bg-black/15 hover:bg-black/25 focus:bg-black/30 border border-black/10 rounded px-1 py-0.5 text-black font-bold outline-none placeholder-black/30 truncate">
+                                </div>
                             </div>
                         </div>
 
@@ -801,12 +958,6 @@
                     </div>`;
             });
             container.innerHTML = html;
-        }
-
-        function selectTodayDate(dStr) {
-            activeTodayDate = dStr;
-            renderTodayDateSelector();
-            renderTodayMatches();
         }
 
         // --- View 3: 赛事中心 ---
@@ -863,16 +1014,24 @@
                         <div class="flex items-center justify-between py-1 relative">
                             ${!isFin ? `<i onclick="openEditMatch(${m.id}); playAudio('click')" class="fa-solid fa-pen-to-square absolute right-0 top-0 text-black/30 hover:text-black cursor-pointer p-1"></i>` : ''}
                             
-                            <div class="flex items-center gap-2 w-[40%] justify-end">
-                                <span class="font-black text-sm md:text-base truncate drop-shadow-md text-right">${m.home}</span>
-                                <div class="soccer-icon shrink-0">${getFlag(m.home)}</div>
+                            <!-- 主队区 -->
+                            <div class="flex flex-col items-end w-[40%] justify-center">
+                                <div class="flex items-center gap-1.5 justify-end w-full">
+                                    <input type="text" placeholder="让球" value="${m.homeHandicap || ''}" onchange="updateHandicap(${m.id}, 'home', this.value)" class="w-11 text-[9px] text-center bg-black/15 hover:bg-black/25 focus:bg-black/30 border border-black/10 rounded px-1 py-0.5 text-black font-bold outline-none placeholder-black/30 truncate">
+                                    <span class="font-black text-xs md:text-sm truncate drop-shadow-md text-right flex-1">${m.home}</span>
+                                    <div class="soccer-icon shrink-0">${getFlag(m.home)}</div>
+                                </div>
                             </div>
                             
-                            <div class="w-[20%] text-center px-1 flex justify-center">${centerUI}</div>
+                            <div class="w-[20%] text-center px-1 flex justify-center shrink-0">${centerUI}</div>
                             
-                            <div class="flex items-center gap-2 w-[40%] justify-start">
-                                <div class="soccer-icon shrink-0">${getFlag(m.away)}</div>
-                                <span class="font-black text-sm md:text-base truncate drop-shadow-md text-left">${m.away}</span>
+                            <!-- 客队区 -->
+                            <div class="flex flex-col items-start w-[40%] justify-center">
+                                <div class="flex items-center gap-1.5 justify-start w-full">
+                                    <div class="soccer-icon shrink-0">${getFlag(m.away)}</div>
+                                    <span class="font-black text-xs md:text-sm truncate drop-shadow-md text-left flex-1">${m.away}</span>
+                                    <input type="text" placeholder="让球" value="${m.awayHandicap || ''}" onchange="updateHandicap(${m.id}, 'away', this.value)" class="w-11 text-[9px] text-center bg-black/15 hover:bg-black/25 focus:bg-black/30 border border-black/10 rounded px-1 py-0.5 text-black font-bold outline-none placeholder-black/30 truncate">
+                                </div>
                             </div>
                         </div>
 
@@ -964,6 +1123,7 @@
             if (!name) return alert("代号必填！");
             const avatar = avatarInput || `https://api.dicebear.com/6.x/bottts/svg?seed=${name}&backgroundColor=00f3ff`;
             db.players.push({ id: 'P_'+Date.now(), name, avatar, balance: 0, totalInvest: 0, correctGuesses: 0, totalBets: 0, highestBalance: 0, lowestBalance: 0, biggestWin: 0, biggestLoss: 0, teamStats: {} });
+            addLog(`新增了玩家: [${name}]`);
             broadcastData(); closeModal('addPlayerModal'); refreshAllUI();
         }
 
@@ -974,6 +1134,7 @@
             if (newUrl !== null) {
                 const trimmed = newUrl.trim();
                 p.avatar = trimmed || `https://api.dicebear.com/6.x/bottts/svg?seed=${p.name}&backgroundColor=00f3ff`;
+                addLog(`更新了玩家 [${p.name}] 的个人头像`);
                 broadcastData();
                 refreshAllUI();
             }
@@ -986,15 +1147,55 @@
                 html += `
                     <div class="bg-black/30 border border-white/10 p-4 rounded-2xl text-center relative group backdrop-blur-md">
                         <img onclick="editPlayerAvatar('${p.id}'); playAudio('click')" src="${p.avatar}" class="w-16 h-16 mx-auto rounded-full bg-black/50 border-2 border-white/20 mb-3 object-cover shadow-lg cursor-pointer hover:scale-110 active:scale-95 transition-all" title="点击修改头像">
-                        <h4 class="font-black text-sm truncate text-white mb-1">${p.name}</h4>
+                        
+                        <div class="flex items-center justify-center gap-1.5 mb-1">
+                            <h4 class="font-black text-sm truncate text-white max-w-[100px]">${p.name}</h4>
+                            <button onclick="editPlayerName('${p.id}'); playAudio('click')" class="text-white/40 hover:text-white transition-colors" title="修改名字"><i class="fa-solid fa-pen text-[10px]"></i></button>
+                        </div>
+                        
                         <p class="${p.balance>=0?'text-green-400':'text-red-400'} font-black text-sm">${p.balance>=0?'+':''}$${p.balance.toFixed(0)}</p>
-                        <button onclick="if(confirm('忍痛割爱删除此玩家?')) { db.players = db.players.filter(x=>x.id!=='${p.id}'); broadcastData(); refreshAllUI(); playAudio('click'); }" class="absolute top-2 right-2 text-white/30 hover:text-red-500 transition"><i class="fa-solid fa-trash text-sm"></i></button>
+                        <button onclick="deletePlayer('${p.id}'); playAudio('click');" class="absolute top-2 right-2 text-white/30 hover:text-red-500 transition"><i class="fa-solid fa-trash text-sm"></i></button>
                     </div>`;
             });
             container.innerHTML = html;
         }
 
-        // --- View 6: 设置后台逻辑控制 --- [1]
+        // --- View 7: 历史操作区 ---
+        function renderLogs() {
+            const container = document.getElementById('logs-container');
+            if (!container) return;
+            if (!db.logs || db.logs.length === 0) {
+                container.innerHTML = '<div class="text-center text-white/50 py-10 text-xs">暂无任何历史操作记录</div>';
+                return;
+            }
+            let html = '';
+            db.logs.forEach(log => {
+                html += `
+                    <div class="bg-black/30 border border-white/5 rounded-xl p-3 flex flex-col gap-1 text-[11px] backdrop-blur-md">
+                        <div class="flex justify-between items-center text-white/40">
+                            <span class="font-mono text-[10px]"><i class="fa-regular fa-clock mr-1"></i>${log.time}</span>
+                        </div>
+                        <p class="text-white/80 leading-relaxed font-semibold">${log.text}</p>
+                    </div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        function clearLogs() {
+            const pwd = prompt("请输入安全密码以清空操作日志：");
+            if (pwd !== "260612") {
+                alert("密码错误，安全验证失败！操作已撤销。");
+                return;
+            }
+            if (confirm("确定要清空所有的历史操作日志吗？")) {
+                db.logs = [];
+                addLog("系统日志已被清空");
+                broadcastData();
+                refreshAllUI();
+            }
+        }
+
+        // --- View 6: 设置后台逻辑控制 ---
         function loadRawDbToTextarea() {
             const ta = document.getElementById('raw-db-textarea');
             if (ta) {
@@ -1021,8 +1222,11 @@
                 if (!parsed.players || !parsed.matches) {
                     return alert("保存失败：JSON 必须具有 players 与 matches 核心字段节点！");
                 }
-                // 实时覆盖并向全网广播，促使旧设备自动接收并静默刷新 [1]
                 db = parsed;
+                if (!db.logs) db.logs = [];
+                if (db.lockBets15Min === undefined) db.lockBets15Min = false;
+                
+                addLog("管理人员直接修改了底层 JSON 原始数据库");
                 broadcastData();
                 refreshAllUI();
                 alert("✅ 数据库成功保存！修改信息已实时发布，旧设备正在同步更新！");
@@ -1053,6 +1257,10 @@
                     }
                     if (confirm("确定要导入此备份吗？导入后将全面覆盖本地现存的所有数据！")) {
                         db = parsed;
+                        if (!db.logs) db.logs = [];
+                        if (db.lockBets15Min === undefined) db.lockBets15Min = false;
+                        
+                        addLog("成功导入外部数据备份");
                         broadcastData();
                         refreshAllUI();
                         loadRawDbToTextarea();
@@ -1087,6 +1295,10 @@
                     return alert("导入失败：该 JSON 数据不满足玩家及对阵的基础结构特征！");
                 }
                 db = parsed;
+                if (!db.logs) db.logs = [];
+                if (db.lockBets15Min === undefined) db.lockBets15Min = false;
+                
+                addLog("通过剪贴板导入并同步了数据库数据");
                 broadcastData();
                 refreshAllUI();
                 loadRawDbToTextarea();
@@ -1097,8 +1309,14 @@
         }
 
         function resetEntireDatabase() {
-            if (confirm("🚨 警告：这会清空本房所有玩家记录、所有历史注单，重置全部104场比赛！确定执行此项毁灭性重置吗？")) {
-                db = { players: [], matches: generateMatches(), bets: {}, timestamp: Date.now() };
+            const pwd = prompt("🚨 极致高危操作提示 🚨\n请键入管理重置密码以彻底恢复出厂数据：");
+            if (pwd !== "260612") {
+                alert("密码错误，身份核验失败！操作已拒绝。");
+                return;
+            }
+            if (confirm("🚨 警告：这会清空本房所有玩家记录、所有历史注单、清空操作日志并重置全部104场比赛！确定执行此项毁灭性重置吗？")) {
+                db = { players: [], matches: generateMatches(), bets: {}, logs: [], lockBets15Min: false, timestamp: Date.now() };
+                addLog("数据库被毁灭性初始化重置");
                 broadcastData();
                 refreshAllUI();
                 loadRawDbToTextarea();
@@ -1115,14 +1333,26 @@
 
         function saveMatchEdit() {
             const m = db.matches.find(x => x.id === parseInt(document.getElementById('editMatchId').value));
-            m.home = document.getElementById('editHome').value.trim() || '主队'; m.away = document.getElementById('editAway').value.trim() || '客队';
+            const oldHome = m.home, oldAway = m.away;
+            m.home = document.getElementById('editHome').value.trim() || '主队'; 
+            m.away = document.getElementById('editAway').value.trim() || '客队';
+            
+            addLog(`编辑了对阵: [${oldHome} VS ${oldAway}] 变更为 [${m.home} VS ${m.away}]`);
             broadcastData(); closeModal('editMatchModal'); refreshAllUI();
         }
 
         let actMatchId = null;
         function openBetModal(id) {
             if (!db.players.length) return alert("请先前往「阵营」添加玩家");
-            const m = db.matches.find(x => x.id === id); actMatchId = id;
+            const m = db.matches.find(x => x.id === id); 
+            
+            // 校验15分钟投注时间限制
+            if (db.lockBets15Min && isMatchWithin15Mins(m.date)) {
+                alert(`⚠️ 操作受阻！\n该赛事 [${m.home} VS ${m.away}] 当前已进入临开赛前 15 分钟限制区或已经开赛，系统已锁定投注！`);
+                return;
+            }
+            
+            actMatchId = id;
             document.getElementById('bet-match-title').innerText = `${m.home} vs ${m.away}`;
             let b = db.bets[id] || { stake: 100, predictions: {} }; document.getElementById('matchStake').value = b.stake;
             const list = document.getElementById('bet-players-list');
@@ -1146,9 +1376,33 @@
         }
 
         function saveBets() {
-            let stake = parseInt(document.getElementById('matchStake').value) || 0; let preds = {};
-            db.players.forEach(p => { for(let r of document.getElementsByName(`p_${p.id}`)) if(r.checked) { preds[p.id] = r.value; break; } });
-            db.bets[actMatchId] = { stake, predictions: preds }; broadcastData(); closeModal('betModal'); refreshAllUI();
+            let stake = parseInt(document.getElementById('matchStake').value) || 0; 
+            let preds = {};
+            const m = db.matches.find(x => x.id === actMatchId);
+            const oldBetObj = db.bets[actMatchId] || { stake: 0, predictions: {} };
+            
+            db.players.forEach(p => { 
+                for(let r of document.getElementsByName(`p_${p.id}`)) {
+                    if(r.checked) { 
+                        preds[p.id] = r.value; 
+                        
+                        // 详细对比并记录谁在什么时间在什么赛事下注了什么
+                        const oldSelection = oldBetObj.predictions[p.id] || 'none';
+                        if (oldSelection !== r.value) {
+                            const sideText = r.value === 'home' ? '主胜' : (r.value === 'away' ? '客胜' : (r.value === 'draw' ? '平局' : '撤单'));
+                            if (r.value !== 'none') {
+                                addLog(`玩家 [${p.name}] 针对比赛 [${m.home} VS ${m.away}] 进行了投注: 预测 [${sideText}]，单注金额 $${stake}`);
+                            } else {
+                                addLog(`玩家 [${p.name}] 取消了对比赛 [${m.home} VS ${m.away}] 的投注`);
+                            }
+                        }
+                        break; 
+                    } 
+                } 
+            });
+            
+            db.bets[actMatchId] = { stake, predictions: preds }; 
+            broadcastData(); closeModal('betModal'); refreshAllUI();
         }
 
         function openSettleModal(id) {
@@ -1208,11 +1462,20 @@
                         p.highestBalance = Math.max(p.highestBalance, p.balance); p.lowestBalance = Math.min(p.lowestBalance, p.balance);
                     }
                 });
+
+                // 结算开奖记录进历史日志
+                const resultText = res === 'home' ? '主胜' : (res === 'away' ? '客胜' : '平局');
+                const scoreDesc = finalScoreText ? `，比分为 [${finalScoreText}]` : '';
+                addLog(`赛事 [${m.home} VS ${m.away}] 完成结算。赛果为: [${resultText}]${scoreDesc}`);
+
                 if (wins.length > 0) {
                     playAudio('win');
                     if(typeof confetti !== 'undefined') confetti({particleCount: 200, spread: 100, origin:{y:0.6}, zIndex: 9999, colors: ['#FFD700', '#FF8C00', '#00F3FF']});
+                    const winnerNames = wins.map(pid => db.players.find(x => x.id === pid)?.name).join(', ');
+                    addLog(`[${m.home} VS ${m.away}] 结算赢家: [${winnerNames}]，各赢得奖池分享金 $${(pool/wins.length).toFixed(1)}`);
                     setTimeout(() => alert(`🎊 结算完成!\n赢家: ${wins.map(pid=>db.players.find(x=>x.id===pid).name).join(', ')}\n各分得: $${(pool/wins.length).toFixed(1)}`), 500);
                 } else {
+                    addLog(`[${m.home} VS ${m.away}] 结算结果：冷门降临，无人猜中，奖金池 $${pool} 归庄家`);
                     alert(`💸 爆冷！全军覆没，庄家吃掉 $${pool}`);
                 }
             }

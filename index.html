@@ -966,9 +966,50 @@
             '摩洛哥':'🇲🇦','海地':'🇭🇹','苏格兰':'🇬🇧','澳大利亚':'🇦🇺','土耳其':'🇹🇷','德国':'🇩🇪','库拉索':'🇨🇼','科特帝瓦':'🇨🇮','厄瓜多尔':'🇪🇨','荷兰':'🇳🇱',
             '日本':'🇯🇵','瑞典':'🇸🇪','突尼斯':'🇹🇳','比利时':'🇧🇪','埃及':'🇪🇬','伊朗':'🇮🇷','新西兰':'🇳🇿','西班牙':'🇪🇸','佛得角':'🇨🇻','沙特阿拉伯':'🇸🇦','乌拉圭':'🇺🇾',
             '法国':'🇫🇷','塞内加言':'🇸🇳','伊拉克':'🇮🇶','挪威':'🇳🇴','阿根廷':'🇦🇷','阿尔及利亚':'🇩🇿','奥地利':'🇦🇹','约旦':'🇯🇴','葡萄牙':'🇵🇹','刚果(金)':'🇨🇩',
-            '乌兹别克斯坦':'🇺🇿','哥伦比亚':'🇨🇴','英格兰':'🇬🇧','克罗地亚':'🇭🇷','加纳':'🇬🇭','巴拿马':'🇵🇦'
+            '乌兹别克斯坦':'🇺🇿','哥伦比亚':'🇨🇴','英格兰':'🇬🇧','克罗地亚':'🇭🇷','加纳':'🇬涵','巴拿马':'🇵🇦'
         };
         function getFlag(name) { return flags[name] || '⚽'; }
+
+        // 统一日期与秒数格式化器
+        function formatTimestamp(date) {
+            if (!date) return '';
+            const y = date.getFullYear();
+            const m = (date.getMonth() + 1).toString().padStart(2, '0');
+            const d = date.getDate().toString().padStart(2, '0');
+            const h = date.getHours().toString().padStart(2, '0');
+            const min = date.getMinutes().toString().padStart(2, '0');
+            const s = date.getSeconds().toString().padStart(2, '0');
+            return `${y}-${m}-${d} ${h}:${min}:${s}`;
+        }
+
+        // 智能回溯算法：如果当前投注没有 explicit 时间戳，则倒序检索系统操作日志，还原最初时间
+        function getBettingTimeFromLogs(pName, home, away) {
+            if (!db.logs || db.logs.length === 0) return '';
+            for (let i = 0; i < db.logs.length; i++) {
+                const log = db.logs[i];
+                if (log && log.text && log.time) {
+                    const text = log.text;
+                    if (text.includes(pName) && text.includes(home) && text.includes(away) && (text.includes("投注") || text.includes("预测"))) {
+                        return log.time;
+                    }
+                }
+            }
+            return '';
+        }
+
+        // 获取用户下注时间主调度器
+        function getPlayerBetTimestamp(matchId, playerId) {
+            const b = db.bets[matchId];
+            if (b && b.timestamps && b.timestamps[playerId]) {
+                return b.timestamps[playerId];
+            }
+            const m = db.matches.find(x => x.id === matchId);
+            const p = db.players.find(x => x.id === playerId);
+            if (m && p) {
+                return getBettingTimeFromLogs(p.name, m.home, m.away);
+            }
+            return '';
+        }
 
         // 生成赛程数据 (104场)
         function generateMatches() {
@@ -991,7 +1032,7 @@
                 ["Group F", "6月15日 04:00", "第1轮", "达拉斯", "荷兰", "日本"], ["Group F", "6月15日 10:00", "第1轮", "蒙特雷", "瑞典", "突尼斯"],
                 ["Group F", "6月21日 01:00", "第2轮", "休斯敦", "荷兰", "瑞典"], ["Group F", "6月21日 12:00", "第2轮", "突尼斯", "日本"],
                 ["Group F", "6月26日 07:00", "第3轮", "达拉斯", "日本", "瑞典"], ["Group F", "6月26日 07:00", "第3轮", "堪萨斯城", "突尼斯", "荷兰"],
-                ["Group G", "6月16日 03:00", "第1轮", "西雅图", "比利时", "埃及"], ["Group G", "6月16日 09:00", "第1轮", "洛杉矶", "伊朗", "新西兰"],
+                ["Group G", "6月16日 03:00", "第1轮", "西雅图", "比利时", "埃及"], ["Group G", "6月16日 09:00", "第1轮", "伊朗", "新西兰"],
                 ["Group G", "6月22日 03:00", "第2轮", "洛杉矶", "比利时", "伊朗"], ["Group G", "6月22日 09:00", "第2轮", "新西兰", "埃及"],
                 ["Group G", "6月27日 11:00", "第3轮", "西雅图", "埃及", "伊朗"], ["Group G", "6月27日 11:00", "第3轮", "温哥华", "新西兰", "比利时"],
                 ["Group H", "6月16日 00:00", "第1轮", "亚特兰大", "西班牙", "佛得角"], ["Group H", "6月16日 06:00", "第1轮", "沙特阿拉伯", "乌拉圭"],
@@ -1003,10 +1044,10 @@
                 ["Group J", "6月17日 09:00", "第1轮", "堪萨斯城", "阿根廷", "阿尔及利亚"], ["Group J", "6月17日 12:00", "第1轮", "旧金山湾区", "奥地利", "约旦"],
                 ["Group J", "6月23日 01:00", "第2轮", "达拉斯", "阿根廷", "奥地利"], ["Group J", "6月23日 11:00", "第2轮", "约旦", "阿尔及利亚"],
                 ["Group J", "6月28日 10:00", "第3轮", "堪萨斯城", "阿尔及利亚", "奥地利"], ["Group J", "6月28日 10:00", "第3轮", "达拉斯", "约旦", "阿根廷"],
-                ["Group K", "6月18日 01:00", "第1轮", "休斯敦", "葡萄牙", "刚果(金)"], ["Group K", "6月18日 10:00", "第1轮", "墨西哥城", "乌兹别克斯坦", "哥伦比亚"],
-                ["Group K", "6月24日 01:00", "第2轮", "休斯敦", "葡萄牙", "乌兹别克斯坦"], ["Group K", "6月24日 10:00", "第2轮", "瓜达拉哈拉", "哥伦比亚", "刚果(金)"],
+                ["Group K", "6月18日 01:00", "第1轮", "休斯敦", "葡萄牙", "刚果(金)"], ["Group K", "6月18日 10:00", "第1轮", "乌兹别克斯坦", "哥伦比亚"],
+                ["Group K", "6月24日 01:00", "第2轮", "休斯敦", "葡萄牙", "乌兹别克斯坦"], ["Group K", "6月24日 10:00", "第2轮", "哥伦比亚", "刚果(金)"],
                 ["Group K", "6月28日 07:30", "第3轮", "迈阿密", "哥伦比亚", "葡萄牙"], ["Group K", "6月28日 07:30", "第3轮", "亚特兰大", "刚果(金)", "乌兹别克斯坦"],
-                ["Group L", "6月18日 04:00", "第1轮", "达拉斯", "英格兰", "克罗地亚"], ["Group L", "6月18日 07:00", "第1轮", "多伦多", "加纳", "巴拿马"],
+                ["Group L", "6月18日 04:00", "第1轮", "达拉斯", "英格兰", "克罗地亚"], ["Group L", "6月18日 07:00", "第1轮", "加纳", "巴拿马"],
                 ["Group L", "6月24日 04:00", "第2轮", "波士顿", "英格兰", "加纳"], ["Group L", "6月24日 07:00", "第2轮", "多伦多", "巴拿马", "克罗地亚"],
                 ["Group L", "6月28日 05:00", "第3轮", "纽约/新泽西", "巴拿马", "英格兰"], ["Group L", "6月28日 05:00", "第3轮", "费城", "克罗地亚", "加纳"]
             ];
@@ -1186,14 +1227,7 @@
         // 追加日志工具函数
         function addLog(text) {
             if (!db.logs) db.logs = [];
-            const now = new Date();
-            const year = now.getFullYear();
-            const month = (now.getMonth() + 1).toString().padStart(2, '0');
-            const date = now.getDate().toString().padStart(2, '0');
-            const hours = now.getHours().toString().padStart(2, '0');
-            const minutes = now.getMinutes().toString().padStart(2, '0');
-            const seconds = now.getSeconds().toString().padStart(2, '0');
-            const timeStr = `${year}-${month}-${date} ${hours}:${minutes}:${seconds}`;
+            const timeStr = formatTimestamp(new Date());
             
             db.logs.unshift({
                 id: 'log_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
@@ -1758,12 +1792,14 @@
                             `;
                         }
 
+                        let tStr = getPlayerBetTimestamp(m.id, p.id);
+
                         html += `
                             <div class="bg-black/40 border border-white/5 p-2 rounded-xl flex justify-between items-center text-xs">
                                 <div class="flex items-center gap-2">
                                     <img src="${p.avatar}" class="w-6 h-6 rounded-full bg-black object-cover">
                                     <div>
-                                        <p class="font-bold text-white">${p.name}</p>
+                                        <p class="font-bold text-white">${p.name} ${tStr ? `<span class="text-[9px] text-white/40 font-mono font-normal ml-2">${tStr}</span>` : ''}</p>
                                         <p class="text-[9px] text-gray-400">选择: <span class="text-yellow-400 font-bold">“${predText}”</span></p>
                                     </div>
                                 </div>
@@ -2475,12 +2511,13 @@
             
             actMatchId = id;
             document.getElementById('bet-match-title').innerText = `${m.home} vs ${m.away}`;
-            let b = db.bets[id] || { stake: 100, predictions: {} }; document.getElementById('matchStake').value = b.stake;
+            let b = db.bets[id] || { stake: 100, predictions: {}, timestamps: {} }; document.getElementById('matchStake').value = b.stake;
             const list = document.getElementById('bet-players-list');
             
             let html = '';
             db.players.forEach(p => {
                 let cur = b.predictions[p.id] || 'none';
+                let tStr = getPlayerBetTimestamp(id, p.id);
                 
                 // 【买定离手】核心限制：如果该规则开启，并且玩家已经做出非'none'下注，则锁定选项
                 let isLocked = (db.buyAndClose && cur !== 'none');
@@ -2493,6 +2530,7 @@
                             <img src="${p.avatar}" class="w-8 h-8 rounded-full bg-black">
                             <div class="flex flex-col min-w-0">
                                 <span class="font-bold text-sm text-white truncate">${p.name}</span>
+                                ${tStr ? `<span class="text-[9px] text-gray-400 block truncate" title="${tStr}">${tStr}</span>` : ''}
                                 ${lockLabel}
                             </div>
                         </div>
@@ -2523,7 +2561,8 @@
             let stake = parseInt(document.getElementById('matchStake').value) || 0; 
             let preds = {};
             const m = db.matches.find(x => x.id === actMatchId);
-            const oldBetObj = db.bets[actMatchId] || { stake: 0, predictions: {} };
+            const oldBetObj = db.bets[actMatchId] || { stake: 0, predictions: {}, timestamps: {} };
+            let times = oldBetObj.timestamps ? { ...oldBetObj.timestamps } : {};
             
             db.players.forEach(p => { 
                 let predictionVal = 'none';
@@ -2546,14 +2585,21 @@
                         const sideText = predictionVal === 'home' ? '主胜' : (predictionVal === 'away' ? '主负' : (predictionVal === 'draw' ? '平局' : '撤单'));
                         if (predictionVal !== 'none') {
                             addLog("玩家 [" + p.name + "] 针对比赛 [" + m.home + " VS " + m.away + "] 进行了投注: 预测 [" + sideText + "]，单注金额 " + stake);
+                            times[p.id] = formatTimestamp(new Date());
                         } else {
                             addLog("玩家 [" + p.name + "] 取消了对比赛 [" + m.home + " VS " + m.away + "] 的投注");
+                            delete times[p.id];
+                        }
+                    } else {
+                        // 如果投注内容不变，但在开启锁定前修改了本金，同样计入操作时间更新
+                        if (oldBetObj.stake !== stake && predictionVal !== 'none') {
+                            times[p.id] = formatTimestamp(new Date());
                         }
                     }
                 }
             });
             
-            db.bets[actMatchId] = { stake, predictions: preds }; 
+            db.bets[actMatchId] = { stake, predictions: preds, timestamps: times }; 
             broadcastData(); closeModal('betModal'); refreshAllUI();
         }
 
@@ -3403,4 +3449,3 @@
     </script>
 </body>
 </html>
-

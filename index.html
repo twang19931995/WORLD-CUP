@@ -3227,10 +3227,10 @@
             if (scoreHVal !== '' && scoreAVal !== '') {
                 const scoreH = parseFloat(scoreHVal);
                 const scoreA = parseFloat(scoreAVal);
-                if (!isNaN(scoreH) && !isNaN(scoreA)) {
-                    const hcp = parseFloat(m.handicap || '0');
-                    const netResult = scoreH - scoreA + hcp;
-                    let res = '';
+if (!isNaN(scoreH) && !isNaN(scoreA)) {
+                const hcp = parseFloat(m.handicap || '0');
+                const netResult = scoreH - scoreA - hcp;
+                let res = '';
                     if (Math.abs(netResult) < 0.0001) {
                         res = 'draw';
                     } else if (netResult > 0) {
@@ -3267,12 +3267,12 @@
             if (scoreHVal !== '' && scoreAVal !== '') {
                 const scoreH = parseFloat(scoreHVal);
                 const scoreA = parseFloat(scoreAVal);
-                if (isNaN(scoreH) || isNaN(scoreA)) {
-                    return alert("请输入比分！");
-                }
-                const hcp = parseFloat(m.handicap || '0');
-                const netResult = scoreH - scoreA + hcp;
-                if (Math.abs(netResult) < 0.0001) {
+if (isNaN(scoreH) || isNaN(scoreA)) {
+                return alert("请输入比分！");
+            }
+            const hcp = parseFloat(m.handicap || '0');
+            const netResult = scoreH - scoreA - hcp;
+            if (Math.abs(netResult) < 0.0001) {
                     res = 'draw';
                 } else if (netResult > 0) {
                     res = 'home';

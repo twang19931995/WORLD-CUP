@@ -108,6 +108,8 @@
             border-top: 1px solid rgba(255,255,255,0.1);
             display: flex; justify-content: space-around; padding: 10px 0 calc(10px + env(safe-area-inset-bottom));
             z-index: 50; box-shadow: 0 -5px 20px rgba(0,0,0,0.5);
+            will-change: transform;
+            transform: translateZ(0);
         }
         .nav-item {
             display: flex; flex-direction: column; align-items: center; gap: 4px;
@@ -120,7 +122,10 @@
         .data-card { background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 12px; }
 
         /* 模态框动画 */
-        .modal-enter { animation: bounceIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        .modal-enter { 
+            animation: bounceIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; 
+            will-change: transform, opacity;
+        }
 
         /* 卡片跑马灯特效的基础旋转动画 */
         @keyframes borderRotate {
@@ -138,6 +143,7 @@
             display: inline-block;
             padding-left: 100%;
             animation: tickerScroll 15s linear infinite;
+            will-change: transform;
         }
 
         /* 强制GPU渲染加速，保障极其丝滑体验 */
@@ -147,6 +153,7 @@
             backface-visibility: hidden;
             -webkit-backface-visibility: hidden;
             will-change: transform;
+            contain: paint; /* 隔离卡片渲染范围，防止回流波及全页 */
         }
 
         /* 启用原生滚动，增强操作跟手感 */
@@ -256,9 +263,9 @@
             <!-- 界面0: 对阵图 -->
             <div id="ko-panel-bracket" class="space-y-4 overflow-hidden">
                 <div id="bracket-container" class="w-full overflow-x-auto no-scrollbar py-4 flex justify-start md:justify-center">
-                    <div id="bracket-wrapper" class="flex items-stretch justify-between select-none relative" style="width: 900px; height: 900px;">
+                    <div id="bracket-wrapper" class="flex items-stretch justify-between select-none relative" style="width: 900px; height: 900px; will-change: transform;">
                         <!-- SVG background lines layer -->
-                        <svg id="bracket-svg" class="absolute inset-0 pointer-events-none" style="width: 100%; height: 100%; z-index: 0;"></svg>
+                        <svg id="bracket-svg" class="absolute inset-0 pointer-events-none" style="width: 100%; height: 100%; z-index: 0; will-change: transform;"></svg>
                         
                         <!-- Col 1: Left R32 -->
                         <div class="flex flex-col justify-around h-full z-10" id="bracket-col-left-r32" style="width: 80px;"></div>
@@ -391,7 +398,7 @@
                             <p class="text-xs font-bold text-white">买定离手</p>
                             <p class="text-[9px] text-gray-400">开启后玩家一旦完成下注将无法再行修改，关闭此规则需输入密码</p>
                         </div>
-                        <label class="relative inline-flex inline-flex items-center cursor-pointer select-none">
+                        <label class="relative inline-flex items-center cursor-pointer select-none">
                             <input type="checkbox" id="buy-and-close-toggle" onchange="toggleBuyAndCloseSetting(this.checked, this); playAudio('click')" class="sr-only peer">
                             <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-400"></div>
                         </label>
@@ -1204,7 +1211,7 @@
                 ["Group F", "6月26日 07:00", "第3轮", "达拉斯", "日本", "瑞典"], ["Group F", "6月26日 07:00", "第3轮", "堪萨斯城", "突尼斯", "荷兰"],
                 ["Group G", "6月16日 03:00", "第1轮", "西雅图", "比利时", "埃及"], ["Group G", "6月16日 09:00", "第1轮", "伊朗", "新西兰"],
                 ["Group G", "6月22日 03:00", "第2轮", "洛杉矶", "比利时", "伊朗"], ["Group G", "6月22日 09:00", "第2轮", "新西兰", "埃及"],
-                ["Group G", "6月27日 11:00", "第3轮", "西雅图", "埃及", "伊朗"], ["Group G", "6月27日 11:00", "第3轮", "温哥华", "新西兰", "比利时"],
+                ["Group G", "67月27日 11:00", "第3轮", "西雅图", "埃及", "伊朗"], ["Group G", "6月27日 11:00", "第3轮", "温哥华", "新西兰", "比利时"],
                 ["Group H", "6月16日 00:00", "第1轮", "亚特兰大", "西班牙", "佛得角"], ["Group H", "6月16日 06:00", "第1轮", "沙特阿拉伯", "乌拉圭"],
                 ["Group H", "6月22日 00:00", "第2轮", "亚特兰大", "西班牙", "沙特阿拉伯"], ["Group H", "6月22日 06:00", "第2轮", "迈阿密", "乌拉圭", "佛得角"],
                 ["Group H", "6月27日 08:00", "第3轮", "休斯敦", "佛得角", "沙特阿拉伯"], ["Group H", "6月27日 08:00", "第3轮", "瓜达拉哈拉", "乌拉圭", "西班牙"],
@@ -1229,8 +1236,8 @@
                 [85,"1/16决赛","7月03日 11:00","温哥华","B1","E3/F3/G3/I3/J3"], [86,"1/16决赛","7月04日 06:00","迈阿密","J1","H2"], [87,"1/16决赛","7月04日 09:30","堪萨斯城","K1","D3/E3/I3/J3/L3"], [88,"1/16决赛","7月04日 02:00","达拉斯","D2","G2"],
                 [89,"1/8决赛","7月05日 05:00","费城","74胜者","77胜者"], [90,"1/8决赛","7月05日 01:00","休斯敦","73胜者","75胜者"], [91,"1/8决赛","7月06日 04:00","纽约/新泽西","76胜者","78胜者"],
                 [92,"1/8决赛","7月06日 08:00","墨西哥城","79胜者","80胜者"], [93,"1/8决赛","7月07日 03:00","达拉斯","83胜者","84胜者"], [94,"1/8决赛","7月07日 08:00","西雅图","81胜者","82胜者"],
-                [95,"1/8决赛","7月08日 00:00","亚特兰大","86胜者","88胜者"], [96,"1/8决赛","7月08日 04:00","温哥飞","85胜者","87胜者"],
-                [97,"1/4决赛","7月10日 04:00","波士顿","89胜者","90胜者"], [98,"1/4决赛","7月11日 03:00","洛杉矶","93胜者","94胜者"], [99,"1/4决赛","7月12日 05:00","迈阿密","91胜者","92胜者"], [100,"1/4决赛","7月12日 09:00","堪萨斯城","95胜者","96胜7"],
+                [95,"1/8决赛","7月08日 00:00","亚特兰大","86胜者","88胜者"], [96,"1/8决赛","7月08日 04:00","温哥华","85胜者","87胜者"],
+                [97,"1/4决赛","7月10日 04:00","波士顿","89胜者","90胜者"], [98,"1/4决赛","7月11日 03:00","洛杉矶","93胜者","94胜者"], [99,"1/4决赛","7月12日 05:00","迈阿密","91胜者","92胜者"], [100,"1/4决赛","7月12日 09:00","堪萨斯城","95胜者","96胜者"],
                 [101,"半决赛","7月15日 03:00","达拉斯","97胜者","98胜者"], [102,"半决赛","7月16日 03:00","亚特兰大","99胜者","100胜者"],
                 [103,"季军赛","7月19日 05:00","迈阿密","半决负1","半决负2"], [104,"决赛","7月20日 03:00","纽约/新泽西","半决胜1","半决胜2"]
             ];
@@ -2847,11 +2854,16 @@
             }, 50);
         }
 
+        // 添加节流重绘机制，防止手机端重绘过频卡顿
+        let resizeTimeout;
         window.addEventListener('resize', () => {
-            if (currentTab === 'knockout' && activeKnockoutSubTab === 'bracket') {
-                resizeBracket();
-                drawBracketLines();
-            }
+            if (resizeTimeout) clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                if (currentTab === 'knockout' && activeKnockoutSubTab === 'bracket') {
+                    resizeBracket();
+                    drawBracketLines();
+                }
+            }, 100);
         });
 
         // ==========================================
@@ -3170,10 +3182,14 @@
                             <button onclick="editPlayerName('${p.id}'); playAudio('click')" class="text-white/40 hover:text-white transition-colors" title="修改名字"><i class="fa-solid fa-pen text-[10px]"></i></button>
                         </div>
                         
-                        <p class="${p.balance>=0?'text-green-400':'text-red-400'} font-black text-sm">{p.balance>=0?'+':''}{p.balance.toFixed(0)}  `;
-}); container.innerHTML = html; }
+                        <p class="${p.balance>=0?'text-green-400':'text-red-400'} font-black text-sm">${p.balance>=0?'+':''}${p.balance.toFixed(0)}</p>
+                        <button onclick="deletePlayer('${p.id}'); playAudio('click')" class="absolute top-2 right-2 text-white/20 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"><i class="fa-solid fa-trash-can text-[10px]"></i></button>
+                    </div>`;
+            }); 
+            container.innerHTML = html; 
+        }
 
-    // --- View 7: 历史操作区 ---
+    // --- View 7: 操作历史 ---
     function renderHistoryDateSelector() {
         const container = document.getElementById('history-date-scroll');
         if (!container) return;
@@ -4201,7 +4217,8 @@
                 -webkit-transform: translate3d(0, 0, 0);
                 backface-visibility: hidden;
                 -webkit-backface-visibility: hidden;
-                will-change: transform;
+                will-change: transform, background-position;
+                contain: paint;
             }
 
             #top-ticker-container {

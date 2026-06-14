@@ -78,16 +78,9 @@
         
         /* 像素级复刻：大国旗正方形容器 */
         .flag-box {
-            /* ======================================================== */
-            /* 【修改国旗大小提示】                                    */
-            /* 1. 下方的 width 和 height 控制国旗外框容器的宽度 and 高度。 */
-            /* 2. 下方的 font-size 控制国旗 Emoji 图标本身的大小。     */
-            /* ======================================================== */
-            width: 76px;        /* 👈 这里调整国旗外框宽度 */
-            height: 76px;       /* 👈 这里调整国旗外框高度 */
-            font-size: 80px;    /* 👈 这里调整国旗图标大小 */
-            /* ======================================================== */
-            
+            width: 76px;        
+            height: 76px;       
+            font-size: 80px;    
             background: transparent; /* 去掉白底，使用纯透明通道 */
             display: flex; 
             justify-content: center; 
@@ -136,6 +129,17 @@
             100% { background-position: 0% 50%; }
         }
 
+        /* 顶部广播滚动条专属动画 */
+        @keyframes tickerScroll {
+            0% { transform: translate3d(0, 0, 0); }
+            100% { transform: translate3d(-100%, 0, 0); }
+        }
+        .animate-ticker-scroll {
+            display: inline-block;
+            padding-left: 100%;
+            animation: tickerScroll 15s linear infinite;
+        }
+
         /* 强制GPU渲染加速，保障极其丝滑体验 */
         .leaderboard-card-item, .match-card-item, .stats-card-item, .player-card-item, .marquee-gb, #bg-slideshow-container, #bg-slide-1, #bg-slide-2 {
             transform: translate3d(0, 0, 0);
@@ -153,6 +157,13 @@
     </style>
 </head>
 <body>
+
+    <!-- 顶部滚动播报栏 -->
+    <div id="top-ticker-container" class="w-full overflow-hidden whitespace-nowrap bg-black/60 border-b border-white/10 flex items-center relative z-50">
+        <div id="ticker-text" class="inline-block pl-[100%] animate-ticker-scroll font-bold text-yellow-400 select-none">
+            今日比赛数据加载中...
+        </div>
+    </div>
 
     <!-- 滚动淡入淡出背景层 -->
     <div id="bg-slideshow-container" class="fixed inset-0 z-0 overflow-hidden pointer-events-none transition-opacity duration-500 opacity-20">
@@ -380,7 +391,7 @@
                             <p class="text-xs font-bold text-white">买定离手</p>
                             <p class="text-[9px] text-gray-400">开启后玩家一旦完成下注将无法再行修改，关闭此规则需输入密码</p>
                         </div>
-                        <label class="relative inline-flex items-center cursor-pointer select-none">
+                        <label class="relative inline-flex inline-flex items-center cursor-pointer select-none">
                             <input type="checkbox" id="buy-and-close-toggle" onchange="toggleBuyAndCloseSetting(this.checked, this); playAudio('click')" class="sr-only peer">
                             <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-400"></div>
                         </label>
@@ -398,6 +409,41 @@
                 </button>
                 <div id="admin-ui-settings-content" class="hidden p-4 space-y-6 border-t border-white/5">
                     
+                    <!-- 滚动条（跑马灯广播）设置区域 -->
+                    <div class="space-y-3 border-b border-white/10 pb-4">
+                        <h4 class="text-xs font-black text-yellow-400 flex items-center gap-1.5">
+                            <i class="fa-solid fa-bullhorn"></i> 顶部滚动播报栏设置
+                        </h4>
+                        <div class="grid grid-cols-2 gap-2 bg-black/20 p-2.5 rounded-xl border border-white/5 mb-2">
+                            <div>
+                                <label class="text-[9px] text-gray-400 block">栏目高度: <span id="val-tk-ht">32</span>px</label>
+                                <input type="range" min="20" max="60" id="cfg-tk-ht" oninput="updateUIConfig('ticker', 'height', this.value)" class="w-full accent-cyan-400 cursor-pointer">
+                            </div>
+                            <div>
+                                <label class="text-[9px] text-gray-400 block">字体大小: <span id="val-tk-fs">12</span>px</label>
+                                <input type="range" min="8" max="24" id="cfg-tk-fs" oninput="updateUIConfig('ticker', 'fontSize', this.value)" class="w-full accent-cyan-400 cursor-pointer">
+                            </div>
+                            <div>
+                                <label class="text-[9px] text-gray-400 block">滚动时间(秒): <span id="val-tk-sp">15</span>s</label>
+                                <input type="range" min="5" max="60" id="cfg-tk-sp" oninput="updateUIConfig('ticker', 'speed', this.value)" class="w-full accent-cyan-400 cursor-pointer">
+                            </div>
+                            <div>
+                                <label class="text-[9px] text-gray-400 block">背景颜色</label>
+                                <div class="flex gap-1 items-center">
+                                    <input type="color" id="cfg-tk-bg" onchange="updateUIConfig('ticker', 'bgColor', this.value)" class="w-6 h-6 bg-transparent border-0 cursor-pointer">
+                                    <input type="text" id="cfg-tk-bg-txt" onchange="updateUIConfig('ticker', 'bgColor', this.value)" class="bg-black/40 text-white text-[10px] px-1 rounded w-full border border-white/10 font-mono py-0.5 outline-none">
+                                </div>
+                            </div>
+                            <div class="col-span-2">
+                                <label class="text-[9px] text-gray-400 block">字体颜色</label>
+                                <div class="flex gap-1 items-center">
+                                    <input type="color" id="cfg-tk-tc" onchange="updateUIConfig('ticker', 'textColor', this.value)" class="w-6 h-6 bg-transparent border-0 cursor-pointer">
+                                    <input type="text" id="cfg-tk-tc-txt" onchange="updateUIConfig('ticker', 'textColor', this.value)" class="bg-black/40 text-white text-[10px] px-1 rounded w-full border border-white/10 font-mono py-0.5 outline-none">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- 对阵图高级控制区域 -->
                     <div class="space-y-3 border-b border-white/10 pb-4">
                         <h4 class="text-xs font-black text-yellow-400 flex items-center gap-1.5">
@@ -430,7 +476,7 @@
                         <div class="flex items-center justify-between bg-black/20 p-3 rounded-xl border border-white/5">
                             <div>
                                 <p class="text-xs font-bold text-white">实时积分落位对阵</p>
-                                <p class-[9px] text-gray-400">开启后根据实时比分/积分填入对阵图与淘汰赛，无需等待6场小组赛全部打完（未开赛、无数据的球队不填入）</p>
+                                <p class="text-[9px] text-gray-400">开启后根据实时比分/积分填入对阵图与淘汰赛，无需等待6场小组赛全部打完（未开赛、无数据的球队不填入）</p>
                             </div>
                             <label class="relative inline-flex items-center cursor-pointer select-none">
                                 <input type="checkbox" id="cfg-rt-bracket" onchange="updateRealtimeBracketSetting(this.checked); playAudio('click')" class="sr-only peer">
@@ -986,7 +1032,7 @@
                 </div>
             </div>
 
-            <p class="text-xs text-red-200 mb-2 font-bold">判定结果（输入比分后将基于让球数自动判定选择）</p>
+            <p class="text-xs text-red-200 mb-2 font-bold">判定结果（输入比分后将基于实际比分自动判定选择）</p>
             <div class="grid grid-cols-3 gap-2 mb-6">
                 <button onclick="setResult('home'); playAudio('click')" id="res-home" class="result-btn py-3 rounded-xl border-2 border-white/10 font-bold text-white bg-black/30 transition">主胜</button>
                 <button onclick="setResult('draw'); playAudio('click')" id="res-draw" class="result-btn py-3 rounded-xl border-2 border-white/10 font-bold text-gray-400 bg-black/30 transition">平局</button>
@@ -1389,31 +1435,9 @@
             }
         }
 
-        function updateHandicap(matchId, val) {
-            const m = db.matches.find(x => x.id === matchId);
-            if (m) {
-                const trimmed = val.trim();
-                const oldVal = m.handicap || '0';
-                if (oldVal === trimmed) return;
-                
-                m.handicap = trimmed;
-                addLog(`更新了 [${m.home} VS ${m.away}] 让球数为: "${trimmed || '0'}"`);
-                broadcastData();
-            }
-        }
-
-        function triggerEditHandicap(matchId) {
-            const m = db.matches.find(x => x.id === matchId);
-            if (!m || m.status === 'finished') return;
-            const currentVal = m.handicap || '0';
-            const resolvedHome = resolveTeamName(m.home, db, m);
-            const resolvedAway = resolveTeamName(m.away, db, m);
-            const newVal = prompt(`请输入 [${resolvedHome} VS ${resolvedAway}] 的让球数 (正数表示主队受让，负数表示主队让球，当前: ${currentVal}):`, currentVal);
-            if (newVal !== null) {
-                updateHandicap(matchId, newVal);
-                refreshAllUI();
-            }
-        }
+        // 为兼容老版本保留空逻辑函数，防止运行错误
+        function updateHandicap(matchId, val) {}
+        function triggerEditHandicap(matchId) {}
 
         function editPlayerName(playerId) {
             const p = db.players.find(x => x.id === playerId);
@@ -1482,9 +1506,6 @@
             refreshAllUI();
         }
 
-        // ==========================================
-        // 核心优化板块：时间排序精确解析算法
-        // ==========================================
         function parseMatchDate(dateStr) {
             if (!dateStr) return 0;
             const regex = /(\d+)月(\d+)日\s+(\d+):(\d+)/;
@@ -1499,9 +1520,6 @@
             return 0;
         }
 
-        // ==========================================
-        // 核心优化板块：国家名单及占位符过滤模块
-        // ==========================================
         function isRealCountry(name) {
             if (!name) return false;
             if (name.includes('胜者') || name.includes('负者')) return false;
@@ -1511,9 +1529,6 @@
             return true;
         }
 
-        // ==========================================
-        // 核心优化板块：球队名称及淘汰赛分组全自动动态递归解析引擎
-        // ==========================================
         function resolveTeamName(team, db, matchContext = null) {
             if (!team) return "";
             
@@ -1560,7 +1575,6 @@
                 const gName = "Group " + gLetter;
                 const place = parseInt(groupMatch[2], 10);
                 
-                // 默认仅当小组的所有6场比赛全部完成时，才解析具体国旗和国名
                 const finishedGroupMatches = db.matches.filter(m => m.group === gName && m.status === 'finished').length;
                 const allowRealtime = !!db.realtimeBracket;
 
@@ -1571,7 +1585,6 @@
                 const sorted = sortGroupTeams(gName, db);
                 if (sorted && sorted[place - 1]) {
                     const targetTeamStats = sorted[place - 1];
-                    // 在实时模式下，若该球队尚未打过比赛（没有实时比分数据），则不提前落位
                     if (allowRealtime && targetTeamStats.played === 0) {
                         return team;
                     }
@@ -1582,7 +1595,6 @@
 
             // 处理小组第三名池匹配占位符 (A3/B3/C3/D3/F3, etc.)
             if (team.includes('/') && team.includes('3')) {
-                // 默认仅当全部小组赛（共72场）全部结束，才分配落位
                 const totalFinishedGroupMatches = db.matches.filter(m => m.round !== '淘汰赛' && m.status === 'finished').length;
                 const allowRealtime = !!db.realtimeBracket;
 
@@ -1603,7 +1615,6 @@
                         const matchedThirdCode = matchups[firstPlaceCode];
                         if (matchedThirdCode) {
                             const resolvedThird = resolveTeamName(matchedThirdCode, db, matchContext);
-                            // 实时积分判定下，如果解析后仍为占位符，则不填入具体球队
                             if (resolvedThird === matchedThirdCode || resolvedThird.match(/^[A-L][1-4]$/) || resolvedThird.includes('/')) {
                                 return team;
                             }
@@ -1617,9 +1628,6 @@
             return team;
         }
 
-        // ==========================================
-        // 核心优化板块：小组积分排名精确解析运算引擎
-        // ==========================================
         function parseScore(scoreStr) {
             if (!scoreStr) return null;
             const parts = scoreStr.split(':').map(x => parseInt(x.trim(), 10));
@@ -1713,9 +1721,7 @@
                 if (h2hGdA !== h2hGdB) return h2hGdA - h2hGdB;
                 if (h2hGsA !== h2hGsB) return h2hGsA - h2hGsB;
 
-                // 4. 小组总净胜球
                 if (sb.gd !== sa.gd) return sb.gd - sa.gd;
-                // 5. 小组总进球数
                 if (sb.gs !== sa.gs) return sb.gs - sa.gs;
 
                 return a.localeCompare(b);
@@ -1724,9 +1730,6 @@
             return teams.map(t => statsMap[t]);
         }
 
-        // ==========================================
-        // 核心优化板块：最佳小组第三及对阵生成算法
-        // ==========================================
         function getThirdPlaceStandings(db) {
             const groups = ["Group A", "Group B", "Group C", "Group D", "Group E", "Group F", "Group G", "Group H", "Group I", "Group J", "Group K", "Group L"];
             const thirds = [];
@@ -1873,7 +1876,7 @@
 
             calculateAdvancedStats();
             
-            activeKnockoutSubTab = 'bracket'; // 默认进入淘汰赛展示对阵图
+            activeKnockoutSubTab = 'bracket'; 
             refreshAllUI();
 
             initSlideshow();
@@ -1903,12 +1906,13 @@
                 
                 loadSlideshowSettingsToAdmin();
                 syncUIInputsFromDB();
-                renderPlayers(); // 后台页面渲染玩家卡片
+                renderPlayers(); 
             }
         }
 
         function refreshAllUI() { 
             calculateAdvancedStats(); 
+            updateTicker();
             renderActiveTabUI(); 
         }
 
@@ -1982,7 +1986,6 @@
                             p.currentStreak = currentW; p.biggestWin = Math.max(p.biggestWin, netProfit);
                         } else {
                             if (matchWinners.length === 0) {
-                                // 没人猜中退还积分逻辑
                                 netProfit = 0;
                                 p.balance += b.stake; 
                                 currentW = 0; currentL = 0; 
@@ -2155,7 +2158,7 @@
                             let pool = Object.values(preds).filter(v => v !== 'none').length * b.stake;
                             let netProfit = -b.stake;
                             if (winners.length === 0) {
-                                netProfit = 0; // 没人猜中，不亏损
+                                netProfit = 0; 
                             } else if (isCorrect) {
                                 netProfit = (pool / winners.length) - b.stake;
                             }
@@ -2247,70 +2250,25 @@
                     <span class="bg-yellow-400 text-blue-950 font-black text-[9px] px-1 py-0.5 rounded skew-x-12 animate-pulse border border-yellow-300 shadow-[0_0_8px_rgba(250,204,21,0.8)]">WIN</span>
                 </div>` : '';
 
-            let curHandicap = m.handicap !== undefined ? m.handicap : '0';
-            const hasHandicap = parseFloat(curHandicap) !== 0;
-
-            let handicapRulesHTML = '';
-            const parsedHandicap = parseFloat(curHandicap);
-            if (!isNaN(parsedHandicap) && parsedHandicap !== 0) {
-                handicapRulesHTML = `
-                    <div class="text-[8px] text-black/60 leading-normal mt-1 select-none text-center scale-90 origin-center shrink-0 w-[145px]" style="font-size: 7.5px;">
-                        <p class="font-black text-center mb-0.5 text-black/70">让球判定逻辑:</p>
-                        <p>• 主队 净胜球 &gt; ${curHandicap} 为主胜</p>
-                        <p>• 主队 净胜球 = ${curHandicap} 为主平</p>
-                        <p>• 主队 净胜球 &lt; ${curHandicap} 为主负</p>
-                    </div>
-                `;
-            }
-
-            // 净胜球计算与排版控制 (仅完赛且有让球数时展示)
+            // 纯比分渲染 - 让球部分已被完全剔除
             const scoreHome = isFin && m.score ? m.score.split(':')[0].trim() : '';
             const scoreAway = isFin && m.score ? m.score.split(':')[1].trim() : '';
             let scoreDisplay = '';
             if (isFin) {
                 const sh = parseInt(scoreHome, 10) || 0;
                 const sa = parseInt(scoreAway, 10) || 0;
-                const netGoals = sh - sa;
-                const sign = netGoals > 0 ? '+' : '';
-                const hcp = parseFloat(curHandicap) || 0;
-                const hcpFormatted = hcp > 0 ? '+' + hcp : hcp.toString();
-
-                let compSign = '＝';
-                if (netGoals - hcp > 0.0001) {
-                    compSign = '＞';
-                } else if (hcp - netGoals > 0.0001) {
-                    compSign = '＜';
-                }
-
-                const netGoalsStr = `净胜球${netGoals > 0 ? '+' : ''}${netGoals}`;
-                const hcpStr = `让球数${hcpFormatted}`;
-
-                const netGoalsHTML = hasHandicap 
-                    ? `<div class="text-[9px] text-red-600 font-bold font-mono mt-0.5 leading-none">净胜: ${sign}${netGoals}</div>` 
-                    : '';
-
-                const handicapBelowAwayHTML = hasHandicap
-                    ? `<div class="text-[9px] text-red-600 font-bold font-mono mt-0.5 leading-none">让球: ${hcpFormatted}</div>`
-                    : `<div class="text-[9px] text-transparent select-none mt-0.5 leading-none">H</div>`;
-
-                const comparisonHTML = hasHandicap
-                    ? `<div class="text-[9px] text-red-600 font-bold mt-1.5 select-none leading-none">${netGoalsStr}  ${compSign}  ${hcpStr}</div>`
-                    : '';
 
                 scoreDisplay = `
                     <div class="flex flex-col items-center">
                         <div class="flex items-start justify-center gap-2">
                             <div class="flex flex-col items-center">
                                 <span class="text-3xl font-black text-slate-800 font-mono leading-none">${sh}</span>
-                                ${netGoalsHTML}
                             </div>
                             <span class="text-3xl font-black text-slate-800 font-mono leading-none pt-0.5">:</span>
                             <div class="flex flex-col items-center">
                                 <span class="text-3xl font-black text-slate-800 font-mono leading-none">${sa}</span>
-                                ${handicapBelowAwayHTML}
                             </div>
                         </div>
-                        ${comparisonHTML}
                     </div>
                 `;
             } else {
@@ -2345,12 +2303,6 @@
                                 奖池: <span class="font-mono font-bold text-yellow-700">${pool}</span>
                             </div>
                             ${scoreDisplay}
-                            <div class="flex flex-col items-center select-none shrink-0 mt-0.5">
-                                <span onclick="triggerEditHandicap(${m.id}); event.stopPropagation();" class="bg-black/10 hover:bg-black/15 text-[9px] font-extrabold px-2 py-0.5 rounded text-black transition-all cursor-pointer">
-                                    让球数: ${curHandicap}
-                                </span>
-                                ${handicapRulesHTML}
-                            </div>
                         </div>
                         
                         <div class="flex flex-col items-center w-[30%] relative">
@@ -2391,7 +2343,7 @@
                 </div>`;
         }
 
-        // 全部赛事下的极简卡片渲染 (全自动名称解析)
+        // 全部赛事下的极简卡片渲染
         function renderSimplifiedMatchCard(m, index) {
             const isFin = m.status === 'finished';
             const scoreText = isFin ? (m.score || "0 : 0") : '<span class="text-yellow-400 font-extrabold text-xs">未开赛</span>';
@@ -2451,6 +2403,7 @@
             activeTodayDate = dStr;
             renderTodayDateSelector();
             renderTodayMatches();
+            updateTicker();
         }
 
         // --- View 3: 赛事中心多维导航 & 排序控制 ---
@@ -2466,7 +2419,6 @@
             renderMatches(); 
         }
 
-        // 绑定小组二级分类
         function selectSecNav(type) {
             if (activeSecNav === type) {
                 activeSecNav = 'none'; 
@@ -2643,7 +2595,7 @@
         }
 
         // ==========================================
-        // 核心优化板块：淘汰赛数据及子Tab渲染器
+        // 淘汰赛数据及子Tab渲染器
         // ==========================================
         function switchKnockoutSubTab(subTabId) {
             activeKnockoutSubTab = subTabId;
@@ -2654,11 +2606,9 @@
             const panelGs = document.getElementById('ko-panel-group-standings');
             const panelTs = document.getElementById('ko-panel-third-standings');
             
-            // 重置所有按钮状态
             [btnBr, btnGs, btnTs].forEach(btn => {
                 if (btn) btn.className = 'flex-1 py-1.5 rounded-full text-xs font-bold text-white hover:bg-white/20 transition';
             });
-            // 隐藏所有面板
             [panelBr, panelGs, panelTs].forEach(p => {
                 if (p) p.classList.add('hidden');
             });
@@ -2889,7 +2839,6 @@
             });
         }
 
-        // 对阵图统一更新入口
         function updateBracketUI() {
             renderKnockoutBracket();
             setTimeout(() => {
@@ -2898,7 +2847,6 @@
             }, 50);
         }
 
-        // 监听浏览器和手机视口变化，自适应重绘
         window.addEventListener('resize', () => {
             if (currentTab === 'knockout' && activeKnockoutSubTab === 'bracket') {
                 resizeBracket();
@@ -3001,7 +2949,7 @@
             });
             tableBody.innerHTML = tableHtml;
             
-            // 渲染第三名大对阵落位
+            // 还原第三名大对阵落位
             const matchups = getThirdPlaceMatchups(db);
             let matchupsHtml = '';
             
@@ -3081,7 +3029,7 @@
                                 </div>
                             </div>
                             <div class="text-right shrink-0">
-                                <p class="text-[9px] text-white/50 mb-0.5 font-bold uppercase tracking-wider">净利润 (Net Profit)</p>
+                                <p class="text-[9px] text-white/50 mb-0.5 font-bold uppercase tracking-wider">净利润</p>
                                 <p class="${balanceClass} font-mono font-black text-2xl tracking-tight drop-shadow-sm mb-1.5">
                                     ${balanceSign}${p.balance.toFixed(0)}
                                 </p>
@@ -3149,7 +3097,6 @@
                                 <i class="fa-solid fa-wand-magic-sparkles text-[11px]"></i> 球队倾向与运势分析
                             </p>
                             <div class="grid grid-cols-2 gap-2">
-                                <!-- 猜胜最多 -->
                                 <div class="bg-white/5 rounded-xl p-2 border border-white/5 flex items-center gap-2">
                                     <div class="text-yellow-400 text-lg shrink-0 w-6 text-center"><i class="fa-solid fa-trophy"></i></div>
                                     <div class="min-w-0">
@@ -3157,7 +3104,6 @@
                                         <p class="text-xs font-black text-white truncate mt-0.5">${p.mostWinPredictStr}</p>
                                     </div>
                                 </div>
-                                <!-- 猜负最多 -->
                                 <div class="bg-white/5 rounded-xl p-2 border border-white/5 flex items-center gap-2">
                                     <div class="text-blue-400 text-lg shrink-0 w-6 text-center"><i class="fa-solid fa-shield-halved"></i></div>
                                     <div class="min-w-0">
@@ -3165,7 +3111,6 @@
                                         <p class="text-xs font-black text-white truncate mt-0.5">${p.mostLossPredictStr}</p>
                                     </div>
                                 </div>
-                                <!-- 幸运球队 -->
                                 <div class="bg-green-500/5 rounded-xl p-2 border border-green-500/10 flex items-center gap-2">
                                     <div class="text-green-400 text-lg shrink-0 w-6 text-center"><i class="fa-solid fa-face-smile-beam"></i></div>
                                     <div class="min-w-0">
@@ -3173,7 +3118,6 @@
                                         <p class="text-xs font-black text-green-300 truncate mt-0.5">${p.luckyTeamStr}</p>
                                     </div>
                                 </div>
-                                <!-- 厄运球队 -->
                                 <div class="bg-red-500/5 rounded-xl p-2 border border-red-500/10 flex items-center gap-2">
                                     <div class="text-red-400 text-lg shrink-0 w-6 text-center"><i class="fa-solid fa-face-frown"></i></div>
                                     <div class="min-w-0">
@@ -3226,476 +3170,430 @@
                             <button onclick="editPlayerName('${p.id}'); playAudio('click')" class="text-white/40 hover:text-white transition-colors" title="修改名字"><i class="fa-solid fa-pen text-[10px]"></i></button>
                         </div>
                         
-                        <p class="${p.balance>=0?'text-green-400':'text-red-400'} font-black text-sm">${p.balance>=0?'+':''}${p.balance.toFixed(0)}</p>
-                        <button onclick="deletePlayer('${p.id}'); playAudio('click');" class="absolute top-2 right-2 text-white/30 hover:text-red-500 transition"><i class="fa-solid fa-trash text-sm"></i></button>
-                    </div>`;
-            });
-            container.innerHTML = html;
-        }
+                        <p class="${p.balance>=0?'text-green-400':'text-red-400'} font-black text-sm">{p.balance>=0?'+':''}{p.balance.toFixed(0)}  `;
+}); container.innerHTML = html; }
 
-        // --- View 7: 历史操作区 ---
-        function renderHistoryDateSelector() {
-            const container = document.getElementById('history-date-scroll');
-            if (!container) return;
-            const dates = getLogDates();
-            if (dates.length === 0) {
-                container.innerHTML = '<div class="text-[10px] text-white/30 text-center py-2">暂无历史记录日期分类</div>';
-                return;
-            }
-            
-            let html = `
-                <button onclick="selectHistoryDate('all'); playAudio('click')" class="shrink-0 px-3 py-1 rounded-full text-[10px] font-bold border transition ${activeHistoryDate === 'all' ? 'bg-yellow-400 text-blue-950 border-yellow-400 shadow-[0_0_5px_rgba(250,204,21,0.4)]' : 'bg-black/40 text-gray-400 border-white/10 hover:border-white/20'}">
-                    全部
+    // --- View 7: 历史操作区 ---
+    function renderHistoryDateSelector() {
+        const container = document.getElementById('history-date-scroll');
+        if (!container) return;
+        const dates = getLogDates();
+        if (dates.length === 0) {
+            container.innerHTML = '<div class="text-[10px] text-white/30 text-center py-2">暂无历史记录日期分类</div>';
+            return;
+        }
+        
+        let html = `
+            <button onclick="selectHistoryDate('all'); playAudio('click')" class="shrink-0 px-3 py-1 rounded-full text-[10px] font-bold border transition ${activeHistoryDate === 'all' ? 'bg-yellow-400 text-blue-950 border-yellow-400 shadow-[0_0_5px_rgba(250,204,21,0.4)]' : 'bg-black/40 text-gray-400 border-white/10 hover:border-white/20'}">
+                全部
+            </button>
+        `;
+        
+        dates.forEach(dStr => {
+            const isActive = dStr === activeHistoryDate;
+            html += `
+                <button onclick="selectHistoryDate('${dStr}'); playAudio('click')" class="shrink-0 px-3 py-1 rounded-full text-[10px] font-bold border transition ${isActive ? 'bg-yellow-400 text-blue-950 border-yellow-400 shadow-[0_0_5px_rgba(250,204,21,0.4)]' : 'bg-black/40 text-gray-400 border-white/10 hover:border-white/20'}">
+                    ${dStr}
                 </button>
             `;
-            
-            dates.forEach(dStr => {
-                const isActive = dStr === activeHistoryDate;
-                html += `
-                    <button onclick="selectHistoryDate('${dStr}'); playAudio('click')" class="shrink-0 px-3 py-1 rounded-full text-[10px] font-bold border transition ${isActive ? 'bg-yellow-400 text-blue-950 border-yellow-400 shadow-[0_0_5px_rgba(250,204,21,0.4)]' : 'bg-black/40 text-gray-400 border-white/10 hover:border-white/20'}">
-                        ${dStr}
-                    </button>
-                `;
+        });
+        container.innerHTML = html;
+    }
+
+    function selectHistoryDate(dStr) {
+        activeHistoryDate = dStr;
+        renderHistoryDateSelector();
+        renderLogs();
+    }
+
+    function renderLogs() {
+        renderHistoryDateSelector(); 
+        const container = document.getElementById('logs-container');
+        if (!container) return;
+        if (!db.logs || db.logs.length === 0) {
+            container.innerHTML = '<div class="text-center text-white/50 py-10 text-xs">暂无任何历史操作记录</div>';
+            return;
+        }
+        
+        let filteredLogs = db.logs;
+        if (activeHistoryDate !== 'all') {
+            filteredLogs = db.logs.filter(log => {
+                if (!log || !log.time) return false;
+                const match = log.time.match(/^(\d{4})-(\d{2})-(\d{2})/);
+                return match && `${match[2]}-${match[3]}` === activeHistoryDate;
             });
-            container.innerHTML = html;
         }
-
-        function selectHistoryDate(dStr) {
-            activeHistoryDate = dStr;
-            renderHistoryDateSelector();
-            renderLogs();
+        
+        if (filteredLogs.length === 0) {
+            container.innerHTML = '<div class="text-center text-white/50 py-10 text-xs">该日期下无操作日志记录</div>';
+            return;
         }
+        
+        let html = '';
+        filteredLogs.forEach(log => {
+            html += `
+                <div class="bg-black/30 border border-white/5 rounded-xl p-3 flex flex-col gap-1 text-[11px]">
+                    <div class="flex justify-between items-center text-white/40 font-semibold">
+                        <span class="font-mono text-[10px]"><i class="fa-regular fa-clock mr-1"></i>${log.time}</span>
+                    </div>
+                    <p class="text-white/80 leading-relaxed font-semibold">${log.text}</p>
+                </div>`;
+        });
+        container.innerHTML = html;
+    }
 
-        function renderLogs() {
-            renderHistoryDateSelector(); 
-            const container = document.getElementById('logs-container');
-            if (!container) return;
-            if (!db.logs || db.logs.length === 0) {
-                container.innerHTML = '<div class="text-center text-white/50 py-10 text-xs">暂无任何历史操作记录</div>';
-                return;
+    function clearLogs() {
+        const pwd = prompt("请输入安全密码以清空操作日志：");
+        if (pwd !== "260612") {
+            alert("密码错误，安全验证失败！操作已撤销。");
+            return;
+        }
+        if (confirm("确定要清空所有的历史操作日志吗？清空后将无法挽回！")) {
+            db.logs = [];
+            activeHistoryDate = 'all';
+            broadcastData();
+            refreshAllUI();
+        }
+    }
+
+    // --- View 6: 设置后台逻辑控制 ---
+    function loadRawDbToTextarea() {
+        const ta = document.getElementById('raw-db-textarea');
+        if (ta) {
+            ta.value = JSON.stringify(db, null, 4);
+        }
+    }
+
+    function formatRawDbText() {
+        const ta = document.getElementById('raw-db-textarea');
+        if (!ta) return;
+        try {
+            const parsed = JSON.parse(ta.value);
+            ta.value = JSON.stringify(parsed, null, 4);
+        } catch(e) {
+            alert("JSON 语法检测到错误，无法格式化！\n错误提示: " + e.message);
+        }
+    }
+
+    function saveRawDbText() {
+        const ta = document.getElementById('raw-db-textarea');
+        if (!ta) return;
+        try {
+            const parsed = JSON.parse(ta.value);
+            if (!parsed.players || !parsed.matches) {
+                return alert("保存失败：JSON 必须具有 players 与 matches 核心字段节点！");
             }
+            db = parsed;
+            if (!db.logs) db.logs = [];
+            if (db.lockBets15Min === undefined) db.lockBets15Min = false;
+            if (db.buyAndClose === undefined) db.buyAndClose = true;
+            if (db.realtimeBracket === undefined) db.realtimeBracket = false;
             
-            let filteredLogs = db.logs;
-            if (activeHistoryDate !== 'all') {
-                filteredLogs = db.logs.filter(log => {
-                    if (!log || !log.time) return false;
-                    const match = log.time.match(/^(\d{4})-(\d{2})-(\d{2})/);
-                    return match && `${match[2]}-${match[3]}` === activeHistoryDate;
-                });
-            }
-            
-            if (filteredLogs.length === 0) {
-                container.innerHTML = '<div class="text-center text-white/50 py-10 text-xs">该日期下无操作日志记录</div>';
-                return;
-            }
-            
-            let html = '';
-            filteredLogs.forEach(log => {
-                html += `
-                    <div class="bg-black/30 border border-white/5 rounded-xl p-3 flex flex-col gap-1 text-[11px]">
-                        <div class="flex justify-between items-center text-white/40 font-semibold">
-                            <span class="font-mono text-[10px]"><i class="fa-regular fa-clock mr-1"></i>${log.time}</span>
-                        </div>
-                        <p class="text-white/80 leading-relaxed font-semibold">${log.text}</p>
-                    </div>`;
-            });
-            container.innerHTML = html;
-        }
+            initUISettings();
+            updateDynamicStyles();
+            syncUIInputsFromDB();
 
-        function clearLogs() {
-            const pwd = prompt("请输入安全密码以清空操作日志：");
-            if (pwd !== "260612") {
-                alert("密码错误，安全验证失败！操作已撤销。");
-                return;
-            }
-            if (confirm("确定要清空所有的历史操作日志吗？清空后将无法挽回！")) {
-                db.logs = [];
-                activeHistoryDate = 'all';
-                broadcastData();
-                refreshAllUI();
-            }
+            addLog("管理人员直接修改了底层 JSON 原始数据库");
+            broadcastData();
+            refreshAllUI();
+            alert("原始数据库修改成功并已进行广播同步！");
+        } catch(e) {
+            alert("保存失败：您输入的 JSON 存在语法错误，请检查后再行保存！\n" + e.message);
         }
+    }
 
-        // --- View 6: 设置后台逻辑控制 ---
-        function loadRawDbToTextarea() {
-            const ta = document.getElementById('raw-db-textarea');
-            if (ta) {
-                ta.value = JSON.stringify(db, null, 4);
-            }
-        }
+    function exportDatabase() {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const finishedCount = db.matches.filter(m => m.status === 'finished').length;
+        
+        const fileName = `${year}（年）/${month}（月）/${day}（日）-已进行${finishedCount}场比赛.json`;
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db, null, 4));
+        
+        const downloadAnchor = document.createElement('a');
+        downloadAnchor.setAttribute("href", dataStr);
+        downloadAnchor.setAttribute("download", fileName);
+        document.body.appendChild(downloadAnchor);
+        downloadAnchor.click();
+        downloadAnchor.remove();
+    }
 
-        function formatRawDbText() {
-            const ta = document.getElementById('raw-db-textarea');
-            if (!ta) return;
+    function importDatabase(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
             try {
-                const parsed = JSON.parse(ta.value);
-                ta.value = JSON.stringify(parsed, null, 4);
-            } catch(e) {
-                alert("JSON 语法检测到错误，无法格式化！\n错误提示: " + e.message);
-            }
-        }
-
-        function saveRawDbText() {
-            const ta = document.getElementById('raw-db-textarea');
-            if (!ta) return;
-            try {
-                const parsed = JSON.parse(ta.value);
+                const parsed = JSON.parse(e.target.result);
                 if (!parsed.players || !parsed.matches) {
-                    return alert("保存失败：JSON 必须具有 players 与 matches 核心字段节点！");
+                    return alert("导入失败：导入格式非合法的世界杯数据库备份！");
                 }
-                db = parsed;
-                if (!db.logs) db.logs = [];
-                if (db.lockBets15Min === undefined) db.lockBets15Min = false;
-                if (db.buyAndClose === undefined) db.buyAndClose = true;
-                if (db.realtimeBracket === undefined) db.realtimeBracket = false;
-                
-                initUISettings();
-                updateDynamicStyles();
-                syncUIInputsFromDB();
+                if (confirm("确定要导入此备份吗？导入后将全面覆盖本地现存的所有数据！")) {
+                    db = parsed;
+                    if (!db.logs) db.logs = [];
+                    if (db.lockBets15Min === undefined) db.lockBets15Min = false;
+                    if (db.buyAndClose === undefined) db.buyAndClose = true;
+                    if (db.realtimeBracket === undefined) db.realtimeBracket = false;
+                    
+                    initUISettings();
+                    updateDynamicStyles();
+                    syncUIInputsFromDB();
 
-                addLog("管理人员直接修改了底层 JSON 原始数据库");
-                broadcastData();
-                refreshAllUI();
-                alert("原始数据库修改成功并已进行广播同步！");
-            } catch(e) {
-                alert("保存失败：您输入的 JSON 存在语法错误，请检查后再行保存！\n" + e.message);
+                    addLog("成功导入外部数据备份");
+                    broadcastData();
+                    refreshAllUI();
+                    loadRawDbToTextarea();
+                    alert("数据库备份导入成功，已实时广播同步全网！");
+                }
+            } catch(err) {
+                alert("导入失败：该文件并不是合法的 JSON 格式文本。");
             }
-        }
+        };
+        reader.readAsText(file);
+        event.target.value = ''; 
+    }
 
-        function exportDatabase() {
-            const now = new Date();
-            const year = now.getFullYear();
-            const month = String(now.getMonth() + 1).padStart(2, '0');
-            const day = String(now.getDate()).padStart(2, '0');
-            const finishedCount = db.matches.filter(m => m.status === 'finished').length;
+    function copyDbToClipboard() {
+        const txt = JSON.stringify(db, null, 4);
+        navigator.clipboard.writeText(txt).then(() => {
+            alert("数据 JSON 已成功复制到您的剪贴板，可前往其他设备进行粘贴！");
+        }).catch(() => {
+            const ta = document.createElement('textarea');
+            ta.value = txt; document.body.appendChild(ta); ta.select();
+            document.execCommand('copy'); document.body.removeChild(ta);
+            alert("数据 JSON 已成功复制到您的剪贴板！");
+        });
+    }
+
+    function pasteDbFromClipboard() {
+        const input = prompt("请在此处粘贴导出的 JSON 字符串：");
+        if (!input) return;
+        try {
+            const parsed = JSON.parse(input.trim());
+            if (!parsed.players || !parsed.matches) {
+                return alert("导入失败：该 JSON 数据不满足玩家及对阵的基础结构特征！");
+            }
+            db = parsed;
+            if (!db.logs) db.logs = [];
+            if (db.lockBets15Min === undefined) db.lockBets15Min = false;
+            if (db.buyAndClose === undefined) db.buyAndClose = true;
+            if (db.realtimeBracket === undefined) db.realtimeBracket = false;
             
-            const fileName = `${year}（年）/${month}（月）/${day}（日）-已进行${finishedCount}场比赛.json`;
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db, null, 4));
-            
-            const downloadAnchor = document.createElement('a');
-            downloadAnchor.setAttribute("href", dataStr);
-            downloadAnchor.setAttribute("download", fileName);
-            document.body.appendChild(downloadAnchor);
-            downloadAnchor.click();
-            downloadAnchor.remove();
+            initUISettings();
+            updateDynamicStyles();
+            syncUIInputsFromDB();
+
+            addLog("通过剪贴板导入并同步了数据库数据");
+            broadcastData();
+            refreshAllUI();
+            loadRawDbToTextarea();
+            alert("剪贴板导入成功！数据已实时向所有在线设备进行广播！");
+        } catch(e) {
+            alert("导入失败：错误的 JSON 语法表达格式！\n" + e.message);
         }
+    }
 
-        function importDatabase(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const parsed = JSON.parse(e.target.result);
-                    if (!parsed.players || !parsed.matches) {
-                        return alert("导入失败：导入格式非合法的世界杯数据库备份！");
-                    }
-                    if (confirm("确定要导入此备份吗？导入后将全面覆盖本地现存的所有数据！")) {
-                        db = parsed;
-                        if (!db.logs) db.logs = [];
-                        if (db.lockBets15Min === undefined) db.lockBets15Min = false;
-                        if (db.buyAndClose === undefined) db.buyAndClose = true;
-                        if (db.realtimeBracket === undefined) db.realtimeBracket = false;
-                        
-                        initUISettings();
-                        updateDynamicStyles();
-                        syncUIInputsFromDB();
-
-                        addLog("成功导入外部数据备份");
-                        broadcastData();
-                        refreshAllUI();
-                        loadRawDbToTextarea();
-                        alert("数据库备份导入成功，已实时广播同步全网！");
-                    }
-                } catch(err) {
-                    alert("导入失败：该文件并不是合法的 JSON 格式文本。");
-                }
+    function resetEntireDatabase() {
+        const pwd = prompt("🚨 极度危险操作提示 🚨\n请键入管理重置密码以彻底恢复出厂数据：");
+        if (pwd !== "260612") {
+            alert("密码错误，身份核验失败！操作已拒绝。");
+            return;
+        }
+        if (confirm("🚨 警告：这会清空本房所有玩家记录、所有历史注单、清空操作日志并重置全部104场比赛！确定执行此项重置吗？")) {
+            db = { 
+                players: [], 
+                matches: generateMatches(), 
+                bets: {}, 
+                logs: [], 
+                lockBets15Min: false, 
+                buyAndClose: true,
+                realtimeBracket: false,
+                slideshow: {
+                    urls: [
+                        "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=1200",
+                        "https://images.unsplash.com/photo-1543351611-58f69d7c1781?q=80&w=1200",
+                        "https://images.unsplash.com/photo-1522778119026-d647f0596c20?q=80&w=1200"
+                    ],
+                    stayTime: 5000,
+                    fadeTime: 1000,
+                    opacity: 0.2
+                },
+                timestamp: Date.now() 
             };
-            reader.readAsText(file);
-            event.target.value = ''; 
-        }
 
-        function copyDbToClipboard() {
-            const txt = JSON.stringify(db, null, 4);
-            navigator.clipboard.writeText(txt).then(() => {
-                alert("数据 JSON 已成功复制到您的剪贴板，可前往其他设备进行粘贴！");
-            }).catch(() => {
-                const ta = document.createElement('textarea');
-                ta.value = txt; document.body.appendChild(ta); ta.select();
-                document.execCommand('copy'); document.body.removeChild(ta);
-                alert("数据 JSON 已成功复制到您的剪贴板！");
-            });
-        }
+            initUISettings();
+            updateDynamicStyles();
+            syncUIInputsFromDB();
 
-        function pasteDbFromClipboard() {
-            const input = prompt("请在此处粘贴导出的 JSON 字符串：");
-            if (!input) return;
-            try {
-                const parsed = JSON.parse(input.trim());
-                if (!parsed.players || !parsed.matches) {
-                    return alert("导入失败：该 JSON 数据不满足玩家及对阵的基础结构特征！");
-                }
-                db = parsed;
-                if (!db.logs) db.logs = [];
-                if (db.lockBets15Min === undefined) db.lockBets15Min = false;
-                if (db.buyAndClose === undefined) db.buyAndClose = true;
-                if (db.realtimeBracket === undefined) db.realtimeBracket = false;
-                
-                initUISettings();
-                updateDynamicStyles();
-                syncUIInputsFromDB();
-
-                addLog("通过剪贴板导入并同步了数据库数据");
-                broadcastData();
-                refreshAllUI();
-                loadRawDbToTextarea();
-                alert("剪贴板导入成功！数据已实时向所有在线设备进行广播！");
-            } catch(e) {
-                alert("导入失败：错误的 JSON 语法表达格式！\n" + e.message);
-            }
-        }
-
-        function resetEntireDatabase() {
-            const pwd = prompt("🚨 极度危险操作提示 🚨\n请键入管理重置密码以彻底恢复出厂数据：");
-            if (pwd !== "260612") {
-                alert("密码错误，身份核验失败！操作已拒绝。");
-                return;
-            }
-            if (confirm("🚨 警告：这会清空本房所有玩家记录、所有历史注单、清空操作日志并重置全部104场比赛！确定执行此项重置吗？")) {
-                db = { 
-                    players: [], 
-                    matches: generateMatches(), 
-                    bets: {}, 
-                    logs: [], 
-                    lockBets15Min: false, 
-                    buyAndClose: true,
-                    realtimeBracket: false,
-                    slideshow: {
-                        urls: [
-                            "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=1200",
-                            "https://images.unsplash.com/photo-1543351611-58f69d7c1781?q=80&w=1200",
-                            "https://images.unsplash.com/photo-1522778119026-d647f0596c20?q=80&w=1200"
-                        ],
-                        stayTime: 5000,
-                        fadeTime: 1000,
-                        opacity: 0.2
-                    },
-                    timestamp: Date.now() 
-                };
-
-                initUISettings();
-                updateDynamicStyles();
-                syncUIInputsFromDB();
-
-                addLog("数据库被整体初始化重置");
-                broadcastData();
-                refreshAllUI();
-                loadRawDbToTextarea();
-                
-                updateLocalSlideshowOpacity(db.slideshow.opacity);
-                startSlideshowLoop();
-                alert("数据库已被初始化归零！");
-            }
-        }
-
-        // --- 交互业务 ---
-        function openEditMatch(id) {
-            const m = db.matches.find(x => x.id === id); 
-            document.getElementById('editMatchId').value = id;
-            document.getElementById('editHome').value = m.home; 
-            document.getElementById('editAway').value = m.away;
-            openModal('editMatchModal');
-        }
-
-        function saveMatchEdit() {
-            const m = db.matches.find(x => x.id === parseInt(document.getElementById('editMatchId').value));
-            const oldHome = m.home, oldAway = m.away;
-            m.home = document.getElementById('editHome').value.trim() || '主队'; 
-            m.away = document.getElementById('editAway').value.trim() || '客队';
+            addLog("数据库被整体初始化重置");
+            broadcastData();
+            refreshAllUI();
+            loadRawDbToTextarea();
             
-            addLog("编辑了对阵: [" + oldHome + " VS " + oldAway + "] 变更为 [" + m.home + " VS " + m.away + "]");
-            broadcastData(); closeModal('editMatchModal'); refreshAllUI();
+            updateLocalSlideshowOpacity(db.slideshow.opacity);
+            startSlideshowLoop();
+            alert("数据库已被初始化归零！");
         }
+    }
 
-        let actMatchId = null;
+    // --- 交互业务 ---
+    function openEditMatch(id) {
+        const m = db.matches.find(x => x.id === id); 
+        document.getElementById('editMatchId').value = id;
+        document.getElementById('editHome').value = m.home; 
+        document.getElementById('editAway').value = m.away;
+        openModal('editMatchModal');
+    }
 
-        function formatBettingTimeForModal(tStr) {
-            if (!tStr) return '';
-            let cleaned = tStr.replace(/^\d{4}-/, '');
-            return `下注时间：${cleaned}`;
+    function saveMatchEdit() {
+        const m = db.matches.find(x => x.id === parseInt(document.getElementById('editMatchId').value));
+        const oldHome = m.home, oldAway = m.away;
+        m.home = document.getElementById('editHome').value.trim() || '主队'; 
+        m.away = document.getElementById('editAway').value.trim() || '客队';
+        
+        addLog("编辑了对阵: [" + oldHome + " VS " + oldAway + "] 变更为 [" + m.home + " VS " + m.away + "]");
+        broadcastData(); closeModal('editMatchModal'); refreshAllUI();
+    }
+
+    let actMatchId = null;
+
+    function formatBettingTimeForModal(tStr) {
+        if (!tStr) return '';
+        let cleaned = tStr.replace(/^\d{4}-/, '');
+        return `下注时间：${cleaned}`;
+    }
+
+    function openBetModal(id) {
+        if (!db.players.length) return alert("请先前往后台管理添加玩家！");
+        const m = db.matches.find(x => x.id === id); 
+        
+        if (db.lockBets15Min && isMatchWithin15Mins(m.date)) {
+            alert(`⚠️ 操作受阻！\n该赛事 [${m.home} vs ${m.away}] 当前已进入临开赛前 15 分钟限制区或已经开赛，系统已锁定投注！`);
+            return;
         }
+        
+        actMatchId = id;
+        const resolvedHome = resolveTeamName(m.home, db, m);
+        const resolvedAway = resolveTeamName(m.away, db, m);
+        document.getElementById('bet-match-title').innerText = `${resolvedHome} vs ${resolvedAway}`;
+        let b = db.bets[id] || { stake: 100, predictions: {}, timestamps: {} }; 
+        document.getElementById('matchStake').value = b.stake;
+        const list = document.getElementById('bet-players-list');
+        
+        let html = '';
+        db.players.forEach(p => {
+            let cur = b.predictions[p.id] || 'none';
+            let tStr = getPlayerBetTimestamp(id, p.id);
+            let displayTime = tStr ? formatBettingTimeForModal(tStr) : '';
+            
+            let isLocked = (db.buyAndClose && cur !== 'none');
+            let disabledAttr = isLocked ? 'disabled' : '';
+            let lockLabel = isLocked ? '<span class="text-red-500 text-[10px] ml-1 font-bold"><i class="fa-solid fa-lock"></i>买定离手</span>' : '';
 
-        function openBetModal(id) {
-            if (!db.players.length) return alert("请先前往后台管理添加玩家！");
-            const m = db.matches.find(x => x.id === id); 
-            
-            if (db.lockBets15Min && isMatchWithin15Mins(m.date)) {
-                alert(`⚠️ 操作受阻！\n该赛事 [${m.home} vs ${m.away}] 当前已进入临开赛前 15 分钟限制区或已经开赛，系统已锁定投注！`);
-                return;
-            }
-            
-            actMatchId = id;
-            const resolvedHome = resolveTeamName(m.home, db, m);
-            const resolvedAway = resolveTeamName(m.away, db, m);
-            document.getElementById('bet-match-title').innerText = `${resolvedHome} vs ${resolvedAway}`;
-            let b = db.bets[id] || { stake: 100, predictions: {}, timestamps: {} }; 
-            document.getElementById('matchStake').value = b.stake;
-            const list = document.getElementById('bet-players-list');
-            
-            let html = '';
-            db.players.forEach(p => {
-                let cur = b.predictions[p.id] || 'none';
-                let tStr = getPlayerBetTimestamp(id, p.id);
-                let displayTime = tStr ? formatBettingTimeForModal(tStr) : '';
-                
-                let isLocked = (db.buyAndClose && cur !== 'none');
-                let disabledAttr = isLocked ? 'disabled' : '';
-                let lockLabel = isLocked ? '<span class="text-red-500 text-[10px] ml-1 font-bold"><i class="fa-solid fa-lock"></i>买定离手</span>' : '';
-
-                html += `
-                    <div class="bg-black/20 p-2 rounded-xl flex items-center justify-between border border-white/5 ${isLocked ? 'opacity-80' : ''}">
-                        <div class="flex items-center gap-2 flex-1 min-w-0 pr-2">
-                            <img src="${p.avatar}" class="w-8 h-8 rounded-full bg-black shrink-0 object-cover">
-                            <div class="flex flex-col min-w-0">
-                                <span class="font-bold text-sm text-white truncate">${p.name}</span>
-                                ${displayTime ? `<span class="text-[9px] text-gray-400 block whitespace-nowrap overflow-hidden text-ellipsis font-mono font-medium" title="${tStr}">${displayTime}</span>` : ''}
-                                ${lockLabel}
-                            </div>
+            html += `
+                <div class="bg-black/20 p-2 rounded-xl flex items-center justify-between border border-white/5 ${isLocked ? 'opacity-80' : ''}">
+                    <div class="flex items-center gap-2 flex-1 min-w-0 pr-2">
+                        <img src="${p.avatar}" class="w-8 h-8 rounded-full bg-black shrink-0 object-cover">
+                        <div class="flex flex-col min-w-0">
+                            <span class="font-bold text-sm text-white truncate">${p.name}</span>
+                            ${displayTime ? `<span class="text-[9px] text-gray-400 block whitespace-nowrap overflow-hidden text-ellipsis font-mono font-medium" title="${tStr}">${displayTime}</span>` : ''}
+                            ${lockLabel}
                         </div>
-                        <div class="flex gap-1 bg-black/50 p-1 rounded-lg shrink-0 ${isLocked ? 'pointer-events-none' : ''}">
-                            <label><input type="radio" name="p_${p.id}" value="home" class="peer hidden" ${cur==='home'?'checked':''} ${disabledAttr} onchange="playAudio('click')"><div class="px-2.5 py-1.5 rounded-md text-xs font-bold text-white/40 peer-checked:bg-blue-600 peer-checked:text-white transition cursor-pointer">主胜</div></label>
-                            <label><input type="radio" name="p_${p.id}" value="draw" class="peer hidden" ${cur==='draw'?'checked':''} ${disabledAttr} onchange="playAudio('click')"><div class="px-2.5 py-1.5 rounded-md text-xs font-bold text-white/40 peer-checked:bg-gray-500 peer-checked:text-white transition cursor-pointer">平</div></label>
-                            <label><input type="radio" name="p_${p.id}" value="away" class="peer hidden" ${cur==='away'?'checked':''} ${disabledAttr} onchange="playAudio('click')"><div class="px-2.5 py-1.5 rounded-md text-xs font-bold text-white/40 peer-checked:bg-red-500 peer-checked:text-white transition cursor-pointer">主负</div></label>
-                            <label><input type="radio" name="p_${p.id}" value="none" class="peer hidden" ${cur==='none'?'checked':''} ${disabledAttr} onchange="playAudio('click')"><div class="px-2.5 py-1.5 rounded-md text-xs font-bold text-white/20 peer-checked:text-yellow-500 transition cursor-pointer"><i class="fa-solid fa-ban"></i></div></label>
-                        </div>
-                    </div>`;
-            });
-            list.innerHTML = html;
+                    </div>
+                    <div class="flex gap-1 bg-black/50 p-1 rounded-lg shrink-0 ${isLocked ? 'pointer-events-none' : ''}">
+                        <label><input type="radio" name="p_${p.id}" value="home" class="peer hidden" ${cur==='home'?'checked':''} ${disabledAttr} onchange="playAudio('click')"><div class="px-2.5 py-1.5 rounded-md text-xs font-bold text-white/40 peer-checked:bg-blue-600 peer-checked:text-white transition cursor-pointer">主胜</div></label>
+                        <label><input type="radio" name="p_${p.id}" value="draw" class="peer hidden" ${cur==='draw'?'checked':''} ${disabledAttr} onchange="playAudio('click')"><div class="px-2.5 py-1.5 rounded-md text-xs font-bold text-white/40 peer-checked:bg-gray-500 peer-checked:text-white transition cursor-pointer">平</div></label>
+                        <label><input type="radio" name="p_${p.id}" value="away" class="peer hidden" ${cur==='away'?'checked':''} ${disabledAttr} onchange="playAudio('click')"><div class="px-2.5 py-1.5 rounded-md text-xs font-bold text-white/40 peer-checked:bg-red-500 peer-checked:text-white transition cursor-pointer">主负</div></label>
+                        <label><input type="radio" name="p_${p.id}" value="none" class="peer hidden" ${cur==='none'?'checked':''} ${disabledAttr} onchange="playAudio('click')"><div class="px-2.5 py-1.5 rounded-md text-xs font-bold text-white/20 peer-checked:text-yellow-500 transition cursor-pointer"><i class="fa-solid fa-ban"></i></div></label>
+                    </div>
+                </div>`;
+        });
+        list.innerHTML = html;
 
-            const confirmBtn = document.getElementById('confirm-bet-btn');
-            if (confirmBtn) {
-                if (db.buyAndClose) {
-                    confirmBtn.innerHTML = '确认下注 <span class="text-xs font-normal opacity-90">(无法更改)</span>';
-                } else {
-                    confirmBtn.innerHTML = '确认下注';
-                }
-            }
-
-            openModal('betModal');
-        }
-
-        function saveBets() {
-            let stake = parseInt(document.getElementById('matchStake').value) || 0; 
-            let preds = {};
-            const m = db.matches.find(x => x.id === actMatchId);
-            const oldBetObj = db.bets[actMatchId] || { stake: 0, predictions: {}, timestamps: {} };
-            let times = oldBetObj.timestamps ? { ...oldBetObj.timestamps } : {};
-            
-            db.players.forEach(p => { 
-                let predictionVal = 'none';
-                const radios = document.getElementsByName(`p_${p.id}`);
-                for(let r of radios) {
-                    if(r.checked) { 
-                        predictionVal = r.value; 
-                        break; 
-                    } 
-                } 
-
-                const oldSelection = oldBetObj.predictions[p.id] || 'none';
-                
-                if (db.buyAndClose && oldSelection !== 'none') {
-                    preds[p.id] = oldSelection;
-                } else {
-                    preds[p.id] = predictionVal;
-                    if (oldSelection !== predictionVal) {
-                        const sideText = predictionVal === 'home' ? '主胜' : (predictionVal === 'away' ? '主负' : (predictionVal === 'draw' ? '平局' : '撤单'));
-                        if (predictionVal !== 'none') {
-                            addLog("玩家 [" + p.name + "] 针对比赛 [" + m.home + " VS " + m.away + "] 进行了投注: 预测 [" + sideText + "]，单注金额 " + stake);
-                            times[p.id] = formatTimestamp(new Date());
-                        } else {
-                            addLog("玩家 [" + p.name + "] 取消了对比赛 [" + m.home + " VS " + m.away + "] 的投注");
-                            delete times[p.id];
-                        }
-                    } else {
-                        if (oldBetObj.stake !== stake && predictionVal !== 'none') {
-                            times[p.id] = formatTimestamp(new Date());
-                        }
-                    }
-                }
-            });
-            
-            db.bets[actMatchId] = { stake, predictions: preds, timestamps: times }; 
-            broadcastData(); closeModal('betModal'); refreshAllUI();
-        }
-
-        function openSettleModal(id) {
-            const m = db.matches.find(x => x.id === id); if (!db.bets[id]) return alert("该场比赛无人下注，无法开奖！");
-            document.getElementById('settleMatchId').value = id;
-            const resolvedHome = resolveTeamName(m.home, db, m);
-            const resolvedAway = resolveTeamName(m.away, db, m);
-            document.getElementById('settle-match-title').innerText = `${resolvedHome} vs ${resolvedAway}`;
-            document.getElementById('settleScoreHome').value = ''; document.getElementById('settleScoreAway').value = '';
-            document.querySelectorAll('.result-btn').forEach(b => { b.classList.remove('border-yellow-400', 'bg-yellow-400/20', 'text-yellow-400'); b.classList.add('border-white/10', 'bg-black/30'); });
-            document.getElementById('settleFinalResult').value = '';
-            openModal('settleModal');
-        }
-
-        function calculateAutoSettleResult() {
-            const id = document.getElementById('settleMatchId').value;
-            const m = db.matches.find(x => x.id == id);
-            if (!m) return;
-            
-            const scoreHVal = document.getElementById('settleScoreHome').value.trim();
-            const scoreAVal = document.getElementById('settleScoreAway').value.trim();
-            
-            if (scoreHVal !== '' && scoreAVal !== '') {
-                const scoreH = parseFloat(scoreHVal);
-                const scoreA = parseFloat(scoreAVal);
-                if (!isNaN(scoreH) && !isNaN(scoreA)) {
-                    const hcp = parseFloat(m.handicap || '0');
-                    const netResult = scoreH - scoreA - hcp;
-                    let res = '';
-                    if (Math.abs(netResult) < 0.0001) {
-                        res = 'draw';
-                    } else if (netResult > 0) {
-                        res = 'home';
-                    } else {
-                        res = 'away';
-                    }
-                    setResult(res);
-                }
+        const confirmBtn = document.getElementById('confirm-bet-btn');
+        if (confirmBtn) {
+            if (db.buyAndClose) {
+                confirmBtn.innerHTML = '确认下注 <span class="text-xs font-normal opacity-90">(无法更改)</span>';
             } else {
-                document.querySelectorAll('.result-btn').forEach(b => { b.classList.remove('border-yellow-400', 'bg-yellow-400/20', 'text-yellow-400'); b.classList.add('border-white/10', 'bg-black/30'); });
-                document.getElementById('settleFinalResult').value = '';
+                confirmBtn.innerHTML = '确认下注';
             }
         }
 
-        function setResult(res) {
-            document.getElementById('settleFinalResult').value = res;
-            document.querySelectorAll('.result-btn').forEach(b => { b.classList.remove('border-yellow-400', 'bg-yellow-400/20', 'text-yellow-400'); b.classList.add('border-white/10', 'bg-black/30'); });
-            const activeBtn = document.getElementById(`res-${res}`);
-            if (activeBtn) {
-                activeBtn.classList.remove('border-white/10', 'bg-black/30', 'text-gray-400');
-                activeBtn.classList.add('border-yellow-400', 'bg-yellow-400/20', 'text-yellow-400');
-            }
-        }
+        openModal('betModal');
+    }
 
-        function confirmSettle() {
-            const id = document.getElementById('settleMatchId').value;
-            const scoreHVal = document.getElementById('settleScoreHome').value.trim();
-            const scoreAVal = document.getElementById('settleScoreAway').value.trim();
+    function saveBets() {
+        let stake = parseInt(document.getElementById('matchStake').value) || 0; 
+        let preds = {};
+        const m = db.matches.find(x => x.id === actMatchId);
+        const oldBetObj = db.bets[actMatchId] || { stake: 0, predictions: {}, timestamps: {} };
+        let times = oldBetObj.timestamps ? { ...oldBetObj.timestamps } : {};
+        
+        db.players.forEach(p => { 
+            let predictionVal = 'none';
+            const radios = document.getElementsByName(`p_${p.id}`);
+            for(let r of radios) {
+                if(r.checked) { 
+                    predictionVal = r.value; 
+                    break; 
+                } 
+            } 
+
+            const oldSelection = oldBetObj.predictions[p.id] || 'none';
             
-            const m = db.matches.find(x => x.id == id);
-            let res = document.getElementById('settleFinalResult').value;
-
-            if (scoreHVal !== '' && scoreAVal !== '') {
-                const scoreH = parseFloat(scoreHVal);
-                const scoreA = parseFloat(scoreAVal);
-                if (isNaN(scoreH) || isNaN(scoreA)) {
-                    return alert("请输入比分！");
+            if (db.buyAndClose && oldSelection !== 'none') {
+                preds[p.id] = oldSelection;
+            } else {
+                preds[p.id] = predictionVal;
+                if (oldSelection !== predictionVal) {
+                    const sideText = predictionVal === 'home' ? '主胜' : (predictionVal === 'away' ? '主负' : (predictionVal === 'draw' ? '平局' : '撤单'));
+                    if (predictionVal !== 'none') {
+                        addLog("玩家 [" + p.name + "] 针对比赛 [" + m.home + " VS " + m.away + "] 进行了投注: 预测 [" + sideText + "]，单注金额 " + stake);
+                        times[p.id] = formatTimestamp(new Date());
+                    } else {
+                        addLog("玩家 [" + p.name + "] 取消了对比赛 [" + m.home + " VS " + m.away + "] 的投注");
+                        delete times[p.id];
+                    }
+                } else {
+                    if (oldBetObj.stake !== stake && predictionVal !== 'none') {
+                        times[p.id] = formatTimestamp(new Date());
+                    }
                 }
-                const hcp = parseFloat(m.handicap || '0');
-                const netResult = scoreH - scoreA - hcp;
+            }
+        });
+        
+        db.bets[actMatchId] = { stake, predictions: preds, timestamps: times }; 
+        broadcastData(); closeModal('betModal'); refreshAllUI();
+    }
+
+    function openSettleModal(id) {
+        const m = db.matches.find(x => x.id === id); if (!db.bets[id]) return alert("该场比赛无人下注，无法开奖！");
+        document.getElementById('settleMatchId').value = id;
+        const resolvedHome = resolveTeamName(m.home, db, m);
+        const resolvedAway = resolveTeamName(m.away, db, m);
+        document.getElementById('settle-match-title').innerText = `${resolvedHome} vs ${resolvedAway}`;
+        document.getElementById('settleScoreHome').value = ''; document.getElementById('settleScoreAway').value = '';
+        document.querySelectorAll('.result-btn').forEach(b => { b.classList.remove('border-yellow-400', 'bg-yellow-400/20', 'text-yellow-400'); b.classList.add('border-white/10', 'bg-black/30'); });
+        document.getElementById('settleFinalResult').value = '';
+        openModal('settleModal');
+    }
+
+    function calculateAutoSettleResult() {
+        const id = document.getElementById('settleMatchId').value;
+        const m = db.matches.find(x => x.id == id);
+        if (!m) return;
+        
+        const scoreHVal = document.getElementById('settleScoreHome').value.trim();
+        const scoreAVal = document.getElementById('settleScoreAway').value.trim();
+        
+        if (scoreHVal !== '' && scoreAVal !== '') {
+            const scoreH = parseFloat(scoreHVal);
+            const scoreA = parseFloat(scoreAVal);
+            if (!isNaN(scoreH) && !isNaN(scoreA)) {
+                const netResult = scoreH - scoreA;
+                let res = '';
                 if (Math.abs(netResult) < 0.0001) {
                     res = 'draw';
                 } else if (netResult > 0) {
@@ -3703,242 +3601,884 @@
                 } else {
                     res = 'away';
                 }
-                document.getElementById('settleFinalResult').value = res;
+                setResult(res);
             }
-
-            if(!res) return alert("必须确定赛果！");
-
-            const b = db.bets[id];
-            let parts = [], wins = [];
-            let finalScoreText = (scoreHVal !== '' && scoreAVal !== '') ? `${scoreHVal} : ${scoreAVal}` : null;
-
-            db.players.forEach(p => {
-                if(p.totalInvest===undefined) p.totalInvest = 0; if(!p.teamStats) p.teamStats = {};
-                if(p.highestBalance===undefined) p.highestBalance = p.balance; if(p.lowestBalance===undefined) p.lowestBalance = p.balance;
-                if(p.biggestWin===undefined) p.biggestWin = 0; if(p.biggestLoss===undefined) p.biggestLoss = 0;
-            });
-
-            for (let pid in b.predictions) {
-                if (b.predictions[pid] !== 'none') {
-                    parts.push(pid);
-                    if (b.predictions[pid] === res) wins.push(pid);
-                }
-            }
-
-            if(parts.length > 0) {
-                let pool = parts.length * b.stake;
-                parts.forEach(pid => {
-                    let p = db.players.find(x => x.id === pid);
-                    if(p) {
-                        p.totalBets++; p.totalInvest += b.stake; p.balance -= b.stake;
-                        let predTeam = b.predictions[pid] === 'home' ? m.home : (b.predictions[pid] === 'away' ? m.away : '平局');
-                        if (wins.length === 0) {
-                            // 没人猜中时，本金退回，净收益为0
-                            p.balance += b.stake; 
-                        } else if (wins.includes(pid)) {
-                            p.correctGuesses++; let winAmt = pool / wins.length; p.balance += winAmt;
-                            let netProfit = winAmt - b.stake; p.biggestWin = Math.max(p.biggestWin, netProfit);
-                            p.teamStats[predTeam] = (p.teamStats[predTeam] || 0) + netProfit;
-                        } else {
-                            p.biggestLoss = Math.max(p.biggestLoss, b.stake); p.teamStats[predTeam] = (p.teamStats[predTeam] || 0) - b.stake;
-                        }
-                        p.highestBalance = Math.max(p.highestBalance, p.balance); p.lowestBalance = Math.min(p.lowestBalance, p.balance);
-                    }
-                });
-
-                const resultText = res === 'home' ? '主胜' : (res === 'away' ? '主负' : '平局');
-                const scoreDesc = finalScoreText ? `，比分为 [${finalScoreText}]` : '';
-                addLog("赛事 [" + m.home + " VS " + m.away + "] 完成结算。赛果为: [" + resultText + "]" + scoreDesc);
-
-                if (wins.length > 0) {
-                    playAudio('win');
-                    if(typeof confetti !== 'undefined') confetti({particleCount: 200, spread: 100, origin:{y:0.6}, zIndex: 9999, colors: ['#FFD700', '#FF8C00', '#00F3FF']});
-                    const winnerNames = wins.map(pid => db.players.find(x => x.id === pid)?.name).join(', ');
-                    addLog("[" + m.home + " VS " + m.away + "] 结算赢家: [" + winnerNames + "]，各赢得奖池分享金 " + (pool/wins.length).toFixed(1));
-                    setTimeout(() => alert(`结算完成!\n赢家: ${wins.map(pid=>db.players.find(x=>x.id===pid).name).join(', ')}\n各分得: ${(pool/wins.length).toFixed(1)}`), 500);
-                } else {
-                    addLog("[" + m.home + " VS " + m.away + "] 结算结果：无人猜中，积分退还给所有下注玩家 🤝");
-                    alert(`没有人猜中！积分已退还给下注的玩家。`);
-                }
-            }
-            m.status = 'finished'; m.result = res; m.score = finalScoreText; m.winners = wins;
-            broadcastData(); closeModal('settleModal'); refreshAllUI();
+        } else {
+            document.querySelectorAll('.result-btn').forEach(b => { b.classList.remove('border-yellow-400', 'bg-yellow-400/20', 'text-yellow-400'); b.classList.add('border-white/10', 'bg-black/30'); });
+            document.getElementById('settleFinalResult').value = '';
         }
+    }
 
-        // --- 回退并重新结算逻辑 (编辑已开奖比赛) ---
-        function revertSettle(id) {
-            const m = db.matches.find(x => x.id == id);
-            if (!m || m.status !== 'finished') return;
-            const b = db.bets[id];
-            if (!b) return;
-
-            let parts = [];
-            let oldWins = m.winners || [];
-
-            for (let pid in b.predictions) {
-                if (b.predictions[pid] !== 'none') {
-                    parts.push(pid);
-                }
-            }
-
-            if (parts.length > 0) {
-                let pool = parts.length * b.stake;
-                parts.forEach(pid => {
-                    let p = db.players.find(x => x.id === pid);
-                    if (p) {
-                        p.totalBets = Math.max(0, p.totalBets - 1);
-                        p.totalInvest = Math.max(0, p.totalInvest - b.stake);
-
-                        let predTeam = b.predictions[pid] === 'home' ? m.home : (b.predictions[pid] === 'away' ? m.away : '平局');
-
-                        if (oldWins.length === 0) {
-                            // 旧结算是无人猜中的全额退款场次，由于结算时对玩家余额及战队盈亏的变动净值为 0，回滚时不做余额和 teamStats 的扣减，直接退还本金
-                        } else if (oldWins.includes(pid)) {
-                            p.balance += b.stake;
-                            p.correctGuesses = Math.max(0, p.correctGuesses - 1);
-                            let winAmt = pool / oldWins.length;
-                            p.balance -= winAmt;
-                            
-                            let netProfit = winAmt - b.stake;
-                            if (p.teamStats && p.teamStats[predTeam] !== undefined) {
-                                p.teamStats[predTeam] -= netProfit;
-                            }
-                        } else {
-                            p.balance += b.stake;
-                            if (p.teamStats && p.teamStats[predTeam] !== undefined) {
-                                p.teamStats[predTeam] += b.stake;
-                            }
-                        }
-                    }
-                });
-            }
-            
-            m.status = 'upcoming';
-            m.result = null;
-            m.score = null;
-            m.winners = [];
+    function setResult(res) {
+        document.getElementById('settleFinalResult').value = res;
+        document.querySelectorAll('.result-btn').forEach(b => { b.classList.remove('border-yellow-400', 'bg-yellow-400/20', 'text-yellow-400'); b.classList.add('border-white/10', 'bg-black/30'); });
+        const activeBtn = document.getElementById(`res-${res}`);
+        if (activeBtn) {
+            activeBtn.classList.remove('border-white/10', 'bg-black/30', 'text-gray-400');
+            activeBtn.classList.add('border-yellow-400', 'bg-yellow-400/20', 'text-yellow-400');
         }
+    }
 
-        function triggerReSettle(id) {
-            const m = db.matches.find(x => x.id === id);
-            if (!m) return;
-            const pwd = prompt(`🚨 敏感操作：重新编辑已结算赛事 🚨\n请输入安全验证密码以重置赛事「${m.home} VS ${m.away}」的赛果：`);
-            if (pwd !== "260612") {
-                alert("密码错误，安全核验失败！操作已撤销。");
-                return;
+    function confirmSettle() {
+        const id = document.getElementById('settleMatchId').value;
+        const scoreHVal = document.getElementById('settleScoreHome').value.trim();
+        const scoreAVal = document.getElementById('settleScoreAway').value.trim();
+        
+        const m = db.matches.find(x => x.id == id);
+        let res = document.getElementById('settleFinalResult').value;
+
+        if (scoreHVal !== '' && scoreAVal !== '') {
+            const scoreH = parseFloat(scoreHVal);
+            const scoreA = parseFloat(scoreAVal);
+            if (isNaN(scoreH) || isNaN(scoreA)) {
+                return alert("请输入比分！");
             }
-            
-            const oldScore = m.score || '无';
-            const oldResultText = m.result === 'home' ? '主胜' : (m.result === 'away' ? '主负' : '平局');
-            
-            revertSettle(id);
-            addLog(`管理员重置并编辑了已结算赛事 [${m.home} VS ${m.away}]（原比分: ${oldScore}，原赛果: ${oldResultText}）`);
-            
-            broadcastData();
-            refreshAllUI();
-            openSettleModal(id);
-        }
-
-        function resetMatch(id) {
-            const m = db.matches.find(x => x.id === id);
-            if (!m) return;
-            const pwd = prompt(`🚨 敏感操作：重置赛事 🚨\n请输入安全验证密码以重置赛事「${m.home} VS ${m.away}」：`);
-            if (pwd !== "260612") {
-                alert("密码错误，安全核验失败！操作已撤销。");
-                return;
-            }
-            
-            revertSettle(id);
-            addLog(`管理员重置了赛事 [${m.home} VS ${m.away}] 状态为未开赛`);
-            
-            broadcastData();
-            refreshAllUI();
-            alert("该场赛事已成功重置为未开赛状态，现在可以重新下注及开奖！");
-        }
-
-        // --- 记账本系统 ---
-        let activeLedgerPlayerId = null;
-        let activeLedgerFilter = 'all';
-
-        function openLedger(playerId) {
-            activeLedgerPlayerId = playerId;
-            activeLedgerFilter = 'all';
-            
-            const p = db.players.find(x => x.id === playerId);
-            if (!p) return;
-            
-            document.getElementById('ledger-title').innerText = `「${p.name}」的记账本`;
-            
-            const datesSet = new Set();
-            db.matches.filter(m => m.status === 'finished').forEach(m => {
-                const b = db.bets[m.id];
-                if (b && b.predictions && b.predictions[playerId] && b.predictions[playerId] !== 'none') {
-                    const match = m.date.match(/\d+月\d+日/);
-                    if (match) datesSet.add(match[0]);
-                }
-            });
-            
-            const uniqueDates = Array.from(datesSet).sort((a, b) => {
-                const ma = a.match(/(\d+)月(\d+)日/);
-                const mb = b.match(/(\d+)月(\d+)日/);
-                if (!ma || !mb) return 0;
-                const da = parseInt(ma[1]) * 100 + parseInt(ma[2]);
-                const dbVal = parseInt(mb[1]) * 100 + parseInt(mb[2]);
-                return da - dbVal;
-            });
-            
-            const selectEl = document.getElementById('ledger-date-select');
-            selectEl.innerHTML = '';
-            if (uniqueDates.length === 0) {
-                selectEl.innerHTML = '<option value="">暂无投注日期</option>';
+            const netResult = scoreH - scoreA;
+            if (Math.abs(netResult) < 0.0001) {
+                res = 'draw';
+            } else if (netResult > 0) {
+                res = 'home';
             } else {
-                uniqueDates.forEach(d => {
-                    const opt = document.createElement('option');
-                    opt.value = d;
-                    opt.innerText = d;
-                    selectEl.appendChild(opt);
+                res = 'away';
+            }
+            document.getElementById('settleFinalResult').value = res;
+        }
+
+        if(!res) return alert("必须确定赛果！");
+
+        const b = db.bets[id];
+        let parts = [], wins = [];
+        let finalScoreText = (scoreHVal !== '' && scoreAVal !== '') ? `${scoreHVal} : ${scoreAVal}` : null;
+
+        db.players.forEach(p => {
+            if(p.totalInvest===undefined) p.totalInvest = 0; if(!p.teamStats) p.teamStats = {};
+            if(p.highestBalance===undefined) p.highestBalance = p.balance; if(p.lowestBalance===undefined) p.lowestBalance = p.balance;
+            if(p.biggestWin===undefined) p.biggestWin = 0; if(p.biggestLoss===undefined) p.biggestLoss = 0;
+        });
+
+        for (let pid in b.predictions) {
+            if (b.predictions[pid] !== 'none') {
+                parts.push(pid);
+                if (b.predictions[pid] === res) wins.push(pid);
+            }
+        }
+
+        if(parts.length > 0) {
+            let pool = parts.length * b.stake;
+            parts.forEach(pid => {
+                let p = db.players.find(x => x.id === pid);
+                if(p) {
+                    p.totalBets++; p.totalInvest += b.stake; p.balance -= b.stake;
+                    let predTeam = b.predictions[pid] === 'home' ? m.home : (b.predictions[pid] === 'away' ? m.away : '平局');
+                    if (wins.length === 0) {
+                        p.balance += b.stake; 
+                    } else if (wins.includes(pid)) {
+                        p.correctGuesses++; let winAmt = pool / wins.length; p.balance += winAmt;
+                        let netProfit = winAmt - b.stake; p.biggestWin = Math.max(p.biggestWin, netProfit);
+                        p.teamStats[predTeam] = (p.teamStats[predTeam] || 0) + netProfit;
+                    } else {
+                        p.biggestLoss = Math.max(p.biggestLoss, b.stake); p.teamStats[predTeam] = (p.teamStats[predTeam] || 0) - b.stake;
+                    }
+                    p.highestBalance = Math.max(p.highestBalance, p.balance); p.lowestBalance = Math.min(p.lowestBalance, p.balance);
+                }
+            });
+
+            const resultText = res === 'home' ? '主胜' : (res === 'away' ? '主负' : '平局');
+            const scoreDesc = finalScoreText ? `，比分为 [${finalScoreText}]` : '';
+            addLog("赛事 [" + m.home + " VS " + m.away + "] 完成结算。赛果为: [" + resultText + "]" + scoreDesc);
+
+            if (wins.length > 0) {
+                playAudio('win');
+                if(typeof confetti !== 'undefined') confetti({particleCount: 200, spread: 100, origin:{y:0.6}, zIndex: 9999, colors: ['#FFD700', '#FF8C00', '#00F3FF']});
+                const winnerNames = wins.map(pid => db.players.find(x => x.id === pid)?.name).join(', ');
+                addLog("[" + m.home + " VS " + m.away + "] 结算赢家: [" + winnerNames + "]，各赢得奖池分享金 " + (pool/wins.length).toFixed(1));
+                setTimeout(() => alert(`结算完成!\n赢家: ${wins.map(pid=>db.players.find(x=>x.id===pid).name).join(', ')}\n各分得: ${(pool/wins.length).toFixed(1)}`), 500);
+            } else {
+                addLog("[" + m.home + " VS " + m.away + "] 结算结果：无人猜中，积分退还给所有下注玩家 🤝");
+                alert(`没有人猜中！积分已退还给下注的玩家。`);
+            }
+        }
+        m.status = 'finished'; m.result = res; m.score = finalScoreText; m.winners = wins;
+        broadcastData(); closeModal('settleModal'); refreshAllUI();
+    }
+
+    // --- 回退并重新结算逻辑 (编辑已开奖比赛) ---
+    function revertSettle(id) {
+        const m = db.matches.find(x => x.id == id);
+        if (!m || m.status !== 'finished') return;
+        const b = db.bets[id];
+        if (!b) return;
+
+        let parts = [];
+        let oldWins = m.winners || [];
+
+        for (let pid in b.predictions) {
+            if (b.predictions[pid] !== 'none') {
+                parts.push(pid);
+            }
+        }
+
+        if (parts.length > 0) {
+            let pool = parts.length * b.stake;
+            parts.forEach(pid => {
+                let p = db.players.find(x => x.id === pid);
+                if (p) {
+                    p.totalBets = Math.max(0, p.totalBets - 1);
+                    p.totalInvest = Math.max(0, p.totalInvest - b.stake);
+
+                    let predTeam = b.predictions[pid] === 'home' ? m.home : (b.predictions[pid] === 'away' ? m.away : '平局');
+
+                    if (oldWins.length === 0) {
+                        // 旧结算无人猜中时余额未作变动，回滚时直接退本金
+                    } else if (oldWins.includes(pid)) {
+                        p.balance += b.stake;
+                        p.correctGuesses = Math.max(0, p.correctGuesses - 1);
+                        let winAmt = pool / oldWins.length;
+                        p.balance -= winAmt;
+                        
+                        let netProfit = winAmt - b.stake;
+                        if (p.teamStats && p.teamStats[predTeam] !== undefined) {
+                            p.teamStats[predTeam] -= netProfit;
+                        }
+                    } else {
+                        p.balance += b.stake;
+                        if (p.teamStats && p.teamStats[predTeam] !== undefined) {
+                            p.teamStats[predTeam] += b.stake;
+                        }
+                    }
+                }
+            });
+        }
+        
+        m.status = 'upcoming';
+        m.result = null;
+        m.score = null;
+        m.winners = [];
+    }
+
+    function triggerReSettle(id) {
+        const m = db.matches.find(x => x.id === id);
+        if (!m) return;
+        const pwd = prompt(`🚨 敏感操作：重新编辑已结算赛事 🚨\n请输入安全验证密码以重置赛事「${m.home} VS ${m.away}」的赛果：`);
+        if (pwd !== "260612") {
+            alert("密码错误，安全核验失败！操作已撤销。");
+            return;
+        }
+        
+        const oldScore = m.score || '无';
+        const oldResultText = m.result === 'home' ? '主胜' : (m.result === 'away' ? '主负' : '平局');
+        
+        revertSettle(id);
+        addLog(`管理员重置并编辑了已结算赛事 [${m.home} VS ${m.away}]（原比分: ${oldScore}，原赛果: ${oldResultText}）`);
+        
+        broadcastData();
+        refreshAllUI();
+        openSettleModal(id);
+    }
+
+    function resetMatch(id) {
+        const m = db.matches.find(x => x.id === id);
+        if (!m) return;
+        const pwd = prompt(`🚨 敏感操作：重置赛事 🚨\n请输入安全验证密码以重置赛事「${m.home} VS ${m.away}」：`);
+        if (pwd !== "260612") {
+            alert("密码错误，安全核验失败！操作已撤销。");
+            return;
+        }
+        
+        revertSettle(id);
+        addLog(`管理员重置了赛事 [${m.home} VS ${m.away}] 状态为未开赛`);
+        
+        broadcastData();
+        refreshAllUI();
+        alert("该场赛事已成功重置为未开赛状态，现在可以重新下注及开奖！");
+    }
+
+    // --- 记账本系统 ---
+    let activeLedgerPlayerId = null;
+    let activeLedgerFilter = 'all';
+
+    function openLedger(playerId) {
+        activeLedgerPlayerId = playerId;
+        activeLedgerFilter = 'all';
+        
+        const p = db.players.find(x => x.id === playerId);
+        if (!p) return;
+        
+        document.getElementById('ledger-title').innerText = `「${p.name}」的记账本`;
+        
+        const datesSet = new Set();
+        db.matches.filter(m => m.status === 'finished').forEach(m => {
+            const b = db.bets[m.id];
+            if (b && b.predictions && b.predictions[playerId] && b.predictions[playerId] !== 'none') {
+                const match = m.date.match(/\d+月\d+日/);
+                if (match) datesSet.add(match[0]);
+            }
+        });
+        
+        const uniqueDates = Array.from(datesSet).sort((a, b) => {
+            const ma = a.match(/(\d+)月(\d+)日/);
+            const mb = b.match(/(\d+)月(\d+)日/);
+            if (!ma || !mb) return 0;
+            const da = parseInt(ma[1]) * 100 + parseInt(ma[2]);
+            const dbVal = parseInt(mb[1]) * 100 + parseInt(mb[2]);
+            return da - dbVal;
+        });
+        
+        const selectEl = document.getElementById('ledger-date-select');
+        selectEl.innerHTML = '';
+        if (uniqueDates.length === 0) {
+            selectEl.innerHTML = '<option value="">暂无投注日期</option>';
+        } else {
+            uniqueDates.forEach(d => {
+                const opt = document.createElement('option');
+                opt.value = d;
+                opt.innerText = d;
+                selectEl.appendChild(opt);
+            });
+        }
+        
+        filterLedgerTab('all');
+        openModal('ledgerModal');
+    }
+
+    function filterLedgerTab(type) {
+        activeLedgerFilter = type;
+        const btnAll = document.getElementById('lt-all');
+        const btnDate = document.getElementById('lt-date');
+        const dateContainer = document.getElementById('ledger-date-select-container');
+        
+        if (type === 'all') {
+            btnAll.className = 'flex-1 py-1 rounded-full text-xs font-bold bg-white text-blue-950 shadow-md transition';
+            btnDate.className = 'flex-1 py-1 rounded-full text-xs font-bold text-white hover:bg-white/10 transition';
+            dateContainer.classList.add('hidden');
+        } else {
+            btnAll.className = 'flex-1 py-1 rounded-full text-xs font-bold text-white hover:bg-white/10 transition';
+            btnDate.className = 'flex-1 py-1 rounded-full text-xs font-bold bg-white text-blue-950 shadow-md transition';
+            dateContainer.classList.remove('hidden');
+        }
+        renderLedgerDetails();
+    }
+
+    function renderLedgerDetails() {
+        const container = document.getElementById('ledger-list-container');
+        const countEl = document.getElementById('ledger-total-count');
+        const profitEl = document.getElementById('ledger-total-profit');
+        
+        if (!activeLedgerPlayerId) return;
+        const p = db.players.find(x => x.id === activeLedgerPlayerId);
+        if (!p) return;
+        
+        let records = [];
+        
+        db.matches.filter(m => m.status === 'finished').sort((a,b) => a.id - b.id).forEach(m => {
+            const b = db.bets[m.id];
+            if (b && b.predictions && b.predictions[p.id] && b.predictions[p.id] !== 'none') {
+                const prediction = b.predictions[p.id];
+                const isCorrect = (prediction === m.result);
+                
+                let matchParticipants = [];
+                let matchWinners = [];
+                for (let pid in b.predictions) {
+                    if (b.predictions[pid] !== 'none') {
+                        matchParticipants.push(pid);
+                        if (b.predictions[pid] === m.result) {
+                            matchWinners.push(pid);
+                        }
+                    }
+                }
+                
+                let pool = matchParticipants.length * b.stake;
+                let netProfit = -b.stake;
+                if (matchWinners.length === 0) {
+                    netProfit = 0; 
+                } else if (isCorrect) {
+                    let winAmt = pool / matchWinners.length;
+                    netProfit = winAmt - b.stake;
+                }
+                
+                let predText = '无';
+                if (prediction === 'home') predText = `主胜`;
+                else if (prediction === 'away') predText = `主负`;
+                else if (prediction === 'draw') predText = '平局';
+                
+                const matchDate = m.date.match(/\d+月\d+日/);
+                const dateStr = matchDate ? matchDate[0] : '未知日期';
+                
+                records.push({
+                    id: m.id,
+                    home: m.home,
+                    away: m.away,
+                    date: dateStr,
+                    predText: predText,
+                    netProfit: netProfit,
+                    score: m.score || m.result.replace('home','主胜').replace('away','主负').replace('draw','平局')
                 });
             }
-            
-            filterLedgerTab('all');
-            openModal('ledgerModal');
+        });
+        
+        if (activeLedgerFilter === 'date') {
+            const selectedDate = document.getElementById('ledger-date-select').value;
+            records = records.filter(r => r.date === selectedDate);
         }
+        
+        let totalProfit = 0;
+        records.forEach(r => totalProfit += r.netProfit);
+        
+        countEl.innerText = `${records.length} 场`;
+        profitEl.innerText = `${totalProfit >= 0 ? '+' : ''}${totalProfit.toFixed(0)}分`;
+        profitEl.className = `font-mono font-black ${totalProfit >= 0 ? 'text-green-400' : 'text-red-400'}`;
+        
+        if (records.length === 0) {
+            container.innerHTML = '<div class="text-center text-white/30 py-10 text-xs">暂无相关对账记录</div>';
+            return;
+        }
+        
+        let html = '';
+        records.forEach(r => {
+            const isWin = r.netProfit >= 0;
+            const isRefund = r.netProfit === 0 && m_winners_zero(r.id);
+            html += `
+                <div class="bg-black/20 border border-white/5 p-3 rounded-2xl flex justify-between items-center text-xs backdrop-blur-sm">
+                    <div class="min-w-0 flex-1 pr-2">
+                        <div class="font-extrabold text-white truncate flex items-center gap-1.5">
+                            <span class="bg-blue-500/10 text-blue-400 px-1.5 py-0.5 rounded text-[9px] font-mono shrink-0">第${r.id}场</span>
+                            <span class="truncate">${r.home} VS ${r.away}</span>
+                        </div>
+                        <div class="text-[10px] text-gray-400 mt-1 flex flex-wrap gap-x-2 gap-y-1">
+                            <span>下注: <span class="text-yellow-400 font-bold">“${r.predText}”</span></span>
+                            <span>|</span>
+                            <span>比分: <span class="text-white font-bold">${r.score}</span></span>
+                            <span>|</span>
+                            <span class="font-mono">${r.date}</span>
+                        </div>
+                    </div>
+                    <div class="shrink-0 text-right">
+                        <span class="${isWin ? (isRefund ? 'text-gray-400' : 'text-green-400') : 'text-red-400'} font-black font-mono text-sm">
+                            ${isWin ? (isRefund ? '' : '+') : ''}${r.netProfit.toFixed(0)}分${isRefund ? ' (退款)' : ''}
+                        </span>
+                    </div>
+                </div>`;
+        });
+        container.innerHTML = html;
+    }
 
-        function filterLedgerTab(type) {
-            activeLedgerFilter = type;
-            const btnAll = document.getElementById('lt-all');
-            const btnDate = document.getElementById('lt-date');
-            const dateContainer = document.getElementById('ledger-date-select-container');
+    // 辅助检测某场已结算赛事是否为 0 赢家
+    function m_winners_zero(matchId) {
+        const m = db.matches.find(x => x.id === matchId);
+        return m && m.status === 'finished' && (!m.winners || m.winners.length === 0);
+    }
+
+    // --- 网页背景图动态轮播逻辑 ---
+    let slideshowTimer = null;
+    let currentSlideIndex = 0;
+    let currentSlideActiveLayer = 1; 
+
+    function initSlideshow() {
+        if (!db.slideshow) {
+            db.slideshow = {
+                urls: [
+                    "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=1200",
+                    "https://images.unsplash.com/photo-1543351611-58f69d7c1781?q=80&w=1200",
+                    "https://images.unsplash.com/photo-1522778119026-d647f0596c20?q=80&w=1200"
+                ],
+                stayTime: 5000,
+                fadeTime: 1000,
+                opacity: 0.2
+            };
+        }
+        
+        const container = document.getElementById('bg-slideshow-container');
+        if (container) {
+            container.style.opacity = db.slideshow.opacity;
+        }
+        
+        startSlideshowLoop();
+    }
+
+    function startSlideshowLoop() {
+        if (slideshowTimer) clearInterval(slideshowTimer);
+        
+        const urls = db.slideshow.urls || [];
+        if (urls.length === 0) {
+            const slide1 = document.getElementById('bg-slide-1');
+            const slide2 = document.getElementById('bg-slide-2');
+            if (slide1) slide1.style.opacity = 0;
+            if (slide2) slide2.style.opacity = 0;
+            return;
+        }
+        
+        currentSlideIndex = 0;
+        const slide1 = document.getElementById('bg-slide-1');
+        const slide2 = document.getElementById('bg-slide-2');
+        
+        if (slide1 && slide2) {
+            const fadeSec = (db.slideshow.fadeTime || 1000) / 1000;
+            slide1.style.transition = `opacity ${fadeSec}s ease-in-out`;
+            slide2.style.transition = `opacity ${fadeSec}s ease-in-out`;
             
-            if (type === 'all') {
-                btnAll.className = 'flex-1 py-1 rounded-full text-xs font-bold bg-white text-blue-950 shadow-md transition';
-                btnDate.className = 'flex-1 py-1 rounded-full text-xs font-bold text-white hover:bg-white/10 transition';
-                dateContainer.classList.add('hidden');
-            } else {
-                btnAll.className = 'flex-1 py-1 rounded-full text-xs font-bold text-white hover:bg-white/10 transition';
-                btnDate.className = 'flex-1 py-1 rounded-full text-xs font-bold bg-white text-blue-950 shadow-md transition';
-                dateContainer.classList.remove('hidden');
+            slide1.style.backgroundImage = `url('${urls[0]}')`;
+            slide1.style.opacity = 1;
+            slide2.style.opacity = 0;
+            currentSlideActiveLayer = 1;
+        }
+        
+        if (urls.length <= 1) return; 
+
+        const cycleInterval = (db.slideshow.stayTime || 5000) + (db.slideshow.fadeTime || 1000);
+        
+        slideshowTimer = setInterval(() => {
+            const nextIndex = (currentSlideIndex + 1) % urls.length;
+            const activeEl = currentSlideActiveLayer === 1 ? document.getElementById('bg-slide-1') : document.getElementById('bg-slide-2');
+            const inactiveEl = currentSlideActiveLayer === 1 ? document.getElementById('bg-slide-2') : document.getElementById('bg-slide-1');
+            
+            if (activeEl && inactiveEl) {
+                const fadeSec = (db.slideshow.fadeTime || 1000) / 1000;
+                activeEl.style.transition = `opacity ${fadeSec}s ease-in-out`;
+                inactiveEl.style.transition = `opacity ${fadeSec}s ease-in-out`;
+                
+                inactiveEl.style.backgroundImage = `url('${urls[nextIndex]}')`;
+                inactiveEl.style.opacity = 1;
+                activeEl.style.opacity = 0;
+                
+                currentSlideActiveLayer = currentSlideActiveLayer === 1 ? 2 : 1;
+                currentSlideIndex = nextIndex;
             }
-            renderLedgerDetails();
+        }, cycleInterval);
+    }
+
+    function updateLocalSlideshowOpacity(val) {
+        const container = document.getElementById('bg-slideshow-container');
+        if (container) {
+            container.style.opacity = val;
+        }
+    }
+
+    function loadSlideshowSettingsToAdmin() {
+        if (!db.slideshow) return;
+        const urlsTextarea = document.getElementById('admin-bg-urls');
+        const stayInput = document.getElementById('admin-bg-stay');
+        const fadeInput = document.getElementById('admin-bg-fade');
+        const opacityInput = document.getElementById('admin-bg-opacity');
+        const opacityVal = document.getElementById('admin-bg-opacity-val');
+        
+        if (urlsTextarea) urlsTextarea.value = (db.slideshow.urls || []).join('\n');
+        if (stayInput) stayInput.value = (db.slideshow.stayTime || 5000) / 1000;
+        if (fadeInput) fadeInput.value = (db.slideshow.fadeTime || 1000) / 1000;
+        if (opacityInput) opacityInput.value = db.slideshow.opacity !== undefined ? db.slideshow.opacity : 0.2;
+        if (opacityVal) opacityVal.innerText = db.slideshow.opacity !== undefined ? db.slideshow.opacity : 0.2;
+    }
+
+    function saveSlideshowSettings() {
+        const urlsTextarea = document.getElementById('admin-bg-urls');
+        const stayInput = document.getElementById('admin-bg-stay');
+        const fadeInput = document.getElementById('admin-bg-fade');
+        const opacityInput = document.getElementById('admin-bg-opacity');
+        
+        if (!urlsTextarea || !stayInput || !fadeInput || !opacityInput) return;
+        
+        const urls = urlsTextarea.value.split('\n').map(u => u.trim()).filter(u => u.length > 0);
+        const stayTime = parseFloat(stayInput.value) * 1000;
+        const fadeTime = parseFloat(fadeInput.value) * 1000;
+        const opacity = parseFloat(opacityInput.value);
+        
+        db.slideshow = {
+            urls: urls,
+            stayTime: isNaN(stayTime) || stayTime < 500 ? 5000 : stayTime,
+            fadeTime: isNaN(fadeTime) || fadeTime < 100 ? 1000 : fadeTime,
+            opacity: isNaN(opacity) ? 0.2 : opacity
+        };
+        
+        addLog("管理员修改并同步了动态背景轮播面板设置");
+        broadcastData();
+        
+        updateLocalSlideshowOpacity(db.slideshow.opacity);
+        startSlideshowLoop();
+        alert("动态轮播背景板保存成功并广播全网！");
+    }
+
+    // --- UI 设置初始化与动态渲染引擎 ---
+    function initUISettings() {
+        if (!db.uiSettings) {
+            db.uiSettings = {
+                opacities: { leaderboard: 40, match: 30, stats: 30, player: 30, banner: 100 },
+                marquee: {
+                    leaderboard: { enabled: false, speed: 3, thickness: 2, opacity: 80 },
+                    match: { enabled: false, speed: 3, thickness: 2, opacity: 80 },
+                    flag: { enabled: false, speed: 3, thickness: 2, opacity: 80 },
+                    stats: { enabled: false, speed: 3, thickness: 2, opacity: 80 },
+                    player: { enabled: false, speed: 3, thickness: 2, opacity: 80 },
+                    banner: { enabled: false, speed: 3, thickness: 2, opacity: 80 }
+                },
+                fonts: {
+                    leaderboard: { size: 14, color: '#ffffff', strokeEnabled: false, strokeWidth: 1, strokeColor: '#000000' },
+                    match: { size: 14, color: '#1a1a1a', strokeEnabled: false, strokeWidth: 1, strokeColor: '#000000' },
+                    stats: { size: 14, color: '#ffffff', strokeEnabled: false, strokeWidth: 1, strokeColor: '#000000' },
+                    player: { size: 14, color: '#ffffff', strokeEnabled: false, strokeWidth: 1, strokeColor: '#000000' },
+                    bannerLabel: { size: 14, color: '#bfdbfe' },
+                    bannerValue: { size: 36, color: '#facc15' },
+                    jackpot: { size: 10 }
+                },
+                spacing: {
+                    bannerGap: 4
+                },
+                bracket: {
+                    flagSize: 24,
+                    fontSize: 10,
+                    height: 900,
+                    width: 900,
+                    teamGap: 4
+                },
+                ticker: {
+                    height: 32,
+                    fontSize: 12,
+                    bgColor: '#000000',
+                    textColor: '#facc15',
+                    speed: 15
+                }
+            };
+        }
+        if (!db.uiSettings.opacities) db.uiSettings.opacities = { leaderboard: 40, match: 30, stats: 30, player: 30, banner: 100 };
+        if (db.uiSettings.opacities.banner === undefined) db.uiSettings.opacities.banner = 100;
+
+        if (!db.uiSettings.marquee) db.uiSettings.marquee = {
+            leaderboard: { enabled: false, speed: 3, thickness: 2, opacity: 80 },
+            match: { enabled: false, speed: 3, thickness: 2, opacity: 80 },
+            flag: { enabled: false, speed: 3, thickness: 2, opacity: 80 },
+            stats: { enabled: false, speed: 3, thickness: 2, opacity: 80 },
+            player: { enabled: false, speed: 3, thickness: 2, opacity: 80 },
+            banner: { enabled: false, speed: 3, thickness: 2, opacity: 80 }
+        };
+        if (db.uiSettings.marquee.banner === undefined) db.uiSettings.marquee.banner = { enabled: false, speed: 3, thickness: 2, opacity: 80 };
+        if (db.uiSettings.marquee.flag === undefined) db.uiSettings.marquee.flag = { enabled: false, speed: 3, thickness: 2, opacity: 80 };
+
+        if (!db.uiSettings.fonts) db.uiSettings.fonts = {
+            leaderboard: { size: 14, color: '#ffffff', strokeEnabled: false, strokeWidth: 1, strokeColor: '#000000' },
+            match: { size: 14, color: '#1a1a1a', strokeEnabled: false, strokeWidth: 1, strokeColor: '#000000' },
+            stats: { size: 14, color: '#ffffff', strokeEnabled: false, strokeWidth: 1, strokeColor: '#000000' },
+            player: { size: 14, color: '#ffffff', strokeEnabled: false, strokeWidth: 1, strokeColor: '#000000' },
+            bannerLabel: { size: 14, color: '#bfdbfe' },
+            bannerValue: { size: 36, color: '#facc15' },
+            jackpot: { size: 10 }
+        };
+        if (db.uiSettings.fonts.bannerLabel === undefined) db.uiSettings.fonts.bannerLabel = { size: 14, color: '#bfdbfe' };
+        if (db.uiSettings.fonts.bannerValue === undefined) db.uiSettings.fonts.bannerValue = { size: 36, color: '#facc15' };
+        if (db.uiSettings.fonts.jackpot === undefined) db.uiSettings.fonts.jackpot = { size: 10 };
+
+        if (!db.uiSettings.spacing) db.uiSettings.spacing = { bannerGap: 4 };
+        if (db.uiSettings.spacing.bannerGap === undefined) db.uiSettings.spacing.bannerGap = 4;
+
+        if (!db.uiSettings.bracket) {
+            db.uiSettings.bracket = { flagSize: 24, fontSize: 10, height: 900, width: 900, teamGap: 4 };
+        }
+        if (db.uiSettings.bracket.height === undefined) {
+            db.uiSettings.bracket.height = 900;
+        } else if (db.uiSettings.bracket.height < 400) {
+            db.uiSettings.bracket.height = 900; 
+        }
+        if (db.uiSettings.bracket.width === undefined) db.uiSettings.bracket.width = 900;
+        if (db.uiSettings.bracket.teamGap === undefined) db.uiSettings.bracket.teamGap = 4;
+
+        if (!db.uiSettings.ticker) {
+            db.uiSettings.ticker = { height: 32, fontSize: 12, bgColor: '#000000', textColor: '#facc15', speed: 15 };
+        }
+    }
+
+    function updateDynamicStyles() {
+        let styleEl = document.getElementById('dynamic-ui-styles');
+        if (!styleEl) {
+            styleEl = document.createElement('style');
+            styleEl.id = 'dynamic-ui-styles';
+            document.head.appendChild(styleEl);
+        }
+        const ui = db.uiSettings;
+        if (!ui) return;
+
+        const ticker = ui.ticker || { height: 32, fontSize: 12, bgColor: '#000000', textColor: '#facc15', speed: 15 };
+
+        styleEl.innerHTML = `
+            .leaderboard-card-item, .match-card-item, .stats-card-item, .player-card-item, .marquee-gb {
+                transform: translate3d(0, 0, 0);
+                -webkit-transform: translate3d(0, 0, 0);
+                backface-visibility: hidden;
+                -webkit-backface-visibility: hidden;
+                will-change: transform;
+            }
+
+            #top-ticker-container {
+                height: ${ticker.height}px !important;
+                background-color: ${ticker.bgColor} !important;
+            }
+            #ticker-text {
+                font-size: ${ticker.fontSize}px !important;
+                color: ${ticker.textColor} !important;
+                animation-duration: ${ticker.speed}s !important;
+                line-height: ${ticker.height}px !important;
+            }
+
+            .marquee-gb {
+                background: linear-gradient(135deg, rgba(37, 99, 235, ${ui.opacities.banner / 100}) 0%, rgba(49, 46, 129, ${ui.opacities.banner / 100}) 100%) !important;
+            }
+            #global-money-label {
+                font-size: ${ui.fonts.bannerLabel.size}px !important;
+                color: ${ui.fonts.bannerLabel.color} !important;
+                margin-bottom: ${ui.spacing.bannerGap}px !important;
+            }
+            #global-money {
+                font-size: ${ui.fonts.bannerValue.size}px !important;
+                color: ${ui.fonts.bannerValue.color} !important;
+            }
+
+            .font-jackpot-size {
+                font-size: ${ui.fonts.jackpot.size}px !important;
+            }
+
+            .bracket-flag {
+                font-size: ${ui.bracket ? ui.bracket.flagSize : 24}px !important;
+            }
+            .bracket-font-size {
+                font-size: ${ui.bracket ? ui.bracket.fontSize : 10}px !important;
+            }
+            #bracket-wrapper {
+                height: ${ui.bracket ? ui.bracket.height : 900}px !important;
+                width: ${ui.bracket ? ui.bracket.width : 900}px !important;
+            }
+            .bracket-team-gap-top {
+                margin-bottom: ${ui.bracket ? ui.bracket.teamGap : 4}px !important;
+            }
+            .bracket-team-gap-bottom {
+                margin-top: ${ui.bracket ? ui.bracket.teamGap : 4}px !important;
+            }
+
+            .leaderboard-card-item {
+                background-color: rgba(0, 0, 0, ${ui.opacities.leaderboard / 100}) !important;
+                font-size: ${ui.fonts.leaderboard.size}px !important;
+                color: ${ui.fonts.leaderboard.color} !important;
+                ${ui.fonts.leaderboard.strokeEnabled ? `-webkit-text-stroke: ${ui.fonts.leaderboard.strokeWidth}px ${ui.fonts.leaderboard.strokeColor}; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);` : '-webkit-text-stroke: 0px !important; text-shadow: none !important;'}
+            }
+            .leaderboard-card-item h3 {
+                font-size: ${ui.fonts.leaderboard.size}px !important;
+                color: inherit !important;
+            }
+
+            .match-card-item {
+                font-size: ${ui.fonts.match.size}px !important;
+                color: ${ui.fonts.match.color} !important;
+                ${ui.fonts.match.strokeEnabled ? `-webkit-text-stroke: ${ui.fonts.match.strokeWidth}px ${ui.fonts.match.strokeColor}; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);` : '-webkit-text-stroke: 0px !important; text-shadow: none !important;'}
+            }
+            .match-card-item span, .match-card-item div, .match-card-item input {
+                color: inherit !important;
+            }
+            .match-card-item-bg-yellow { background: linear-gradient(135deg, rgba(255, 251, 230, ${ui.opacities.match / 100}) 0%, rgba(255, 214, 102, ${ui.opacities.match / 100}) 100%) !important; }
+            .match-card-item-bg-blue { background: linear-gradient(135deg, rgba(230, 247, 255, ${ui.opacities.match / 100}) 0%, rgba(105, 192, 255, ${ui.opacities.match / 100}) 100%) !important; }
+            .match-card-item-bg-red { background: linear-gradient(135deg, rgba(255, 240, 246, ${ui.opacities.match / 100}) 0%, rgba(255, 133, 192, ${ui.opacities.match / 100}) 100%) !important; }
+            .match-card-item-bg-green { background: linear-gradient(135deg, rgba(246, 255, 237, ${ui.opacities.match / 100}) 0%, rgba(149, 222, 100, ${ui.opacities.match / 100}) 100%) !important; }
+            .match-card-item-bg-gray { background: linear-gradient(135deg, rgba(200, 200, 200, ${ui.opacities.match / 100}) 0%, rgba(140, 140, 140, ${ui.opacities.match / 100}) 100%) !important; }
+
+            .stats-card-item {
+                background-color: rgba(0, 0, 0, ${ui.opacities.stats / 100}) !important;
+                font-size: ${ui.fonts.stats.size}px !important;
+                color: ${ui.fonts.stats.color} !important;
+                ${ui.fonts.stats.strokeEnabled ? `-webkit-text-stroke: ${ui.fonts.stats.strokeWidth}px ${ui.fonts.stats.strokeColor}; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);` : '-webkit-text-stroke: 0px !important; text-shadow: none !important;'}
+            }
+            .stats-card-item h3 {
+                font-size: calc(${ui.fonts.stats.size}px + 4px) !important;
+                color: inherit !important;
+            }
+
+            .player-card-item {
+                background-color: rgba(0, 0, 0, ${ui.opacities.player / 100}) !important;
+                font-size: ${ui.fonts.player.size}px !important;
+                color: ${ui.fonts.player.color} !important;
+                ${ui.fonts.player.strokeEnabled ? `-webkit-text-stroke: ${ui.fonts.player.strokeWidth}px ${ui.fonts.player.strokeColor}; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);` : '-webkit-text-stroke: 0px !important; text-shadow: none !important;'}
+            }
+            .player-card-item h4 {
+                font-size: ${ui.fonts.player.size}px !important;
+                color: inherit !important;
+            }
+
+            ${['leaderboard', 'match', 'flag', 'stats', 'player', 'banner'].map(sec => {
+                const m = ui.marquee[sec];
+                const prefix = sec === 'leaderboard' ? 'marquee-lb' : sec === 'match' ? 'marquee-mc' : sec === 'flag' ? 'marquee-fl' : sec === 'stats' ? 'marquee-st' : sec === 'player' ? 'marquee-pc' : 'marquee-gb';
+                if (!m.enabled) {
+                    return `.${prefix}::after { display: none !important; } .${prefix} { border: 1px solid rgba(255,255,255,0.1) !important; }`;
+                }
+                return `
+                    .${prefix} {
+                        position: relative;
+                    }
+                    .${prefix}::after {
+                        content: '';
+                        position: absolute;
+                        inset: 0;
+                        border-radius: inherit;
+                        padding: ${m.thickness}px;
+                        background: linear-gradient(90deg, #ff007f, #00f3ff, #e600ff, #ff007f);
+                        background-size: 200% auto;
+                        animation: borderRotate ${m.speed}s linear infinite;
+                        -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+                        -webkit-mask-composite: destination-out;
+                        mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+                        mask-composite: exclude;
+                        opacity: ${m.opacity / 100};
+                        pointer-events: none;
+                        z-index: 5;
+                    }
+                `;
+            }).join('\n')}
+        `;
+    }
+
+    function updateUIConfig(category, subCategory, val, property = null) {
+        initUISettings();
+        const ui = db.uiSettings;
+        
+        let parsedVal = val;
+        if (typeof val === 'string' && !val.startsWith('#') && !isNaN(val) && val.trim() !== '') {
+            parsedVal = parseFloat(val);
+        } else if (val === 'true' || val === true) {
+            parsedVal = true;
+        } else if (val === 'false' || val === false) {
+            parsedVal = false;
         }
 
-        function renderLedgerDetails() {
-            const container = document.getElementById('ledger-list-container');
-            const countEl = document.getElementById('ledger-total-count');
-            const profitEl = document.getElementById('ledger-total-profit');
+        if (property) {
+            if (!ui[category][subCategory]) ui[category][subCategory] = {};
+            ui[category][subCategory][property] = parsedVal;
+        } else {
+            ui[category][subCategory] = parsedVal;
+        }
+
+        updateDynamicStyles();
+        syncUIInputsFromDB();
+        broadcastData();
+
+        // 如果修改了对阵图，即时自适应
+        if (category === 'bracket' && currentTab === 'knockout' && activeKnockoutSubTab === 'bracket') {
+            updateBracketUI();
+        }
+    }
+
+    function syncUIInputsFromDB() {
+        initUISettings();
+        const ui = db.uiSettings;
+
+        const opL = document.getElementById('cfg-op-lb'); if (opL) opL.value = ui.opacities.leaderboard;
+        const opM = document.getElementById('cfg-op-mc'); if (opM) opM.value = ui.opacities.match;
+        const opS = document.getElementById('cfg-op-st'); if (opS) opS.value = ui.opacities.stats;
+        const opP = document.getElementById('cfg-op-pc'); if (opP) opP.value = ui.opacities.player;
+        const opB = document.getElementById('cfg-op-gb'); if (opB) opB.value = ui.opacities.banner;
+
+        const valOpL = document.getElementById('val-op-lb'); if (valOpL) valOpL.innerText = ui.opacities.leaderboard;
+        const valOpM = document.getElementById('val-op-mc'); if (valOpM) valOpM.innerText = ui.opacities.match;
+        const valOpS = document.getElementById('val-op-st'); if (valOpS) valOpS.innerText = ui.opacities.stats;
+        const valOpP = document.getElementById('val-op-pc'); if (valOpP) valOpP.innerText = ui.opacities.player;
+        const valOpB = document.getElementById('val-op-gb'); if (valOpB) valOpB.innerText = ui.opacities.banner;
+
+        // 对阵图设置同步
+        const bk = ui.bracket || { flagSize: 24, fontSize: 10, height: 900, width: 900, teamGap: 4 };
+        const cfgBkFl = document.getElementById('cfg-bk-fl'); if (cfgBkFl) cfgBkFl.value = bk.flagSize;
+        const cfgBkFt = document.getElementById('cfg-bk-ft'); if (cfgBkFt) cfgBkFt.value = bk.fontSize;
+        const cfgBkHt = document.getElementById('cfg-bk-ht'); if (cfgBkHt) cfgBkHt.value = bk.height;
+        const cfgBkWd = document.getElementById('cfg-bk-wd'); if (cfgBkWd) cfgBkWd.value = bk.width || 900;
+        const cfgBkTg = document.getElementById('cfg-bk-tg'); if (cfgBkTg) cfgBkTg.value = bk.teamGap !== undefined ? bk.teamGap : 4;
+
+        const valBkFl = document.getElementById('val-bk-fl'); if (valBkFl) valBkFl.innerText = bk.flagSize;
+        const valBkFt = document.getElementById('val-bk-ft'); if (valBkFt) valBkFt.innerText = bk.fontSize;
+        const valBkHt = document.getElementById('val-bk-ht'); if (valBkHt) valBkHt.innerText = bk.height;
+        const valBkWd = document.getElementById('val-bk-wd'); if (valBkWd) valBkWd.innerText = bk.width || 900;
+        const valBkTg = document.getElementById('val-bk-tg'); if (valBkTg) valBkTg.innerText = bk.teamGap !== undefined ? bk.teamGap : 4;
+
+        const rtBk = document.getElementById('cfg-rt-bracket'); if (rtBk) rtBk.checked = !!db.realtimeBracket;
+
+        // 滚动播报条同步
+        const tk = ui.ticker || { height: 32, fontSize: 12, bgColor: '#000000', textColor: '#facc15', speed: 15 };
+        const cfgTkHt = document.getElementById('cfg-tk-ht'); if (cfgTkHt) cfgTkHt.value = tk.height;
+        const cfgTkFs = document.getElementById('cfg-tk-fs'); if (cfgTkFs) cfgTkFs.value = tk.fontSize;
+        const cfgTkSp = document.getElementById('cfg-tk-sp'); if (cfgTkSp) cfgTkSp.value = tk.speed;
+        const cfgTkBg = document.getElementById('cfg-tk-bg'); if (cfgTkBg) cfgTkBg.value = tk.bgColor;
+        const cfgTkBgTxt = document.getElementById('cfg-tk-bg-txt'); if (cfgTkBgTxt) cfgTkBgTxt.value = tk.bgColor;
+        const cfgTkTc = document.getElementById('cfg-tk-tc'); if (cfgTkTc) cfgTkTc.value = tk.textColor;
+        const cfgTkTcTxt = document.getElementById('cfg-tk-tc-txt'); if (cfgTkTcTxt) cfgTkTcTxt.value = tk.textColor;
+
+        const valTkHt = document.getElementById('val-tk-ht'); if (valTkHt) valTkHt.innerText = tk.height;
+        const valTkFs = document.getElementById('val-tk-fs'); if (valTkFs) valTkFs.innerText = tk.fontSize;
+        const valTkSp = document.getElementById('val-tk-sp'); if (valTkSp) valTkSp.innerText = tk.speed;
+
+        ['leaderboard', 'match', 'flag', 'stats', 'player', 'banner'].forEach(sec => {
+            const m = ui.marquee[sec];
+            const code = sec === 'leaderboard' ? 'lb' : sec === 'match' ? 'mc' : sec === 'flag' ? 'fl' : sec === 'stats' ? 'st' : sec === 'player' ? 'pc' : 'gb';
+
+            const en = document.getElementById(`cfg-mq-${code}-en`); if (en) en.checked = !!m.enabled;
+            const sp = document.getElementById(`cfg-mq-${code}-sp`); if (sp) sp.value = m.speed;
+            const th = document.getElementById(`cfg-mq-${code}-th`); if (th) th.value = m.thickness;
+            const op = document.getElementById(`cfg-mq-${code}-op`); if (op) op.value = m.opacity;
+
+            const valSp = document.getElementById(`val-mq-${code}-sp`); if (valSp) valSp.innerText = m.speed;
+            const valTh = document.getElementById(`val-mq-${code}-th`); if (valTh) valTh.innerText = m.thickness;
+            const valOp = document.getElementById(`val-mq-${code}-op`); if (valOp) valOp.innerText = m.opacity;
+        });
+
+        const mapFonts = [
+            {sec: 'leaderboard', code: 'lb'},
+            {sec: 'match', code: 'mc'},
+            {sec: 'stats', code: 'st'},
+            {sec: 'player', code: 'pc'},
+            {sec: 'bannerLabel', code: 'gbl'},
+            {sec: 'bannerValue', code: 'gbv'}
+        ];
+
+        mapFonts.forEach(item => {
+            const f = ui.fonts[item.sec];
+            const code = item.code;
+
+            const sz = document.getElementById(`cfg-ft-${code}-sz`); if (sz) sz.value = f.size;
+            const cl = document.getElementById(`cfg-ft-${code}-cl`); if (cl) cl.value = f.color;
+            const clT = document.getElementById(`cfg-ft-${code}-cl-txt`); if (clT) clT.value = f.color;
             
-            if (!activeLedgerPlayerId) return;
-            const p = db.players.find(x => x.id === activeLedgerPlayerId);
-            if (!p) return;
+            const valSz = document.getElementById(`val-ft-${code}-sz`); if (valSz) valSz.innerText = f.size;
+
+            if (['lb', 'mc', 'st', 'pc'].includes(code)) {
+                const stEn = document.getElementById(`cfg-ft-${code}-st-en`); if (stEn) stEn.checked = !!f.strokeEnabled;
+                const stWi = document.getElementById(`cfg-ft-${code}-st-wi`); if (stWi) stWi.value = f.strokeWidth;
+                const stCl = document.getElementById(`cfg-ft-${code}-st-cl`); if (stCl) stCl.value = f.strokeColor;
+                const stClT = document.getElementById(`cfg-ft-${code}-st-cl-txt`); if (stClT) stClT.value = f.strokeColor;
+
+                const valStWi = document.getElementById(`val-ft-${code}-st-wi`); if (valStWi) valStWi.innerText = f.strokeWidth;
+            }
+        });
+
+        const jkSz = document.getElementById('cfg-ft-jk-sz'); if (jkSz) jkSz.value = ui.fonts.jackpot.size;
+        const valJkSz = document.getElementById('val-ft-jk-sz'); if (valJkSz) valJkSz.innerText = ui.fonts.jackpot.size;
+
+        const spBg = document.getElementById('cfg-sp-banner-gap'); if (spBg) spBg.value = ui.spacing.bannerGap;
+        const valSpBg = document.getElementById('val-sp-banner-gap'); if (valSpBg) valSpBg.innerText = ui.spacing.bannerGap;
+    }
+
+    function updateTicker() {
+        const tickerTextEl = document.getElementById('ticker-text');
+        if (!tickerTextEl) return;
+        
+        const todayMatches = db.matches.filter(m => {
+            if (!m || !m.date) return false;
+            const match = m.date.match(/\d+月\d+日/);
+            return match && match[0] === activeTodayDate;
+        });
+        
+        if (todayMatches.length === 0) {
+            tickerTextEl.innerText = `今日（${activeTodayDate || '无'}）无比赛安排`;
+            return;
+        }
+        
+        let tickerParts = [];
+        todayMatches.forEach(m => {
+            const resolvedHome = resolveTeamName(m.home, db, m);
+            const resolvedAway = resolveTeamName(m.away, db, m);
             
-            let records = [];
-            
-            db.matches.filter(m => m.status === 'finished').sort((a,b) => a.id - b.id).forEach(m => {
+            if (m.status === 'finished') {
+                const score = m.score || '0:0';
                 const b = db.bets[m.id];
-                if (b && b.predictions && b.predictions[p.id] && b.predictions[p.id] !== 'none') {
-                    const prediction = b.predictions[p.id];
-                    const isCorrect = (prediction === m.result);
-                    
+                let winnerStrings = [];
+                if (b && b.predictions) {
                     let matchParticipants = [];
                     let matchWinners = [];
                     for (let pid in b.predictions) {
@@ -3949,560 +4489,54 @@
                             }
                         }
                     }
-                    
-                    let pool = matchParticipants.length * b.stake;
-                    let netProfit = -b.stake;
-                    if (matchWinners.length === 0) {
-                        netProfit = 0; // 没人猜中退还积分，本场结算无扣除
-                    } else if (isCorrect) {
-                        let winAmt = pool / matchWinners.length;
-                        netProfit = winAmt - b.stake;
+                    const pool = matchParticipants.length * b.stake;
+                    if (matchWinners.length > 0) {
+                        const winAmt = pool / matchWinners.length;
+                        const netProfit = winAmt - b.stake;
+                        matchWinners.forEach(pid => {
+                            const p = db.players.find(x => x.id === pid);
+                            if (p) {
+                                const sign = netProfit >= 0 ? '+' : '';
+                                winnerStrings.push(`${p.name} ${sign}${netProfit.toFixed(0)}分`);
+                            }
+                        });
                     }
-                    
-                    let predText = '无';
-                    if (prediction === 'home') predText = `主胜`;
-                    else if (prediction === 'away') predText = `主负`;
-                    else if (prediction === 'draw') predText = '平局';
-                    
-                    const matchDate = m.date.match(/\d+月\d+日/);
-                    const dateStr = matchDate ? matchDate[0] : '未知日期';
-                    
-                    records.push({
-                        id: m.id,
-                        home: m.home,
-                        away: m.away,
-                        date: dateStr,
-                        predText: predText,
-                        netProfit: netProfit,
-                        score: m.score || m.result.replace('home','主胜').replace('away','主负').replace('draw','平局')
-                    });
                 }
-            });
-            
-            if (activeLedgerFilter === 'date') {
-                const selectedDate = document.getElementById('ledger-date-select').value;
-                records = records.filter(r => r.date === selectedDate);
-            }
-            
-            let totalProfit = 0;
-            records.forEach(r => totalProfit += r.netProfit);
-            
-            countEl.innerText = `${records.length} 场`;
-            profitEl.innerText = `${totalProfit >= 0 ? '+' : ''}${totalProfit.toFixed(0)}分`;
-            profitEl.className = `font-mono font-black ${totalProfit >= 0 ? 'text-green-400' : 'text-red-400'}`;
-            
-            if (records.length === 0) {
-                container.innerHTML = '<div class="text-center text-white/30 py-10 text-xs">暂无相关对账记录</div>';
-                return;
-            }
-            
-            let html = '';
-            records.forEach(r => {
-                const isWin = r.netProfit >= 0;
-                const isRefund = r.netProfit === 0 && m_winners_zero(r.id);
-                html += `
-                    <div class="bg-black/20 border border-white/5 p-3 rounded-2xl flex justify-between items-center text-xs backdrop-blur-sm">
-                        <div class="min-w-0 flex-1 pr-2">
-                            <div class="font-extrabold text-white truncate flex items-center gap-1.5">
-                                <span class="bg-blue-500/10 text-blue-400 px-1.5 py-0.5 rounded text-[9px] font-mono shrink-0">第${r.id}场</span>
-                                <span class="truncate">${r.home} VS ${r.away}</span>
-                            </div>
-                            <div class="text-[10px] text-gray-400 mt-1 flex flex-wrap gap-x-2 gap-y-1">
-                                <span>下注: <span class="text-yellow-400 font-bold">“${r.predText}”</span></span>
-                                <span>|</span>
-                                <span>比分: <span class="text-white font-bold">${r.score}</span></span>
-                                <span>|</span>
-                                <span class="font-mono">${r.date}</span>
-                            </div>
-                        </div>
-                        <div class="shrink-0 text-right">
-                            <span class="${isWin ? (isRefund ? 'text-gray-400' : 'text-green-400') : 'text-red-400'} font-black font-mono text-sm">
-                                ${isWin ? (isRefund ? '' : '+') : ''}${r.netProfit.toFixed(0)}分${isRefund ? ' (退款)' : ''}
-                            </span>
-                        </div>
-                    </div>`;
-            });
-            container.innerHTML = html;
-        }
-
-        // 辅助检测某场已结算赛事是否为 0 赢家 (没人猜中)
-        function m_winners_zero(matchId) {
-            const m = db.matches.find(x => x.id === matchId);
-            return m && m.status === 'finished' && (!m.winners || m.winners.length === 0);
-        }
-
-        // --- 网页背景图动态轮播逻辑 ---
-        let slideshowTimer = null;
-        let currentSlideIndex = 0;
-        let currentSlideActiveLayer = 1; 
-
-        function initSlideshow() {
-            if (!db.slideshow) {
-                db.slideshow = {
-                    urls: [
-                        "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=1200",
-                        "https://images.unsplash.com/photo-1543351611-58f69d7c1781?q=80&w=1200",
-                        "https://images.unsplash.com/photo-1522778119026-d647f0596c20?q=80&w=1200"
-                    ],
-                    stayTime: 5000,
-                    fadeTime: 1000,
-                    opacity: 0.2
-                };
-            }
-            
-            const container = document.getElementById('bg-slideshow-container');
-            if (container) {
-                container.style.opacity = db.slideshow.opacity;
-            }
-            
-            startSlideshowLoop();
-        }
-
-        function startSlideshowLoop() {
-            if (slideshowTimer) clearInterval(slideshowTimer);
-            
-            const urls = db.slideshow.urls || [];
-            if (urls.length === 0) {
-                const slide1 = document.getElementById('bg-slide-1');
-                const slide2 = document.getElementById('bg-slide-2');
-                if (slide1) slide1.style.opacity = 0;
-                if (slide2) slide2.style.opacity = 0;
-                return;
-            }
-            
-            currentSlideIndex = 0;
-            const slide1 = document.getElementById('bg-slide-1');
-            const slide2 = document.getElementById('bg-slide-2');
-            
-            if (slide1 && slide2) {
-                const fadeSec = (db.slideshow.fadeTime || 1000) / 1000;
-                slide1.style.transition = `opacity ${fadeSec}s ease-in-out`;
-                slide2.style.transition = `opacity ${fadeSec}s ease-in-out`;
                 
-                slide1.style.backgroundImage = `url('${urls[0]}')`;
-                slide1.style.opacity = 1;
-                slide2.style.opacity = 0;
-                currentSlideActiveLayer = 1;
-            }
-            
-            if (urls.length <= 1) return; 
-
-            const cycleInterval = (db.slideshow.stayTime || 5000) + (db.slideshow.fadeTime || 1000);
-            
-            slideshowTimer = setInterval(() => {
-                const nextIndex = (currentSlideIndex + 1) % urls.length;
-                const activeEl = currentSlideActiveLayer === 1 ? document.getElementById('bg-slide-1') : document.getElementById('bg-slide-2');
-                const inactiveEl = currentSlideActiveLayer === 1 ? document.getElementById('bg-slide-2') : document.getElementById('bg-slide-1');
-                
-                if (activeEl && inactiveEl) {
-                    const fadeSec = (db.slideshow.fadeTime || 1000) / 1000;
-                    activeEl.style.transition = `opacity ${fadeSec}s ease-in-out`;
-                    inactiveEl.style.transition = `opacity ${fadeSec}s ease-in-out`;
-                    
-                    inactiveEl.style.backgroundImage = `url('${urls[nextIndex]}')`;
-                    inactiveEl.style.opacity = 1;
-                    activeEl.style.opacity = 0;
-                    
-                    currentSlideActiveLayer = currentSlideActiveLayer === 1 ? 2 : 1;
-                    currentSlideIndex = nextIndex;
-                }
-            }, cycleInterval);
-        }
-
-        function updateLocalSlideshowOpacity(val) {
-            const container = document.getElementById('bg-slideshow-container');
-            if (container) {
-                container.style.opacity = val;
-            }
-        }
-
-        function loadSlideshowSettingsToAdmin() {
-            if (!db.slideshow) return;
-            const urlsTextarea = document.getElementById('admin-bg-urls');
-            const stayInput = document.getElementById('admin-bg-stay');
-            const fadeInput = document.getElementById('admin-bg-fade');
-            const opacityInput = document.getElementById('admin-bg-opacity');
-            const opacityVal = document.getElementById('admin-bg-opacity-val');
-            
-            if (urlsTextarea) urlsTextarea.value = (db.slideshow.urls || []).join('\n');
-            if (stayInput) stayInput.value = (db.slideshow.stayTime || 5000) / 1000;
-            if (fadeInput) fadeInput.value = (db.slideshow.fadeTime || 1000) / 1000;
-            if (opacityInput) opacityInput.value = db.slideshow.opacity !== undefined ? db.slideshow.opacity : 0.2;
-            if (opacityVal) opacityVal.innerText = db.slideshow.opacity !== undefined ? db.slideshow.opacity : 0.2;
-        }
-
-        function saveSlideshowSettings() {
-            const urlsTextarea = document.getElementById('admin-bg-urls');
-            const stayInput = document.getElementById('admin-bg-stay');
-            const fadeInput = document.getElementById('admin-bg-fade');
-            const opacityInput = document.getElementById('admin-bg-opacity');
-            
-            if (!urlsTextarea || !stayInput || !fadeInput || !opacityInput) return;
-            
-            const urls = urlsTextarea.value.split('\n').map(u => u.trim()).filter(u => u.length > 0);
-            const stayTime = parseFloat(stayInput.value) * 1000;
-            const fadeTime = parseFloat(fadeInput.value) * 1000;
-            const opacity = parseFloat(opacityInput.value);
-            
-            db.slideshow = {
-                urls: urls,
-                stayTime: isNaN(stayTime) || stayTime < 500 ? 5000 : stayTime,
-                fadeTime: isNaN(fadeTime) || fadeTime < 100 ? 1000 : fadeTime,
-                opacity: isNaN(opacity) ? 0.2 : opacity
-            };
-            
-            addLog("管理员修改并同步了动态背景轮播面板设置");
-            broadcastData();
-            
-            updateLocalSlideshowOpacity(db.slideshow.opacity);
-            startSlideshowLoop();
-            alert("动态轮播背景板保存成功并广播全网！");
-        }
-
-        // --- UI 设置初始化与动态渲染引擎 ---
-        function initUISettings() {
-            if (!db.uiSettings) {
-                db.uiSettings = {
-                    opacities: { leaderboard: 40, match: 30, stats: 30, player: 30, banner: 100 },
-                    marquee: {
-                        leaderboard: { enabled: false, speed: 3, thickness: 2, opacity: 80 },
-                        match: { enabled: false, speed: 3, thickness: 2, opacity: 80 },
-                        flag: { enabled: false, speed: 3, thickness: 2, opacity: 80 },
-                        stats: { enabled: false, speed: 3, thickness: 2, opacity: 80 },
-                        player: { enabled: false, speed: 3, thickness: 2, opacity: 80 },
-                        banner: { enabled: false, speed: 3, thickness: 2, opacity: 80 }
-                    },
-                    fonts: {
-                        leaderboard: { size: 14, color: '#ffffff', strokeEnabled: false, strokeWidth: 1, strokeColor: '#000000' },
-                        match: { size: 14, color: '#1a1a1a', strokeEnabled: false, strokeWidth: 1, strokeColor: '#000000' },
-                        stats: { size: 14, color: '#ffffff', strokeEnabled: false, strokeWidth: 1, strokeColor: '#000000' },
-                        player: { size: 14, color: '#ffffff', strokeEnabled: false, strokeWidth: 1, strokeColor: '#000000' },
-                        bannerLabel: { size: 14, color: '#bfdbfe' },
-                        bannerValue: { size: 36, color: '#facc15' },
-                        jackpot: { size: 10 }
-                    },
-                    spacing: {
-                        bannerGap: 4
-                    },
-                    bracket: {
-                        flagSize: 24,
-                        fontSize: 10,
-                        height: 900,
-                        width: 900,
-                        teamGap: 4
-                    }
-                };
-            }
-            if (!db.uiSettings.opacities) db.uiSettings.opacities = { leaderboard: 40, match: 30, stats: 30, player: 30, banner: 100 };
-            if (db.uiSettings.opacities.banner === undefined) db.uiSettings.opacities.banner = 100;
-
-            if (!db.uiSettings.marquee) db.uiSettings.marquee = {
-                leaderboard: { enabled: false, speed: 3, thickness: 2, opacity: 80 },
-                match: { enabled: false, speed: 3, thickness: 2, opacity: 80 },
-                flag: { enabled: false, speed: 3, thickness: 2, opacity: 80 },
-                stats: { enabled: false, speed: 3, thickness: 2, opacity: 80 },
-                player: { enabled: false, speed: 3, thickness: 2, opacity: 80 },
-                banner: { enabled: false, speed: 3, thickness: 2, opacity: 80 }
-            };
-            if (db.uiSettings.marquee.banner === undefined) db.uiSettings.marquee.banner = { enabled: false, speed: 3, thickness: 2, opacity: 80 };
-            if (db.uiSettings.marquee.flag === undefined) db.uiSettings.marquee.flag = { enabled: false, speed: 3, thickness: 2, opacity: 80 };
-
-            if (!db.uiSettings.fonts) db.uiSettings.fonts = {
-                leaderboard: { size: 14, color: '#ffffff', strokeEnabled: false, strokeWidth: 1, strokeColor: '#000000' },
-                match: { size: 14, color: '#1a1a1a', strokeEnabled: false, strokeWidth: 1, strokeColor: '#000000' },
-                stats: { size: 14, color: '#ffffff', strokeEnabled: false, strokeWidth: 1, strokeColor: '#000000' },
-                player: { size: 14, color: '#ffffff', strokeEnabled: false, strokeWidth: 1, strokeColor: '#000000' },
-                bannerLabel: { size: 14, color: '#bfdbfe' },
-                bannerValue: { size: 36, color: '#facc15' },
-                jackpot: { size: 10 }
-            };
-            if (db.uiSettings.fonts.bannerLabel === undefined) db.uiSettings.fonts.bannerLabel = { size: 14, color: '#bfdbfe' };
-            if (db.uiSettings.fonts.bannerValue === undefined) db.uiSettings.fonts.bannerValue = { size: 36, color: '#facc15' };
-            if (db.uiSettings.fonts.jackpot === undefined) db.uiSettings.fonts.jackpot = { size: 10 };
-
-            if (!db.uiSettings.spacing) db.uiSettings.spacing = { bannerGap: 4 };
-            if (db.uiSettings.spacing.bannerGap === undefined) db.uiSettings.spacing.bannerGap = 4;
-
-            if (!db.uiSettings.bracket) {
-                db.uiSettings.bracket = { flagSize: 24, fontSize: 10, height: 900, width: 900, teamGap: 4 };
-            }
-            if (db.uiSettings.bracket.height === undefined) {
-                db.uiSettings.bracket.height = 900;
-            } else if (db.uiSettings.bracket.height < 400) {
-                db.uiSettings.bracket.height = 900; 
-            }
-            if (db.uiSettings.bracket.width === undefined) db.uiSettings.bracket.width = 900;
-            if (db.uiSettings.bracket.teamGap === undefined) db.uiSettings.bracket.teamGap = 4;
-        }
-
-        function updateDynamicStyles() {
-            let styleEl = document.getElementById('dynamic-ui-styles');
-            if (!styleEl) {
-                styleEl = document.createElement('style');
-                styleEl.id = 'dynamic-ui-styles';
-                document.head.appendChild(styleEl);
-            }
-            const ui = db.uiSettings;
-            if (!ui) return;
-
-            styleEl.innerHTML = `
-                .leaderboard-card-item, .match-card-item, .stats-card-item, .player-card-item, .marquee-gb {
-                    transform: translate3d(0, 0, 0);
-                    -webkit-transform: translate3d(0, 0, 0);
-                    backface-visibility: hidden;
-                    -webkit-backface-visibility: hidden;
-                    will-change: transform;
-                }
-
-                .marquee-gb {
-                    background: linear-gradient(135deg, rgba(37, 99, 235, ${ui.opacities.banner / 100}) 0%, rgba(49, 46, 129, ${ui.opacities.banner / 100}) 100%) !important;
-                }
-                #global-money-label {
-                    font-size: ${ui.fonts.bannerLabel.size}px !important;
-                    color: ${ui.fonts.bannerLabel.color} !important;
-                    margin-bottom: ${ui.spacing.bannerGap}px !important;
-                }
-                #global-money {
-                    font-size: ${ui.fonts.bannerValue.size}px !important;
-                    color: ${ui.fonts.bannerValue.color} !important;
-                }
-
-                .font-jackpot-size {
-                    font-size: ${ui.fonts.jackpot.size}px !important;
-                }
-
-                .bracket-flag {
-                    font-size: ${ui.bracket ? ui.bracket.flagSize : 24}px !important;
-                }
-                .bracket-font-size {
-                    font-size: ${ui.bracket ? ui.bracket.fontSize : 10}px !important;
-                }
-                #bracket-wrapper {
-                    height: ${ui.bracket ? ui.bracket.height : 900}px !important;
-                    width: ${ui.bracket ? ui.bracket.width : 900}px !important;
-                }
-                .bracket-team-gap-top {
-                    margin-bottom: ${ui.bracket ? ui.bracket.teamGap : 4}px !important;
-                }
-                .bracket-team-gap-bottom {
-                    margin-top: ${ui.bracket ? ui.bracket.teamGap : 4}px !important;
-                }
-
-                .leaderboard-card-item {
-                    background-color: rgba(0, 0, 0, ${ui.opacities.leaderboard / 100}) !important;
-                    font-size: ${ui.fonts.leaderboard.size}px !important;
-                    color: ${ui.fonts.leaderboard.color} !important;
-                    ${ui.fonts.leaderboard.strokeEnabled ? `-webkit-text-stroke: ${ui.fonts.leaderboard.strokeWidth}px ${ui.fonts.leaderboard.strokeColor}; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);` : '-webkit-text-stroke: 0px !important; text-shadow: none !important;'}
-                }
-                .leaderboard-card-item h3 {
-                    font-size: ${ui.fonts.leaderboard.size}px !important;
-                    color: inherit !important;
-                }
-
-                .match-card-item {
-                    font-size: ${ui.fonts.match.size}px !important;
-                    color: ${ui.fonts.match.color} !important;
-                    ${ui.fonts.match.strokeEnabled ? `-webkit-text-stroke: ${ui.fonts.match.strokeWidth}px ${ui.fonts.match.strokeColor}; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);` : '-webkit-text-stroke: 0px !important; text-shadow: none !important;'}
-                }
-                .match-card-item span, .match-card-item div, .match-card-item input {
-                    color: inherit !important;
-                }
-                .match-card-item-bg-yellow { background: linear-gradient(135deg, rgba(255, 251, 230, ${ui.opacities.match / 100}) 0%, rgba(255, 214, 102, ${ui.opacities.match / 100}) 100%) !important; }
-                .match-card-item-bg-blue { background: linear-gradient(135deg, rgba(230, 247, 255, ${ui.opacities.match / 100}) 0%, rgba(105, 192, 255, ${ui.opacities.match / 100}) 100%) !important; }
-                .match-card-item-bg-red { background: linear-gradient(135deg, rgba(255, 240, 246, ${ui.opacities.match / 100}) 0%, rgba(255, 133, 192, ${ui.opacities.match / 100}) 100%) !important; }
-                .match-card-item-bg-green { background: linear-gradient(135deg, rgba(246, 255, 237, ${ui.opacities.match / 100}) 0%, rgba(149, 222, 100, ${ui.opacities.match / 100}) 100%) !important; }
-                .match-card-item-bg-gray { background: linear-gradient(135deg, rgba(200, 200, 200, ${ui.opacities.match / 100}) 0%, rgba(140, 140, 140, ${ui.opacities.match / 100}) 100%) !important; }
-
-                .stats-card-item {
-                    background-color: rgba(0, 0, 0, ${ui.opacities.stats / 100}) !important;
-                    font-size: ${ui.fonts.stats.size}px !important;
-                    color: ${ui.fonts.stats.color} !important;
-                    ${ui.fonts.stats.strokeEnabled ? `-webkit-text-stroke: ${ui.fonts.stats.strokeWidth}px ${ui.fonts.stats.strokeColor}; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);` : '-webkit-text-stroke: 0px !important; text-shadow: none !important;'}
-                }
-                .stats-card-item h3 {
-                    font-size: calc(${ui.fonts.stats.size}px + 4px) !important;
-                    color: inherit !important;
-                }
-
-                .player-card-item {
-                    background-color: rgba(0, 0, 0, ${ui.opacities.player / 100}) !important;
-                    font-size: ${ui.fonts.player.size}px !important;
-                    color: ${ui.fonts.player.color} !important;
-                    ${ui.fonts.player.strokeEnabled ? `-webkit-text-stroke: ${ui.fonts.player.strokeWidth}px ${ui.fonts.player.strokeColor}; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);` : '-webkit-text-stroke: 0px !important; text-shadow: none !important;'}
-                }
-                .player-card-item h4 {
-                    font-size: ${ui.fonts.player.size}px !important;
-                    color: inherit !important;
-                }
-
-                ${['leaderboard', 'match', 'flag', 'stats', 'player', 'banner'].map(sec => {
-                    const m = ui.marquee[sec];
-                    const prefix = sec === 'leaderboard' ? 'marquee-lb' : sec === 'match' ? 'marquee-mc' : sec === 'flag' ? 'marquee-fl' : sec === 'stats' ? 'marquee-st' : sec === 'player' ? 'marquee-pc' : 'marquee-gb';
-                    if (!m.enabled) {
-                        return `.${prefix}::after { display: none !important; } .${prefix} { border: 1px solid rgba(255,255,255,0.1) !important; }`;
-                    }
-                    return `
-                        .${prefix} {
-                            position: relative;
-                        }
-                        .${prefix}::after {
-                            content: '';
-                            position: absolute;
-                            inset: 0;
-                            border-radius: inherit;
-                            padding: ${m.thickness}px;
-                            background: linear-gradient(90deg, #ff007f, #00f3ff, #e600ff, #ff007f);
-                            background-size: 200% auto;
-                            animation: borderRotate ${m.speed}s linear infinite;
-                            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-                            -webkit-mask-composite: destination-out;
-                            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-                            mask-composite: exclude;
-                            opacity: ${m.opacity / 100};
-                            pointer-events: none;
-                            z-index: 5;
-                        }
-                    `;
-                }).join('\n')}
-            `;
-        }
-
-        function updateUIConfig(category, subCategory, val, property = null) {
-            initUISettings();
-            const ui = db.uiSettings;
-            
-            let parsedVal = val;
-            if (typeof val === 'string' && !val.startsWith('#') && !isNaN(val) && val.trim() !== '') {
-                parsedVal = parseFloat(val);
-            } else if (val === 'true' || val === true) {
-                parsedVal = true;
-            } else if (val === 'false' || val === false) {
-                parsedVal = false;
-            }
-
-            if (property) {
-                if (!ui[category][subCategory]) ui[category][subCategory] = {};
-                ui[category][subCategory][property] = parsedVal;
+                const winnerText = winnerStrings.length > 0 ? `猜中玩家：${winnerStrings.join(' ')}` : '无猜中玩家（本金退回）';
+                tickerParts.push(`${resolvedHome} ${score} ${resolvedAway} - ${winnerText}`);
             } else {
-                ui[category][subCategory] = parsedVal;
+                tickerParts.push(`${resolvedHome} VS ${resolvedAway}（未开赛）`);
             }
+        });
+        
+        tickerTextEl.innerText = `今日比赛：【` + tickerParts.join('】   【') + `】`;
+    }
 
-            updateDynamicStyles();
-            syncUIInputsFromDB();
-            broadcastData();
-
-            // 如果修改了对阵图，即时自适应
-            if (category === 'bracket' && currentTab === 'knockout' && activeKnockoutSubTab === 'bracket') {
-                updateBracketUI();
-            }
-        }
-
-        function syncUIInputsFromDB() {
-            initUISettings();
-            const ui = db.uiSettings;
-
-            const opL = document.getElementById('cfg-op-lb'); if (opL) opL.value = ui.opacities.leaderboard;
-            const opM = document.getElementById('cfg-op-mc'); if (opM) opM.value = ui.opacities.match;
-            const opS = document.getElementById('cfg-op-st'); if (opS) opS.value = ui.opacities.stats;
-            const opP = document.getElementById('cfg-op-pc'); if (opP) opP.value = ui.opacities.player;
-            const opB = document.getElementById('cfg-op-gb'); if (opB) opB.value = ui.opacities.banner;
-
-            const valOpL = document.getElementById('val-op-lb'); if (valOpL) valOpL.innerText = ui.opacities.leaderboard;
-            const valOpM = document.getElementById('val-op-mc'); if (valOpM) valOpM.innerText = ui.opacities.match;
-            const valOpS = document.getElementById('val-op-st'); if (valOpS) valOpS.innerText = ui.opacities.stats;
-            const valOpP = document.getElementById('val-op-pc'); if (valOpP) valOpP.innerText = ui.opacities.player;
-            const valOpB = document.getElementById('val-op-gb'); if (valOpB) valOpB.innerText = ui.opacities.banner;
-
-            // 对阵图设置同步
-            const bk = ui.bracket || { flagSize: 24, fontSize: 10, height: 900, width: 900, teamGap: 4 };
-            const cfgBkFl = document.getElementById('cfg-bk-fl'); if (cfgBkFl) cfgBkFl.value = bk.flagSize;
-            const cfgBkFt = document.getElementById('cfg-bk-ft'); if (cfgBkFt) cfgBkFt.value = bk.fontSize;
-            const cfgBkHt = document.getElementById('cfg-bk-ht'); if (cfgBkHt) cfgBkHt.value = bk.height;
-            const cfgBkWd = document.getElementById('cfg-bk-wd'); if (cfgBkWd) cfgBkWd.value = bk.width || 900;
-            const cfgBkTg = document.getElementById('cfg-bk-tg'); if (cfgBkTg) cfgBkTg.value = bk.teamGap !== undefined ? bk.teamGap : 4;
-
-            const valBkFl = document.getElementById('val-bk-fl'); if (valBkFl) valBkFl.innerText = bk.flagSize;
-            const valBkFt = document.getElementById('val-bk-ft'); if (valBkFt) valBkFt.innerText = bk.fontSize;
-            const valBkHt = document.getElementById('val-bk-ht'); if (valBkHt) valBkHt.innerText = bk.height;
-            const valBkWd = document.getElementById('val-bk-wd'); if (valBkWd) valBkWd.innerText = bk.width || 900;
-            const valBkTg = document.getElementById('val-bk-tg'); if (valBkTg) valBkTg.innerText = bk.teamGap !== undefined ? bk.teamGap : 4;
-
-            const rtBk = document.getElementById('cfg-rt-bracket'); if (rtBk) rtBk.checked = !!db.realtimeBracket;
-
-            ['leaderboard', 'match', 'flag', 'stats', 'player', 'banner'].forEach(sec => {
-                const m = ui.marquee[sec];
-                const code = sec === 'leaderboard' ? 'lb' : sec === 'match' ? 'mc' : sec === 'flag' ? 'fl' : sec === 'stats' ? 'st' : sec === 'player' ? 'pc' : 'gb';
-
-                const en = document.getElementById(`cfg-mq-${code}-en`); if (en) en.checked = !!m.enabled;
-                const sp = document.getElementById(`cfg-mq-${code}-sp`); if (sp) sp.value = m.speed;
-                const th = document.getElementById(`cfg-mq-${code}-th`); if (th) th.value = m.thickness;
-                const op = document.getElementById(`cfg-mq-${code}-op`); if (op) op.value = m.opacity;
-
-                const valSp = document.getElementById(`val-mq-${code}-sp`); if (valSp) valSp.innerText = m.speed;
-                const valTh = document.getElementById(`val-mq-${code}-th`); if (valTh) valTh.innerText = m.thickness;
-                const valOp = document.getElementById(`val-mq-${code}-op`); if (valOp) valOp.innerText = m.opacity;
-            });
-
-            const mapFonts = [
-                {sec: 'leaderboard', code: 'lb'},
-                {sec: 'match', code: 'mc'},
-                {sec: 'stats', code: 'st'},
-                {sec: 'player', code: 'pc'},
-                {sec: 'bannerLabel', code: 'gbl'},
-                {sec: 'bannerValue', code: 'gbv'}
-            ];
-
-            mapFonts.forEach(item => {
-                const f = ui.fonts[item.sec];
-                const code = item.code;
-
-                const sz = document.getElementById(`cfg-ft-${code}-sz`); if (sz) sz.value = f.size;
-                const cl = document.getElementById(`cfg-ft-${code}-cl`); if (cl) cl.value = f.color;
-                const clT = document.getElementById(`cfg-ft-${code}-cl-txt`); if (clT) clT.value = f.color;
-                
-                const valSz = document.getElementById(`val-ft-${code}-sz`); if (valSz) valSz.innerText = f.size;
-
-                if (['lb', 'mc', 'st', 'pc'].includes(code)) {
-                    const stEn = document.getElementById(`cfg-ft-${code}-st-en`); if (stEn) stEn.checked = !!f.strokeEnabled;
-                    const stWi = document.getElementById(`cfg-ft-${code}-st-wi`); if (stWi) stWi.value = f.strokeWidth;
-                    const stCl = document.getElementById(`cfg-ft-${code}-st-cl`); if (stCl) stCl.value = f.strokeColor;
-                    const stClT = document.getElementById(`cfg-ft-${code}-st-cl-txt`); if (stClT) stClT.value = f.strokeColor;
-
-                    const valStWi = document.getElementById(`val-ft-${code}-st-wi`); if (valStWi) valStWi.innerText = f.strokeWidth;
-                }
-            });
-
-            const jkSz = document.getElementById('cfg-ft-jk-sz'); if (jkSz) jkSz.value = ui.fonts.jackpot.size;
-            const valJkSz = document.getElementById('val-ft-jk-sz'); if (valJkSz) valJkSz.innerText = ui.fonts.jackpot.size;
-
-            const spBg = document.getElementById('cfg-sp-banner-gap'); if (spBg) spBg.value = ui.spacing.bannerGap;
-            const valSpBg = document.getElementById('val-sp-banner-gap'); if (valSpBg) valSpBg.innerText = ui.spacing.bannerGap;
-        }
-
-        // --- 风琴式折叠面板控制核心 ---
-        function toggleAccordion(id) {
-            const content = document.getElementById(`${id}-content`);
-            const icon = document.getElementById(`${id}-icon`);
-            if (content && icon) {
-                const isHidden = content.classList.contains('hidden');
-                if (isHidden) {
-                    if (id === 'admin-ui-settings') {
-                        const pwd = prompt("请输入安全验证密码以展开UI配置面板：");
-                        if (pwd !== "260612") {
-                            alert("密码错误，安全核验失败！");
-                            return;
-                        }
+    // --- 风琴式折叠面板控制核心 ---
+    function toggleAccordion(id) {
+        const content = document.getElementById(`${id}-content`);
+        const icon = document.getElementById(`${id}-icon`);
+        if (content && icon) {
+            const isHidden = content.classList.contains('hidden');
+            if (isHidden) {
+                if (id === 'admin-ui-settings') {
+                    const pwd = prompt("请输入安全验证密码以展开UI配置面板：");
+                    if (pwd !== "260612") {
+                        alert("密码错误，安全核验失败！");
+                        return;
                     }
-                    content.classList.remove('hidden');
-                    icon.classList.remove('fa-chevron-down');
-                    icon.classList.add('fa-chevron-up');
-                } else {
-                    content.classList.add('hidden');
-                    icon.classList.remove('fa-chevron-up');
-                    icon.classList.add('fa-chevron-down');
                 }
+                content.classList.remove('hidden');
+                icon.classList.remove('fa-chevron-down');
+                icon.classList.add('fa-chevron-up');
+            } else {
+                content.classList.add('hidden');
+                icon.classList.remove('fa-chevron-up');
+                icon.classList.add('fa-chevron-down');
             }
         }
-    </script>
+    }
+</script>
 </body>
 </html>

@@ -8,9 +8,9 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- 稳定的 CDN 依赖 -->
+    <!-- 稳定的 CDN 依赖 - 已更换为高速稳定的全球/国内加速 jsDelivr 镜像 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/canvas-confetti/1.9.2/confetti.browser.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/5.5.2/mqtt.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mqtt@5.5.2/dist/mqtt.min.js"></script>
     
     <script>
         tailwind.config = {
@@ -164,6 +164,18 @@
     </style>
 </head>
 <body>
+
+    <!-- 开屏广告 Container -->
+    <div id="splash-screen" class="fixed inset-0 z-[9999] bg-[#001529] flex flex-col items-center justify-between py-10 px-6 transition-all duration-500">
+        <div class="flex-1 w-full flex items-center justify-center overflow-hidden rounded-3xl border border-white/10 shadow-2xl relative max-w-md mx-auto">
+            <img id="splash-image" src="https://i.ibb.co/7xmRFfjt/26WC.jpg" class="w-full h-full object-cover object-center absolute inset-0">
+        </div>
+        <div class="pt-6 w-full max-w-xs flex flex-col items-center shrink-0">
+            <button onclick="dismissSplashScreen(); playAudio('coin')" class="w-full btn-3d bg-gradient-to-b from-yellow-400 to-amber-600 text-blue-950 font-black text-lg py-3.5 shadow-lg tracking-widest animate-pulse">
+                进入程序
+            </button>
+        </div>
+    </div>
 
     <!-- 顶部滚动播报栏 -->
     <div id="top-ticker-container" class="w-full overflow-hidden whitespace-nowrap bg-black/60 border-b border-white/10 flex items-center relative z-50">
@@ -406,6 +418,30 @@
                 </div>
             </div>
 
+            <!-- 新增板块：2.5 联机服务器网络配置 -->
+            <div class="bg-black/30 border border-white/10 rounded-2xl shadow-xl backdrop-blur-md overflow-hidden">
+                <button onclick="toggleAccordion('admin-mqtt-config'); playAudio('click')" class="w-full px-4 py-3 flex justify-between items-center bg-black/20 hover:bg-black/40 text-left transition-colors">
+                    <span class="text-sm font-black text-cyan-400 flex items-center gap-2">
+                        <i class="fa-solid fa-network-wired"></i> 联机同步网络服务器配置
+                    </span>
+                    <i id="admin-mqtt-config-icon" class="fa-solid fa-chevron-down text-xs text-cyan-400 transition-transform"></i>
+                </button>
+                <div id="admin-mqtt-config-content" class="hidden p-4 space-y-3 border-t border-white/5">
+                    <div>
+                        <label class="text-[9px] text-gray-400 block mb-1">MQTT 联机服务器地址 (支持 ws:// 或 wss:// 协议)：</label>
+                        <input type="text" id="cfg-mqtt-broker" class="w-full bg-black/50 border border-white/20 rounded-xl p-2.5 text-xs text-white outline-none focus:border-cyan-400 font-bold" placeholder="wss://broker.emqx.io:8084/mqtt">
+                    </div>
+                    <p class="text-[9px] text-gray-400 leading-relaxed">
+                        * 如果默认的服务器断开或无法建立连接，您可以通过在这里切换更稳定的第三方公共连接点（推荐使用 Eclipse wss-443 端口服务，对受限网络、校园网及运营商防火墙穿透极强）：<br>
+                        - Mosquitto 节点: <span class="text-yellow-400 font-bold">wss://test.mosquitto.org:8081/mqtt</span><br>
+                        - Eclipse 节点 (443端口极速): <span class="text-yellow-400 font-bold">wss://mqtt.eclipseprojects.io:443/mqtt</span>
+                    </p>
+                    <button onclick="saveMqttBrokerSetting(); playAudio('coin')" class="w-full btn-3d bg-gradient-to-b from-cyan-500 to-blue-800 py-2.5 text-xs">
+                        保存设置并立即重新联机
+                    </button>
+                </div>
+            </div>
+
             <!-- 3. UI 界面与背景个性化设置 (风琴折叠板块) -->
             <div class="bg-black/30 border border-white/10 rounded-2xl shadow-xl backdrop-blur-md overflow-hidden">
                 <button onclick="toggleAccordion('admin-ui-settings'); playAudio('click')" class="w-full px-4 py-3 flex justify-between items-center bg-black/20 hover:bg-black/40 text-left transition-colors">
@@ -416,6 +452,17 @@
                 </button>
                 <div id="admin-ui-settings-content" class="hidden p-4 space-y-6 border-t border-white/5">
                     
+                    <!-- 开屏广告设置区域 -->
+                    <div class="space-y-3 border-b border-white/10 pb-4">
+                        <h4 class="text-xs font-black text-cyan-400 flex items-center gap-1.5">
+                            <i class="fa-solid fa-rectangle-ad"></i> 开屏广告设置
+                        </h4>
+                        <div class="space-y-2 bg-black/20 p-2.5 rounded-xl border border-white/5">
+                            <label class="text-[9px] text-gray-400 block">开屏画面图片 URL：</label>
+                            <input type="text" id="admin-splash-url" onchange="updateSplashUrlSetting(this.value); playAudio('click')" class="w-full bg-black/40 border border-white/20 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-cyan-400" placeholder="https://i.ibb.co/7xmRFfjt/26WC.jpg">
+                        </div>
+                    </div>
+
                     <!-- 滚动条（跑马灯广播）设置区域 -->
                     <div class="space-y-3 border-b border-white/10 pb-4">
                         <h4 class="text-xs font-black text-yellow-400 flex items-center gap-1.5">
@@ -1205,7 +1252,7 @@
                 ["Group D", "6月26日 10:00", "第3轮", "洛杉矶", "土耳其", "美国"], ["Group D", "6月26日 10:00", "第3轮", "旧金山湾区", "巴拉圭", "澳大利亚"],
                 ["Group E", "6月15日 01:00", "第1轮", "休斯敦", "德国", "库拉索"], ["Group E", "6月15日 07:00", "第1轮", "费城", "科特div瓦", "厄瓜多尔"],
                 ["Group E", "6月21日 04:00", "第2轮", "多伦多", "德国", "科特div瓦"], ["Group E", "6月21日 08:00", "第2轮", "堪萨斯城", "厄瓜多尔", "库拉索"],
-                ["Group E", "6月26日 04:00", "第3轮", "纽约/新泽西", "厄瓜多尔", "德国"], ["Group E", "6月26日 04:00", "第3轮", "费城", "库拉索", "科特div瓦"],
+                ["Group E", "6月26日 04:00", "第3轮", "纽约/新泽西", "厄瓜原尔", "德国"], ["Group E", "6月26日 04:00", "第3轮", "费城", "库拉索", "科特div瓦"],
                 ["Group F", "6月15日 04:00", "第1轮", "达拉斯", "荷兰", "日本"], ["Group F", "6月15日 10:00", "第1轮", "蒙特雷", "瑞典", "突尼斯"],
                 ["Group F", "6月21日 01:00", "第2轮", "休斯敦", "荷兰", "瑞典"], ["Group F", "6月21日 12:00", "第2轮", "突尼斯", "日本"],
                 ["Group F", "6月26日 07:00", "第3轮", "达拉斯", "日本", "瑞典"], ["Group F", "6月26日 07:00", "第3轮", "堪萨斯城", "突尼斯", "荷兰"],
@@ -1249,7 +1296,7 @@
 
         // 分配本设备唯一 Client ID
         const myClientId = 'device_' + Math.random().toString(36).substr(2, 9);
-        let db = { players: [], matches: [], bets: {}, logs: [], lockBets15Min: false, buyAndClose: true, realtimeBracket: false, timestamp: 0 };
+        let db = { players: [], matches: [], bets: {}, logs: [], lockBets15Min: false, buyAndClose: true, realtimeBracket: false, splashUrl: 'https://i.ibb.co/7xmRFfjt/26WC.jpg', mqttBrokerUrl: 'wss://broker.emqx.io:8084/mqtt', timestamp: 0 };
         const roomId = new URLSearchParams(window.location.search).get('room') || 'public_wc2026';
 
         // MQTT 连接
@@ -1257,9 +1304,14 @@
         const syncTopic = `wc_betmaster_sync_v4_${roomId}`;
 
         function initMQTT() {
-            if (typeof mqtt === 'undefined') { setSyncStatus(false, "离线单机版"); return; }
+            if (typeof mqtt === 'undefined') { setSyncStatus(false, "离线单机版 (联机脚本组件未载入)"); return; }
             try {
-                mqttClient = mqtt.connect('wss://broker.emqx.io:8084/mqtt');
+                // 默认使用 db 设定的服务器地址进行连接
+                const brokerUrl = db.mqttBrokerUrl || 'wss://broker.emqx.io:8084/mqtt';
+                mqttClient = mqtt.connect(brokerUrl, {
+                    connectTimeout: 5000,
+                    reconnectPeriod: 2000
+                });
                 mqttClient.on('connect', () => { 
                     mqttClient.subscribe(syncTopic); 
                     setSyncStatus(true); 
@@ -1270,16 +1322,18 @@
                         mqttClient.publish(syncTopic, JSON.stringify(syncReq));
                     }, 500); 
                 });
-                mqttClient.on('offline', () => setSyncStatus(false)); mqttClient.on('error', () => setSyncStatus(false));
+                mqttClient.on('offline', () => setSyncStatus(false, "联机已断开 (正在尝试后台重连)")); 
+                mqttClient.on('error', (err) => setSyncStatus(false, "连接异常"));
                 mqttClient.on('message', (topic, message) => {
                     try {
                         const data = JSON.parse(message.toString());
                         
                         // 处理来自新设备的握手同步请求
                         if (data.type === "sync_request") {
+                            // 握手响应仅回传自身拥有的数据库，但绝不伪造当前时间作为最新 timestamp，彻底解决数据反向覆盖问题
                             if (data.requester !== myClientId && db.players && db.players.length > 0) {
                                 setTimeout(() => {
-                                    broadcastData();
+                                    broadcastData(false); 
                                 }, Math.random() * 400);
                             }
                             return;
@@ -1296,6 +1350,8 @@
                             if (db.lockBets15Min === undefined) db.lockBets15Min = false;
                             if (db.buyAndClose === undefined) db.buyAndClose = true;
                             if (db.realtimeBracket === undefined) db.realtimeBracket = false;
+                            if (db.splashUrl === undefined) db.splashUrl = "https://i.ibb.co/7xmRFfjt/26WC.jpg";
+                            if (db.mqttBrokerUrl === undefined) db.mqttBrokerUrl = "wss://broker.emqx.io:8084/mqtt";
                             
                             db.matches.forEach(m => {
                                 if (m.handicap === undefined) {
@@ -1323,6 +1379,10 @@
                             updateDynamicStyles();
                             syncUIInputsFromDB();
 
+                            // 同步更新开屏画面URL
+                            const splashImg = document.getElementById('splash-image');
+                            if (splashImg) splashImg.src = db.splashUrl;
+
                             refreshAllUI(); 
 
                             updateLocalSlideshowOpacity(db.slideshow.opacity);
@@ -1332,13 +1392,17 @@
                         }
                     } catch (e) { }
                 });
-            } catch (e) { setSyncStatus(false, "连接异常"); }
+            } catch (e) { setSyncStatus(false, "网络异常"); }
         }
 
-        function broadcastData() {
+        // 修复核心：引入 isMutation 标记。仅在发生本地实质性写操作修改时更新戳，其余应答场景不变，杜绝局域网串号自动覆盖。
+        function broadcastData(isMutation = true) {
             if (isReceiving) return;
             calculateAdvancedStats(); 
-            db.timestamp = Date.now(); localStorage.setItem(`wc_db_v4_${roomId}`, JSON.stringify(db));
+            if (isMutation) {
+                db.timestamp = Date.now(); 
+            }
+            localStorage.setItem(`wc_db_v4_${roomId}`, JSON.stringify(db));
             if (mqttClient && mqttClient.connected) mqttClient.publish(syncTopic, JSON.stringify(db), { retain: true });
         }
 
@@ -1456,7 +1520,7 @@
                 const oldName = p.name;
                 p.name = trimmed;
                 addLog(`修改了玩家名: 「${oldName}」 已更名为 「${p.name}」`);
-                broadcastData();
+                broadcastData(true);
                 refreshAllUI();
             }
         }
@@ -1481,7 +1545,7 @@
             if (confirm(`确定要彻底删除玩家「${p.name}」并移除其对应的数据资料吗？`)) {
                 db.players = db.players.filter(x => x.id !== playerId);
                 addLog(`删除了玩家: [${p.name}]`);
-                broadcastData();
+                broadcastData(true);
                 refreshAllUI();
             }
         }
@@ -1489,7 +1553,7 @@
         function toggleLockBetsSetting(checked) {
             db.lockBets15Min = checked;
             addLog(`设置: 开赛前15分钟投注限制规则已 [${checked ? '开启' : '关闭'}]`);
-            broadcastData();
+            broadcastData(true);
         }
 
         function toggleBuyAndCloseSetting(checked, checkboxEl) {
@@ -1503,13 +1567,13 @@
             }
             db.buyAndClose = checked;
             addLog(`设置: 买定离手规则已 [${checked ? '开启' : '关闭'}]`);
-            broadcastData();
+            broadcastData(true);
         }
 
         function updateRealtimeBracketSetting(checked) {
             db.realtimeBracket = checked;
             addLog(`设置: 实时积分落位对阵规则已 [${checked ? '开启' : '关闭'}]`);
-            broadcastData();
+            broadcastData(true);
             refreshAllUI();
         }
 
@@ -1796,6 +1860,46 @@
             return matchups;
         }
 
+        // 开屏广告控制逻辑
+        function dismissSplashScreen() {
+            const el = document.getElementById('splash-screen');
+            if (el) {
+                el.classList.add('opacity-0', 'pointer-events-none');
+                setTimeout(() => {
+                    el.classList.add('hidden');
+                }, 500);
+            }
+        }
+
+        // 随时替换开屏画面的设置配置
+        function updateSplashUrlSetting(val) {
+            db.splashUrl = val.trim() || "https://i.ibb.co/7xmRFfjt/26WC.jpg";
+            const splashImg = document.getElementById('splash-image');
+            if (splashImg) splashImg.src = db.splashUrl;
+            addLog("管理员修改并同步了开屏广告画面 URL");
+            broadcastData(true);
+        }
+
+        // 新增：手动修改联机服务器地址逻辑并重连
+        function saveMqttBrokerSetting() {
+            const input = document.getElementById('cfg-mqtt-broker');
+            if (!input) return;
+            const url = input.value.trim();
+            if (!url) return alert("服务器地址不能为空！");
+            if (!url.startsWith('wss://') && !url.startsWith('ws://')) {
+                return alert("MQTT 连接协议必须以 wss:// 或 ws:// 开头，在网页端推荐使用安全的 wss:// 加密网络。");
+            }
+            db.mqttBrokerUrl = url;
+            addLog(`管理员修改了 MQTT 联机服务器地址为 [${url}]`);
+            localStorage.setItem(`wc_db_v4_${roomId}`, JSON.stringify(db));
+            
+            if (mqttClient) {
+                try { mqttClient.end(); } catch(e){}
+            }
+            initMQTT();
+            alert("联机服务器配置已成功保存！正在为您建立网络连接通道...");
+        }
+
         // 初始化入口
         window.onload = () => {
             initMQTT();
@@ -1807,7 +1911,7 @@
             } catch(e) {}
             
             if (!db || typeof db !== 'object') {
-                db = { players: [], matches: [], bets: {}, logs: [], lockBets15Min: false, buyAndClose: true, realtimeBracket: false, timestamp: 0 };
+                db = { players: [], matches: [], bets: {}, logs: [], lockBets15Min: false, buyAndClose: true, realtimeBracket: false, splashUrl: 'https://i.ibb.co/7xmRFfjt/26WC.jpg', mqttBrokerUrl: 'wss://broker.emqx.io:8084/mqtt', timestamp: 0 };
             }
             if (!db.players) db.players = [];
             if (!db.matches || db.matches.length < 104) { 
@@ -1818,6 +1922,8 @@
             if (db.lockBets15Min === undefined) db.lockBets15Min = false;
             if (db.buyAndClose === undefined) db.buyAndClose = true;
             if (db.realtimeBracket === undefined) db.realtimeBracket = false;
+            if (db.splashUrl === undefined) db.splashUrl = "https://i.ibb.co/7xmRFfjt/26WC.jpg";
+            if (db.mqttBrokerUrl === undefined) db.mqttBrokerUrl = "wss://broker.emqx.io:8084/mqtt";
 
             db.matches.forEach(m => {
                 if (m.handicap === undefined) {
@@ -1841,6 +1947,10 @@
             
             document.getElementById('room-id-display').innerText = `房号: ${roomId}`;
             
+            // 绑定载入的开屏广告画面图片
+            const splashImg = document.getElementById('splash-image');
+            if (splashImg) splashImg.src = db.splashUrl;
+
             initUISettings();
 
             if (!SHOW_HIDDEN_ADMIN_CONTROLS) {
@@ -3152,7 +3262,7 @@
             const avatar = avatarInput || `https://api.dicebear.com/6.x/bottts/svg?seed=${name}&backgroundColor=00f3ff`;
             db.players.push({ id: 'P_'+Date.now(), name, avatar, balance: 0, totalInvest: 0, correctGuesses: 0, totalBets: 0, highestBalance: 0, lowestBalance: 0, biggestWin: 0, biggestLoss: 0, teamStats: {} });
             addLog("新增了玩家: [" + name + "]");
-            broadcastData(); closeModal('addPlayerModal'); refreshAllUI();
+            broadcastData(true); closeModal('addPlayerModal'); refreshAllUI();
         }
 
         function editPlayerAvatar(playerId) {
@@ -3163,7 +3273,7 @@
                 const trimmed = newUrl.trim();
                 p.avatar = trimmed || `https://api.dicebear.com/6.x/bottts/svg?seed=${p.name}&backgroundColor=00f3ff`;
                 addLog(`更新了玩家 [${p.name}] 的个人头像`);
-                broadcastData();
+                broadcastData(true);
                 refreshAllUI();
             }
         }
@@ -3189,340 +3299,342 @@
             container.innerHTML = html; 
         }
 
-    // --- View 7: 操作历史 ---
-    function renderHistoryDateSelector() {
-        const container = document.getElementById('history-date-scroll');
-        if (!container) return;
-        const dates = getLogDates();
-        if (dates.length === 0) {
-            container.innerHTML = '<div class="text-[10px] text-white/30 text-center py-2">暂无历史记录日期分类</div>';
-            return;
-        }
-        
-        let html = `
-            <button onclick="selectHistoryDate('all'); playAudio('click')" class="shrink-0 px-3 py-1 rounded-full text-[10px] font-bold border transition ${activeHistoryDate === 'all' ? 'bg-yellow-400 text-blue-950 border-yellow-400 shadow-[0_0_5px_rgba(250,204,21,0.4)]' : 'bg-black/40 text-gray-400 border-white/10 hover:border-white/20'}">
-                全部
-            </button>
-        `;
-        
-        dates.forEach(dStr => {
-            const isActive = dStr === activeHistoryDate;
-            html += `
-                <button onclick="selectHistoryDate('${dStr}'); playAudio('click')" class="shrink-0 px-3 py-1 rounded-full text-[10px] font-bold border transition ${isActive ? 'bg-yellow-400 text-blue-950 border-yellow-400 shadow-[0_0_5px_rgba(250,204,21,0.4)]' : 'bg-black/40 text-gray-400 border-white/10 hover:border-white/20'}">
-                    ${dStr}
+        // --- View 7: 操作历史 ---
+        function renderHistoryDateSelector() {
+            const container = document.getElementById('history-date-scroll');
+            if (!container) return;
+            const dates = getLogDates();
+            if (dates.length === 0) {
+                container.innerHTML = '<div class="text-[10px] text-white/30 text-center py-2">暂无历史记录日期分类</div>';
+                return;
+            }
+            
+            let html = `
+                <button onclick="selectHistoryDate('all'); playAudio('click')" class="shrink-0 px-3 py-1 rounded-full text-[10px] font-bold border transition ${activeHistoryDate === 'all' ? 'bg-yellow-400 text-blue-950 border-yellow-400 shadow-[0_0_5px_rgba(250,204,21,0.4)]' : 'bg-black/40 text-gray-400 border-white/10 hover:border-white/20'}">
+                    全部
                 </button>
             `;
-        });
-        container.innerHTML = html;
-    }
-
-    function selectHistoryDate(dStr) {
-        activeHistoryDate = dStr;
-        renderHistoryDateSelector();
-        renderLogs();
-    }
-
-    function renderLogs() {
-        renderHistoryDateSelector(); 
-        const container = document.getElementById('logs-container');
-        if (!container) return;
-        if (!db.logs || db.logs.length === 0) {
-            container.innerHTML = '<div class="text-center text-white/50 py-10 text-xs">暂无任何历史操作记录</div>';
-            return;
+            
+            dates.forEach(dStr => {
+                const isActive = dStr === activeHistoryDate;
+                html += `
+                    <button onclick="selectHistoryDate('${dStr}'); playAudio('click')" class="shrink-0 px-3 py-1 rounded-full text-[10px] font-bold border transition ${isActive ? 'bg-yellow-400 text-blue-950 border-yellow-400 shadow-[0_0_5px_rgba(250,204,21,0.4)]' : 'bg-black/40 text-gray-400 border-white/10 hover:border-white/20'}">
+                        ${dStr}
+                    </button>
+                `;
+            });
+            container.innerHTML = html;
         }
-        
-        let filteredLogs = db.logs;
-        if (activeHistoryDate !== 'all') {
-            filteredLogs = db.logs.filter(log => {
-                if (!log || !log.time) return false;
-                const match = log.time.match(/^(\d{4})-(\d{2})-(\d{2})/);
-                return match && `${match[2]}-${match[3]}` === activeHistoryDate;
+
+        function selectHistoryDate(dStr) {
+            activeHistoryDate = dStr;
+            renderHistoryDateSelector();
+            renderLogs();
+        }
+
+        function renderLogs() {
+            renderHistoryDateSelector(); 
+            const container = document.getElementById('logs-container');
+            if (!container) return;
+            if (!db.logs || db.logs.length === 0) {
+                container.innerHTML = '<div class="text-center text-white/50 py-10 text-xs">暂无任何历史操作记录</div>';
+                return;
+            }
+            
+            let filteredLogs = db.logs;
+            if (activeHistoryDate !== 'all') {
+                filteredLogs = db.logs.filter(log => {
+                    if (!log || !log.time) return false;
+                    const match = log.time.match(/^(\d{4})-(\d{2})-(\d{2})/);
+                    return match && `${match[2]}-${match[3]}` === activeHistoryDate;
+                });
+            }
+            
+            if (filteredLogs.length === 0) {
+                container.innerHTML = '<div class="text-center text-white/50 py-10 text-xs">该日期下无操作日志记录</div>';
+                return;
+            }
+            
+            let html = '';
+            filteredLogs.forEach(log => {
+                html += `
+                    <div class="bg-black/30 border border-white/5 rounded-xl p-3 flex flex-col gap-1 text-[11px]">
+                        <div class="flex justify-between items-center text-white/40 font-semibold">
+                            <span class="font-mono text-[10px]"><i class="fa-regular fa-clock mr-1"></i>${log.time}</span>
+                        </div>
+                        <p class="text-white/80 leading-relaxed font-semibold">${log.text}</p>
+                    </div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        function clearLogs() {
+            const pwd = prompt("请输入安全密码以清空操作日志：");
+            if (pwd !== "260612") {
+                alert("密码错误，安全验证失败！操作已撤销。");
+                return;
+            }
+            if (confirm("确定要清空所有的历史操作日志吗？清空后将无法挽回！")) {
+                db.logs = [];
+                activeHistoryDate = 'all';
+                broadcastData(true);
+                refreshAllUI();
+            }
+        }
+
+        // --- View 6: 设置后台逻辑控制 ---
+        function loadRawDbToTextarea() {
+            const ta = document.getElementById('raw-db-textarea');
+            if (ta) {
+                ta.value = JSON.stringify(db, null, 4);
+            }
+        }
+
+        function formatRawDbText() {
+            const ta = document.getElementById('raw-db-textarea');
+            if (!ta) return;
+            try {
+                const parsed = JSON.parse(ta.value);
+                ta.value = JSON.stringify(parsed, null, 4);
+            } catch(e) {
+                alert("JSON 语法检测到错误，无法格式化！\n错误提示: " + e.message);
+            }
+        }
+
+        function saveRawDbText() {
+            const ta = document.getElementById('raw-db-textarea');
+            if (!ta) return;
+            try {
+                const parsed = JSON.parse(ta.value);
+                if (!parsed.players || !parsed.matches) {
+                    return alert("保存失败：JSON 必须具有 players 与 matches 核心字段节点！");
+                }
+                db = parsed;
+                if (!db.logs) db.logs = [];
+                if (db.lockBets15Min === undefined) db.lockBets15Min = false;
+                if (db.buyAndClose === undefined) db.buyAndClose = true;
+                if (db.realtimeBracket === undefined) db.realtimeBracket = false;
+                
+                initUISettings();
+                updateDynamicStyles();
+                syncUIInputsFromDB();
+
+                addLog("管理人员直接修改了底层 JSON 原始数据库");
+                broadcastData(true);
+                refreshAllUI();
+                alert("原始数据库修改成功并已进行广播同步！");
+            } catch(e) {
+                alert("保存失败：您输入的 JSON 存在语法错误，请检查后再行保存！\n" + e.message);
+            }
+        }
+
+        function exportDatabase() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const finishedCount = db.matches.filter(m => m.status === 'finished').length;
+            
+            const fileName = `${year}（年）/${month}（月）/${day}（日）-已进行${finishedCount}场比赛.json`;
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db, null, 4));
+            
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", fileName);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        function importDatabase(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const parsed = JSON.parse(e.target.result);
+                    if (!parsed.players || !parsed.matches) {
+                        return alert("导入失败：导入格式非合法的世界杯数据库备份！");
+                    }
+                    if (confirm("确定要导入此备份吗？导入后将全面覆盖本地现存的所有数据！")) {
+                        db = parsed;
+                        if (!db.logs) db.logs = [];
+                        if (db.lockBets15Min === undefined) db.lockBets15Min = false;
+                        if (db.buyAndClose === undefined) db.buyAndClose = true;
+                        if (db.realtimeBracket === undefined) db.realtimeBracket = false;
+                        
+                        initUISettings();
+                        updateDynamicStyles();
+                        syncUIInputsFromDB();
+
+                        addLog("成功导入外部数据备份");
+                        broadcastData(true);
+                        refreshAllUI();
+                        loadRawDbToTextarea();
+                        alert("数据库备份导入成功，已实时广播同步全网！");
+                    }
+                } catch(err) {
+                    alert("导入失败：该文件并不是合法的 JSON 格式文本。");
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = ''; 
+        }
+
+        function copyDbToClipboard() {
+            const txt = JSON.stringify(db, null, 4);
+            navigator.clipboard.writeText(txt).then(() => {
+                alert("数据 JSON 已成功复制到您的剪贴板，可前往其他设备进行粘贴！");
+            }).catch(() => {
+                const ta = document.createElement('textarea');
+                ta.value = txt; document.body.appendChild(ta); ta.select();
+                document.execCommand('copy'); document.body.removeChild(ta);
+                alert("数据 JSON 已成功复制到您的剪贴板！");
             });
         }
-        
-        if (filteredLogs.length === 0) {
-            container.innerHTML = '<div class="text-center text-white/50 py-10 text-xs">该日期下无操作日志记录</div>';
-            return;
-        }
-        
-        let html = '';
-        filteredLogs.forEach(log => {
-            html += `
-                <div class="bg-black/30 border border-white/5 rounded-xl p-3 flex flex-col gap-1 text-[11px]">
-                    <div class="flex justify-between items-center text-white/40 font-semibold">
-                        <span class="font-mono text-[10px]"><i class="fa-regular fa-clock mr-1"></i>${log.time}</span>
-                    </div>
-                    <p class="text-white/80 leading-relaxed font-semibold">${log.text}</p>
-                </div>`;
-        });
-        container.innerHTML = html;
-    }
 
-    function clearLogs() {
-        const pwd = prompt("请输入安全密码以清空操作日志：");
-        if (pwd !== "260612") {
-            alert("密码错误，安全验证失败！操作已撤销。");
-            return;
-        }
-        if (confirm("确定要清空所有的历史操作日志吗？清空后将无法挽回！")) {
-            db.logs = [];
-            activeHistoryDate = 'all';
-            broadcastData();
-            refreshAllUI();
-        }
-    }
-
-    // --- View 6: 设置后台逻辑控制 ---
-    function loadRawDbToTextarea() {
-        const ta = document.getElementById('raw-db-textarea');
-        if (ta) {
-            ta.value = JSON.stringify(db, null, 4);
-        }
-    }
-
-    function formatRawDbText() {
-        const ta = document.getElementById('raw-db-textarea');
-        if (!ta) return;
-        try {
-            const parsed = JSON.parse(ta.value);
-            ta.value = JSON.stringify(parsed, null, 4);
-        } catch(e) {
-            alert("JSON 语法检测到错误，无法格式化！\n错误提示: " + e.message);
-        }
-    }
-
-    function saveRawDbText() {
-        const ta = document.getElementById('raw-db-textarea');
-        if (!ta) return;
-        try {
-            const parsed = JSON.parse(ta.value);
-            if (!parsed.players || !parsed.matches) {
-                return alert("保存失败：JSON 必须具有 players 与 matches 核心字段节点！");
-            }
-            db = parsed;
-            if (!db.logs) db.logs = [];
-            if (db.lockBets15Min === undefined) db.lockBets15Min = false;
-            if (db.buyAndClose === undefined) db.buyAndClose = true;
-            if (db.realtimeBracket === undefined) db.realtimeBracket = false;
-            
-            initUISettings();
-            updateDynamicStyles();
-            syncUIInputsFromDB();
-
-            addLog("管理人员直接修改了底层 JSON 原始数据库");
-            broadcastData();
-            refreshAllUI();
-            alert("原始数据库修改成功并已进行广播同步！");
-        } catch(e) {
-            alert("保存失败：您输入的 JSON 存在语法错误，请检查后再行保存！\n" + e.message);
-        }
-    }
-
-    function exportDatabase() {
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const day = String(now.getDate()).padStart(2, '0');
-        const finishedCount = db.matches.filter(m => m.status === 'finished').length;
-        
-        const fileName = `${year}（年）/${month}（月）/${day}（日）-已进行${finishedCount}场比赛.json`;
-        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db, null, 4));
-        
-        const downloadAnchor = document.createElement('a');
-        downloadAnchor.setAttribute("href", dataStr);
-        downloadAnchor.setAttribute("download", fileName);
-        document.body.appendChild(downloadAnchor);
-        downloadAnchor.click();
-        downloadAnchor.remove();
-    }
-
-    function importDatabase(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = function(e) {
+        function pasteDbFromClipboard() {
+            const input = prompt("请在此处粘贴导出的 JSON 字符串：");
+            if (!input) return;
             try {
-                const parsed = JSON.parse(e.target.result);
+                const parsed = JSON.parse(input.trim());
                 if (!parsed.players || !parsed.matches) {
-                    return alert("导入失败：导入格式非合法的世界杯数据库备份！");
+                    return alert("导入失败：该 JSON 数据不满足玩家及对阵的基础结构特征！");
                 }
-                if (confirm("确定要导入此备份吗？导入后将全面覆盖本地现存的所有数据！")) {
-                    db = parsed;
-                    if (!db.logs) db.logs = [];
-                    if (db.lockBets15Min === undefined) db.lockBets15Min = false;
-                    if (db.buyAndClose === undefined) db.buyAndClose = true;
-                    if (db.realtimeBracket === undefined) db.realtimeBracket = false;
-                    
-                    initUISettings();
-                    updateDynamicStyles();
-                    syncUIInputsFromDB();
+                db = parsed;
+                if (!db.logs) db.logs = [];
+                if (db.lockBets15Min === undefined) db.lockBets15Min = false;
+                if (db.buyAndClose === undefined) db.buyAndClose = true;
+                if (db.realtimeBracket === undefined) db.realtimeBracket = false;
+                
+                initUISettings();
+                updateDynamicStyles();
+                syncUIInputsFromDB();
 
-                    addLog("成功导入外部数据备份");
-                    broadcastData();
-                    refreshAllUI();
-                    loadRawDbToTextarea();
-                    alert("数据库备份导入成功，已实时广播同步全网！");
-                }
-            } catch(err) {
-                alert("导入失败：该文件并不是合法的 JSON 格式文本。");
+                addLog("通过剪贴板导入并同步了数据库数据");
+                broadcastData(true);
+                refreshAllUI();
+                loadRawDbToTextarea();
+                alert("剪贴板导入成功！数据已实时向所有在线设备进行广播！");
+            } catch(e) {
+                alert("导入失败：错误的 JSON 语法表达格式！\n" + e.message);
             }
-        };
-        reader.readAsText(file);
-        event.target.value = ''; 
-    }
+        }
 
-    function copyDbToClipboard() {
-        const txt = JSON.stringify(db, null, 4);
-        navigator.clipboard.writeText(txt).then(() => {
-            alert("数据 JSON 已成功复制到您的剪贴板，可前往其他设备进行粘贴！");
-        }).catch(() => {
-            const ta = document.createElement('textarea');
-            ta.value = txt; document.body.appendChild(ta); ta.select();
-            document.execCommand('copy'); document.body.removeChild(ta);
-            alert("数据 JSON 已成功复制到您的剪贴板！");
-        });
-    }
-
-    function pasteDbFromClipboard() {
-        const input = prompt("请在此处粘贴导出的 JSON 字符串：");
-        if (!input) return;
-        try {
-            const parsed = JSON.parse(input.trim());
-            if (!parsed.players || !parsed.matches) {
-                return alert("导入失败：该 JSON 数据不满足玩家及对阵的基础结构特征！");
+        function resetEntireDatabase() {
+            const pwd = prompt("🚨 极度危险操作提示 🚨\n请键入管理重置密码以彻底恢复出厂数据：");
+            if (pwd !== "260612") {
+                alert("密码错误，身份核验失败！操作已拒绝。");
+                return;
             }
-            db = parsed;
-            if (!db.logs) db.logs = [];
-            if (db.lockBets15Min === undefined) db.lockBets15Min = false;
-            if (db.buyAndClose === undefined) db.buyAndClose = true;
-            if (db.realtimeBracket === undefined) db.realtimeBracket = false;
+            if (confirm("🚨 警告：这会清空本房所有玩家记录、所有历史注单、清空操作日志并重置全部104场比赛！确定执行此项重置吗？")) {
+                db = { 
+                    players: [], 
+                    matches: generateMatches(), 
+                    bets: {}, 
+                    logs: [], 
+                    lockBets15Min: false, 
+                    buyAndClose: true,
+                    realtimeBracket: false,
+                    splashUrl: 'https://i.ibb.co/7xmRFfjt/26WC.jpg',
+                    mqttBrokerUrl: 'wss://broker.emqx.io:8084/mqtt',
+                    slideshow: {
+                        urls: [
+                            "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=1200",
+                            "https://images.unsplash.com/photo-1543351611-58f69d7c1781?q=80&w=1200",
+                            "https://images.unsplash.com/photo-1522778119026-d647f0596c20?q=80&w=1200"
+                        ],
+                        stayTime: 5000,
+                        fadeTime: 1000,
+                        opacity: 0.2
+                    },
+                    timestamp: Date.now() 
+                };
+
+                initUISettings();
+                updateDynamicStyles();
+                syncUIInputsFromDB();
+
+                addLog("数据库被整体初始化重置");
+                broadcastData(true);
+                refreshAllUI();
+                loadRawDbToTextarea();
+                
+                updateLocalSlideshowOpacity(db.slideshow.opacity);
+                startSlideshowLoop();
+                alert("数据库已被初始化归零！");
+            }
+        }
+
+        // --- 交互业务 ---
+        function openEditMatch(id) {
+            const m = db.matches.find(x => x.id === id); 
+            document.getElementById('editMatchId').value = id;
+            document.getElementById('editHome').value = m.home; 
+            document.getElementById('editAway').value = m.away;
+            openModal('editMatchModal');
+        }
+
+        function saveMatchEdit() {
+            const m = db.matches.find(x => x.id === parseInt(document.getElementById('editMatchId').value));
+            const oldHome = m.home, oldAway = m.away;
+            m.home = document.getElementById('editHome').value.trim() || '主队'; 
+            m.away = document.getElementById('editAway').value.trim() || '客队';
             
-            initUISettings();
-            updateDynamicStyles();
-            syncUIInputsFromDB();
-
-            addLog("通过剪贴板导入并同步了数据库数据");
-            broadcastData();
-            refreshAllUI();
-            loadRawDbToTextarea();
-            alert("剪贴板导入成功！数据已实时向所有在线设备进行广播！");
-        } catch(e) {
-            alert("导入失败：错误的 JSON 语法表达格式！\n" + e.message);
+            addLog("编辑了对阵: [" + oldHome + " VS " + oldAway + "] 变更为 [" + m.home + " VS " + m.away + "]");
+            broadcastData(true); closeModal('editMatchModal'); refreshAllUI();
         }
-    }
 
-    function resetEntireDatabase() {
-        const pwd = prompt("🚨 极度危险操作提示 🚨\n请键入管理重置密码以彻底恢复出厂数据：");
-        if (pwd !== "260612") {
-            alert("密码错误，身份核验失败！操作已拒绝。");
-            return;
+        let actMatchId = null;
+
+        function formatBettingTimeForModal(tStr) {
+            if (!tStr) return '';
+            let cleaned = tStr.replace(/^\d{4}-/, '');
+            return `下注时间：${cleaned}`;
         }
-        if (confirm("🚨 警告：这会清空本房所有玩家记录、所有历史注单、清空操作日志并重置全部104场比赛！确定执行此项重置吗？")) {
-            db = { 
-                players: [], 
-                matches: generateMatches(), 
-                bets: {}, 
-                logs: [], 
-                lockBets15Min: false, 
-                buyAndClose: true,
-                realtimeBracket: false,
-                slideshow: {
-                    urls: [
-                        "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=1200",
-                        "https://images.unsplash.com/photo-1543351611-58f69d7c1781?q=80&w=1200",
-                        "https://images.unsplash.com/photo-1522778119026-d647f0596c20?q=80&w=1200"
-                    ],
-                    stayTime: 5000,
-                    fadeTime: 1000,
-                    opacity: 0.2
-                },
-                timestamp: Date.now() 
-            };
 
-            initUISettings();
-            updateDynamicStyles();
-            syncUIInputsFromDB();
-
-            addLog("数据库被整体初始化重置");
-            broadcastData();
-            refreshAllUI();
-            loadRawDbToTextarea();
+        function openBetModal(id) {
+            if (!db.players.length) return alert("请先前往后台管理添加玩家！");
+            const m = db.matches.find(x => x.id === id); 
             
-            updateLocalSlideshowOpacity(db.slideshow.opacity);
-            startSlideshowLoop();
-            alert("数据库已被初始化归零！");
-        }
-    }
-
-    // --- 交互业务 ---
-    function openEditMatch(id) {
-        const m = db.matches.find(x => x.id === id); 
-        document.getElementById('editMatchId').value = id;
-        document.getElementById('editHome').value = m.home; 
-        document.getElementById('editAway').value = m.away;
-        openModal('editMatchModal');
-    }
-
-    function saveMatchEdit() {
-        const m = db.matches.find(x => x.id === parseInt(document.getElementById('editMatchId').value));
-        const oldHome = m.home, oldAway = m.away;
-        m.home = document.getElementById('editHome').value.trim() || '主队'; 
-        m.away = document.getElementById('editAway').value.trim() || '客队';
-        
-        addLog("编辑了对阵: [" + oldHome + " VS " + oldAway + "] 变更为 [" + m.home + " VS " + m.away + "]");
-        broadcastData(); closeModal('editMatchModal'); refreshAllUI();
-    }
-
-    let actMatchId = null;
-
-    function formatBettingTimeForModal(tStr) {
-        if (!tStr) return '';
-        let cleaned = tStr.replace(/^\d{4}-/, '');
-        return `下注时间：${cleaned}`;
-    }
-
-    function openBetModal(id) {
-        if (!db.players.length) return alert("请先前往后台管理添加玩家！");
-        const m = db.matches.find(x => x.id === id); 
-        
-        if (db.lockBets15Min && isMatchWithin15Mins(m.date)) {
-            alert(`⚠️ 操作受阻！\n该赛事 [${m.home} vs ${m.away}] 当前已进入临开赛前 15 分钟限制区或已经开赛，系统已锁定投注！`);
-            return;
-        }
-        
-        actMatchId = id;
-        const resolvedHome = resolveTeamName(m.home, db, m);
-        const resolvedAway = resolveTeamName(m.away, db, m);
-        document.getElementById('bet-match-title').innerText = `${resolvedHome} vs ${resolvedAway}`;
-        let b = db.bets[id] || { stake: 100, predictions: {}, timestamps: {} }; 
-        document.getElementById('matchStake').value = b.stake;
-        const list = document.getElementById('bet-players-list');
-        
-        let html = '';
-        db.players.forEach(p => {
-            let cur = b.predictions[p.id] || 'none';
-            let tStr = getPlayerBetTimestamp(id, p.id);
-            let displayTime = tStr ? formatBettingTimeForModal(tStr) : '';
+            if (db.lockBets15Min && isMatchWithin15Mins(m.date)) {
+                alert(`⚠️ 操作受阻！\n该赛事 [${m.home} vs ${m.away}] 当前已进入临开赛前 15 分钟限制区或已经开赛，系统已锁定投注！`);
+                return;
+            }
             
-            let isLocked = (db.buyAndClose && cur !== 'none');
-            let disabledAttr = isLocked ? 'disabled' : '';
-            let lockLabel = isLocked ? '<span class="text-red-500 text-[10px] ml-1 font-bold"><i class="fa-solid fa-lock"></i>买定离手</span>' : '';
+            actMatchId = id;
+            const resolvedHome = resolveTeamName(m.home, db, m);
+            const resolvedAway = resolveTeamName(m.away, db, m);
+            document.getElementById('bet-match-title').innerText = `${resolvedHome} vs ${resolvedAway}`;
+            let b = db.bets[id] || { stake: 100, predictions: {}, timestamps: {} }; 
+            document.getElementById('matchStake').value = b.stake;
+            const list = document.getElementById('bet-players-list');
+            
+            let html = '';
+            db.players.forEach(p => {
+                let cur = b.predictions[p.id] || 'none';
+                let tStr = getPlayerBetTimestamp(id, p.id);
+                let displayTime = tStr ? formatBettingTimeForModal(tStr) : '';
+                
+                let isLocked = (db.buyAndClose && cur !== 'none');
+                let disabledAttr = isLocked ? 'disabled' : '';
+                let lockLabel = isLocked ? '<span class="text-red-500 text-[10px] ml-1 font-bold"><i class="fa-solid fa-lock"></i>买定离手</span>' : '';
 
-            html += `
-                <div class="bg-black/20 p-2 rounded-xl flex items-center justify-between border border-white/5 ${isLocked ? 'opacity-80' : ''}">
-                    <div class="flex items-center gap-2 flex-1 min-w-0 pr-2">
-                        <img src="${p.avatar}" class="w-8 h-8 rounded-full bg-black shrink-0 object-cover">
-                        <div class="flex flex-col min-w-0">
-                            <span class="font-bold text-sm text-white truncate">${p.name}</span>
-                            ${displayTime ? `<span class="text-[9px] text-gray-400 block whitespace-nowrap overflow-hidden text-ellipsis font-mono font-medium" title="${tStr}">${displayTime}</span>` : ''}
-                            ${lockLabel}
+                html += `
+                    <div class="bg-black/20 p-2 rounded-xl flex items-center justify-between border border-white/5 ${isLocked ? 'opacity-80' : ''}">
+                        <div class="flex items-center gap-2 flex-1 min-w-0 pr-2">
+                            <img src="${p.avatar}" class="w-8 h-8 rounded-full bg-black shrink-0 object-cover">
+                            <div class="flex flex-col min-w-0">
+                                <span class="font-bold text-sm text-white truncate">${p.name}</span>
+                                ${displayTime ? `<span class="text-[9px] text-gray-400 block whitespace-nowrap overflow-hidden text-ellipsis font-mono font-medium" title="${tStr}">${displayTime}</span>` : ''}
+                                ${lockLabel}
+                            </div>
                         </div>
-                    </div>
-                    <div class="flex gap-1 bg-black/50 p-1 rounded-lg shrink-0 ${isLocked ? 'pointer-events-none' : ''}">
-                        <label><input type="radio" name="p_${p.id}" value="home" class="peer hidden" ${cur==='home'?'checked':''} ${disabledAttr} onchange="playAudio('click')"><div class="px-2.5 py-1.5 rounded-md text-xs font-bold text-white/40 peer-checked:bg-blue-600 peer-checked:text-white transition cursor-pointer">主胜</div></label>
-                        <label><input type="radio" name="p_${p.id}" value="draw" class="peer hidden" ${cur==='draw'?'checked':''} ${disabledAttr} onchange="playAudio('click')"><div class="px-2.5 py-1.5 rounded-md text-xs font-bold text-white/40 peer-checked:bg-gray-500 peer-checked:text-white transition cursor-pointer">平</div></label>
-                        <label><input type="radio" name="p_${p.id}" value="away" class="peer hidden" ${cur==='away'?'checked':''} ${disabledAttr} onchange="playAudio('click')"><div class="px-2.5 py-1.5 rounded-md text-xs font-bold text-white/40 peer-checked:bg-red-500 peer-checked:text-white transition cursor-pointer">主负</div></label>
-                        <label><input type="radio" name="p_${p.id}" value="none" class="peer hidden" ${cur==='none'?'checked':''} ${disabledAttr} onchange="playAudio('click')"><div class="px-2.5 py-1.5 rounded-md text-xs font-bold text-white/20 peer-checked:text-yellow-500 transition cursor-pointer"><i class="fa-solid fa-ban"></i></div></label>
+                        <div class="flex gap-1 bg-black/50 p-1 rounded-lg shrink-0 ${isLocked ? 'pointer-events-none' : ''}">
+                            <label><input type="radio" name="p_${p.id}" value="home" class="peer hidden" ${cur==='home'?'checked':''} ${disabledAttr} onchange="playAudio('click')"><div class="px-2.5 py-1.5 rounded-md text-xs font-bold text-white/40 peer-checked:bg-blue-600 peer-checked:text-white transition cursor-pointer">主胜</div></label>
+                            <label><input type="radio" name="p_${p.id}" value="draw" class="peer hidden" ${cur==='draw'?'checked':''} ${disabledAttr} onchange="playAudio('click')"><div class="px-2.5 py-1.5 rounded-md text-xs font-bold text-white/40 peer-checked:bg-gray-500 peer-checked:text-white transition cursor-pointer">平</div></label>
+                            <label><input type="radio" name="p_${p.id}" value="away" class="peer hidden" ${cur==='away'?'checked':''} ${disabledAttr} onchange="playAudio('click')"><div class="px-2.5 py-1.5 rounded-md text-xs font-bold text-white/40 peer-checked:bg-red-500 peer-checked:text-white transition cursor-pointer">主负</div></label>
+                            <label><input type="radio" name="p_${p.id}" value="none" class="peer hidden" ${cur==='none'?'checked':''} ${disabledAttr} onchange="playAudio('click')"><div class="px-2.5 py-1.5 rounded-md text-xs font-bold text-white/20 peer-checked:text-yellow-500 transition cursor-pointer"><i class="fa-solid fa-ban"></i></div></label>
                     </div>
                 </div>`;
         });
@@ -3581,7 +3693,7 @@
         });
         
         db.bets[actMatchId] = { stake, predictions: preds, timestamps: times }; 
-        broadcastData(); closeModal('betModal'); refreshAllUI();
+        broadcastData(true); closeModal('betModal'); refreshAllUI();
     }
 
     function openSettleModal(id) {
@@ -3715,7 +3827,7 @@
             }
         }
         m.status = 'finished'; m.result = res; m.score = finalScoreText; m.winners = wins;
-        broadcastData(); closeModal('settleModal'); refreshAllUI();
+        broadcastData(true); closeModal('settleModal'); refreshAllUI();
     }
 
     // --- 回退并重新结算逻辑 (编辑已开奖比赛) ---
@@ -3787,7 +3899,7 @@
         revertSettle(id);
         addLog(`管理员重置并编辑了已结算赛事 [${m.home} VS ${m.away}]（原比分: ${oldScore}，原赛果: ${oldResultText}）`);
         
-        broadcastData();
+        broadcastData(true);
         refreshAllUI();
         openSettleModal(id);
     }
@@ -3804,7 +3916,7 @@
         revertSettle(id);
         addLog(`管理员重置了赛事 [${m.home} VS ${m.away}] 状态为未开赛`);
         
-        broadcastData();
+        broadcastData(true);
         refreshAllUI();
         alert("该场赛事已成功重置为未开赛状态，现在可以重新下注及开奖！");
     }
@@ -4105,7 +4217,7 @@
         };
         
         addLog("管理员修改并同步了动态背景轮播面板设置");
-        broadcastData();
+        broadcastData(true);
         
         updateLocalSlideshowOpacity(db.slideshow.opacity);
         startSlideshowLoop();
@@ -4367,7 +4479,7 @@
 
         updateDynamicStyles();
         syncUIInputsFromDB();
-        broadcastData();
+        broadcastData(true);
 
         // 如果修改了对阵图，即时自适应
         if (category === 'bracket' && currentTab === 'knockout' && activeKnockoutSubTab === 'bracket') {
@@ -4391,35 +4503,39 @@
         const valOpP = document.getElementById('val-op-pc'); if (valOpP) valOpP.innerText = ui.opacities.player;
         const valOpB = document.getElementById('val-op-gb'); if (valOpB) valOpB.innerText = ui.opacities.banner;
 
-        // 对阵图设置同步
-        const bk = ui.bracket || { flagSize: 24, fontSize: 10, height: 900, width: 900, teamGap: 4 };
-        const cfgBkFl = document.getElementById('cfg-bk-fl'); if (cfgBkFl) cfgBkFl.value = bk.flagSize;
-        const cfgBkFt = document.getElementById('cfg-bk-ft'); if (cfgBkFt) cfgBkFt.value = bk.fontSize;
-        const cfgBkHt = document.getElementById('cfg-bk-ht'); if (cfgBkHt) cfgBkHt.value = bk.height;
-        const cfgBkWd = document.getElementById('cfg-bk-wd'); if (cfgBkWd) cfgBkWd.value = bk.width || 900;
-        const cfgBkTg = document.getElementById('cfg-bk-tg'); if (cfgBkTg) cfgBkTg.value = bk.teamGap !== undefined ? bk.teamGap : 4;
+        // 同步开屏画面 URL 设置项
+        const splashInput = document.getElementById('admin-splash-url');
+        if (splashInput) splashInput.value = db.splashUrl || "https://i.ibb.co/7xmRFfjt/26WC.jpg";
 
-        const valBkFl = document.getElementById('val-bk-fl'); if (valBkFl) valBkFl.innerText = bk.flagSize;
-        const valBkFt = document.getElementById('val-bk-ft'); if (valBkFt) valBkFt.innerText = bk.fontSize;
-        const valBkHt = document.getElementById('val-bk-ht'); if (valBkHt) valBkHt.innerText = bk.height;
-        const valBkWd = document.getElementById('val-bk-wd'); if (valBkWd) valBkWd.innerText = bk.width || 900;
-        const valBkTg = document.getElementById('val-bk-tg'); if (valBkTg) valBkTg.innerText = bk.teamGap !== undefined ? bk.teamGap : 4;
+        // 同步联机服务器网络配置
+        const mqttInput = document.getElementById('cfg-mqtt-broker');
+        if (mqttInput) mqttInput.value = db.mqttBrokerUrl || 'wss://broker.emqx.io:8084/mqtt';
 
-        const rtBk = document.getElementById('cfg-rt-bracket'); if (rtBk) rtBk.checked = !!db.realtimeBracket;
+        const bkFl = document.getElementById('cfg-bk-fl'); if (bkFl) bkFl.value = ui.bracket.flagSize;
+        const bkFt = document.getElementById('cfg-bk-ft'); if (bkFt) bkFt.value = ui.bracket.fontSize;
+        const bkHt = document.getElementById('cfg-bk-ht'); if (bkHt) bkHt.value = ui.bracket.height;
+        const bkWd = document.getElementById('cfg-bk-wd'); if (bkWd) bkWd.value = ui.bracket.width;
+        const bkTg = document.getElementById('cfg-bk-tg'); if (bkTg) bkTg.value = ui.bracket.teamGap;
 
-        // 滚动播报条同步
-        const tk = ui.ticker || { height: 32, fontSize: 12, bgColor: '#000000', textColor: '#facc15', speed: 15 };
-        const cfgTkHt = document.getElementById('cfg-tk-ht'); if (cfgTkHt) cfgTkHt.value = tk.height;
-        const cfgTkFs = document.getElementById('cfg-tk-fs'); if (cfgTkFs) cfgTkFs.value = tk.fontSize;
-        const cfgTkSp = document.getElementById('cfg-tk-sp'); if (cfgTkSp) cfgTkSp.value = tk.speed;
-        const cfgTkBg = document.getElementById('cfg-tk-bg'); if (cfgTkBg) cfgTkBg.value = tk.bgColor;
-        const cfgTkBgTxt = document.getElementById('cfg-tk-bg-txt'); if (cfgTkBgTxt) cfgTkBgTxt.value = tk.bgColor;
-        const cfgTkTc = document.getElementById('cfg-tk-tc'); if (cfgTkTc) cfgTkTc.value = tk.textColor;
-        const cfgTkTcTxt = document.getElementById('cfg-tk-tc-txt'); if (cfgTkTcTxt) cfgTkTcTxt.value = tk.textColor;
+        const valBkFl = document.getElementById('val-bk-fl'); if (valBkFl) valBkFl.innerText = ui.bracket.flagSize;
+        const valBkFt = document.getElementById('val-bk-ft'); if (valBkFt) valBkFt.innerText = ui.bracket.fontSize;
+        const valBkHt = document.getElementById('val-bk-ht'); if (valBkHt) valBkHt.innerText = ui.bracket.height;
+        const valBkWd = document.getElementById('val-bk-wd'); if (valBkWd) valBkWd.innerText = ui.bracket.width;
+        const valBkTg = document.getElementById('val-bk-tg'); if (valBkTg) valBkTg.innerText = ui.bracket.teamGap;
 
-        const valTkHt = document.getElementById('val-tk-ht'); if (valTkHt) valTkHt.innerText = tk.height;
-        const valTkFs = document.getElementById('val-tk-fs'); if (valTkFs) valTkFs.innerText = tk.fontSize;
-        const valTkSp = document.getElementById('val-tk-sp'); if (valTkSp) valTkSp.innerText = tk.speed;
+        const rtBracket = document.getElementById('cfg-rt-bracket'); if (rtBracket) rtBracket.checked = !!db.realtimeBracket;
+
+        const tkHt = document.getElementById('cfg-tk-ht'); if (tkHt) tkHt.value = ui.ticker.height;
+        const tkFs = document.getElementById('cfg-tk-fs'); if (tkFs) tkFs.value = ui.ticker.fontSize;
+        const tkSp = document.getElementById('cfg-tk-sp'); if (tkSp) tkSp.value = ui.ticker.speed;
+        const tkBg = document.getElementById('cfg-tk-bg'); if (tkBg) tkBg.value = ui.ticker.bgColor;
+        const tkBgTxt = document.getElementById('cfg-tk-bg-txt'); if (tkBgTxt) tkBgTxt.value = ui.ticker.bgColor;
+        const tkTc = document.getElementById('cfg-tk-tc'); if (tkTc) tkTc.value = ui.ticker.textColor;
+        const tkTcTxt = document.getElementById('cfg-tk-tc-txt'); if (tkTcTxt) tkTcTxt.value = ui.ticker.textColor;
+
+        const valTkHt = document.getElementById('val-tk-ht'); if (valTkHt) valTkHt.innerText = ui.ticker.height;
+        const valTkFs = document.getElementById('val-tk-fs'); if (valTkFs) valTkFs.innerText = ui.ticker.fontSize;
+        const valTkSp = document.getElementById('val-tk-sp'); if (valTkSp) valTkSp.innerText = ui.ticker.speed;
 
         ['leaderboard', 'match', 'flag', 'stats', 'player', 'banner'].forEach(sec => {
             const m = ui.marquee[sec];
@@ -4557,3 +4673,4 @@
 </script>
 </body>
 </html>
+

@@ -1190,7 +1190,8 @@
             '摩洛哥':'🇲🇦','海地':'🇭🇹','苏格兰':'🇬🇧','澳大利亚':'🇦🇺','土耳其':'🇹🇷','德国':'🇩🇪','库拉索':'🇨🇼','科特div瓦':'🇨🇮','厄瓜多尔':'🇪🇨','荷兰':'🇳🇱',
             '日本':'🇯🇵','瑞典':'🇸🇪','突尼斯':'🇹🇳','比利时':'🇧🇪','埃及':'🇪🇬','伊朗':'🇮🇷','新西兰':'🇳🇿','西班牙':'🇪🇸','佛得角':'🇨🇻','沙特阿拉伯':'🇸🇦','乌拉圭':'🇺🇾',
             '法国':'🇫🇷','塞内加尔':'🇸🇳','伊拉克':'🇮🇶','挪威':'🇳🇴','阿根廷':'🇦🇷','阿尔及利亚':'🇩🇿','奥地利':'🇦🇹','约旦':'🇯🇴','葡萄牙':'🇵🇹','刚果(金)':'🇨🇩',
-            '乌兹别克斯坦':'🇺🇿','哥伦比亚':'🇨🇴','英格兰':'🇬🇧','克罗地亚':'🇭🇷','加纳':'🇬🇭','巴拿马':'🇵🇦'
+            '乌兹别克斯坦':'🇺🇿','哥伦比亚':'🇨🇴','英格兰':'🇬🇧','克罗地亚':'🇭🇷','加纳':'🇬🇭','巴拿马':'🇵🇦',
+            '沙特':'🇸🇦' // 映射国旗，确保输入“沙特”也能显示 🇸🇦
         };
         function getFlag(name) { return flags[name] || '⚽'; }
 
@@ -1235,7 +1236,35 @@
             return '';
         }
 
-        // 生成赛程数据 (104场)
+        // 自动统一沙特名称的核心防Bug函数
+        function migrateSaudiTeams(database) {
+            if (!database) return;
+            if (database.matches) {
+                database.matches.forEach(m => {
+                    if (m.home === "沙特") m.home = "沙特阿拉伯";
+                    if (m.away === "沙特") m.away = "沙特阿拉伯";
+                });
+            }
+            if (database.players) {
+                database.players.forEach(p => {
+                    if (p.teamStats) {
+                        if (p.teamStats["沙特"] !== undefined) {
+                            p.teamStats["沙特阿拉伯"] = (p.teamStats["沙特阿拉伯"] || 0) + p.teamStats["沙特"];
+                            delete p.teamStats["沙特"];
+                        }
+                    }
+                });
+            }
+            if (database.logs) {
+                database.logs.forEach(log => {
+                    if (log && log.text) {
+                        log.text = log.text.replace(/\[沙特\s+VS/g, "[沙特阿拉伯 VS").replace(/VS\s+沙特\]/g, "VS 沙特阿拉伯]");
+                    }
+                });
+            }
+        }
+
+        // 生成赛程数据 (104场) - 补全所有缺省Venue城市的小组赛，使之全量规整为标准的 6 元素数组
         function generateMatches() {
             const rawData = [
                 ["Group A", "6月12日 03:00", "第1轮", "墨西哥城", "墨西哥", "南非"], ["Group A", "6月12日 10:00", "第1轮", "瓜达拉哈拉", "韩国", "捷克"],
@@ -1254,25 +1283,25 @@
                 ["Group E", "6月21日 04:00", "第2轮", "多伦多", "德国", "科特div瓦"], ["Group E", "6月21日 08:00", "第2轮", "堪萨斯城", "厄瓜多尔", "库拉索"],
                 ["Group E", "6月26日 04:00", "第3轮", "纽约/新泽西", "厄瓜原尔", "德国"], ["Group E", "6月26日 04:00", "第3轮", "费城", "库拉索", "科特div瓦"],
                 ["Group F", "6月15日 04:00", "第1轮", "达拉斯", "荷兰", "日本"], ["Group F", "6月15日 10:00", "第1轮", "蒙特雷", "瑞典", "突尼斯"],
-                ["Group F", "6月21日 01:00", "第2轮", "休斯敦", "荷兰", "瑞典"], ["Group F", "6月21日 12:00", "第2轮", "突尼斯", "日本"],
+                ["Group F", "6月21日 01:00", "第2轮", "休斯敦", "荷兰", "瑞典"], ["Group F", "6月21日 12:00", "第2轮", "堪萨斯城", "突尼斯", "日本"], // 补全 Venue -> 堪萨斯城
                 ["Group F", "6月26日 07:00", "第3轮", "达拉斯", "日本", "瑞典"], ["Group F", "6月26日 07:00", "第3轮", "堪萨斯城", "突尼斯", "荷兰"],
-                ["Group G", "6月16日 03:00", "第1轮", "西雅图", "比利时", "埃及"], ["Group G", "6月16日 09:00", "第1轮", "伊朗", "新西兰"],
-                ["Group G", "6月22日 03:00", "第2轮", "洛杉矶", "比利时", "伊朗"], ["Group G", "6月22日 09:00", "第2轮", "新西兰", "埃及"],
+                ["Group G", "6月16日 03:00", "第1轮", "西雅图", "比利时", "埃及"], ["Group G", "6月16日 09:00", "第1轮", "旧金山湾区", "伊朗", "新西兰"], // 补全 Venue -> 旧金山湾区
+                ["Group G", "6月22日 03:00", "第2轮", "洛杉矶", "比利时", "伊朗"], ["Group G", "6月22日 09:00", "第2轮", "亚特兰大", "新西兰", "埃及"], // 补全 Venue -> 亚特兰大
                 ["Group G", "67月27日 11:00", "第3轮", "西雅图", "埃及", "伊朗"], ["Group G", "6月27日 11:00", "第3轮", "温哥华", "新西兰", "比利时"],
-                ["Group H", "6月16日 00:00", "第1轮", "亚特兰大", "西班牙", "佛得角"], ["Group H", "6月16日 06:00", "第1轮", "沙特阿拉伯", "乌拉圭"],
+                ["Group H", "6月16日 00:00", "第1轮", "亚特兰大", "西班牙", "佛得角"], ["Group H", "6月16日 06:00", "第1轮", "纽约/新泽西", "沙特阿拉伯", "乌拉圭"], // 补全 Venue -> 纽约/新泽西，核心解决沙特阿拉伯 vs 乌拉圭丢失城市造成的undefined拆分队 bug
                 ["Group H", "6月22日 00:00", "第2轮", "亚特兰大", "西班牙", "沙特阿拉伯"], ["Group H", "6月22日 06:00", "第2轮", "迈阿密", "乌拉圭", "佛得角"],
                 ["Group H", "6月27日 08:00", "第3轮", "休斯敦", "佛得角", "沙特阿拉伯"], ["Group H", "6月27日 08:00", "第3轮", "瓜达拉哈拉", "乌拉圭", "西班牙"],
-                ["Group I", "6月17日 03:00", "第1轮", "纽约/新泽西", "法国", "塞内加尔"], ["Group I", "6月17日 06:00", "第1轮", "伊拉克", "挪威"],
+                ["Group I", "6月17日 03:00", "第1轮", "纽约/新泽西", "法国", "塞内加尔"], ["Group I", "6月17日 06:00", "第1轮", "西雅图", "伊拉克", "挪威"], // 补全 Venue -> 西雅图
                 ["Group I", "6月23日 05:00", "第2轮", "费城", "法国", "伊拉克"], ["Group I", "6月23日 08:00", "第2轮", "纽约/新泽西", "挪威", "塞内加尔"],
-                ["Group I", "6月27日 03:00", "第3轮", "波士顿", "挪威", "法国"], ["Group I", "6月27日 03:00", "第3轮", "多伦多", "塞内加尔", "伊拉克"],
+                ["Group I", "6月27日 03:00", "第3轮", "波士顿", "挪威", "法国"], ["Group I", "6月27日 03:00", "第3轮", "多伦多", "塞内加言", "伊拉克"],
                 ["Group J", "6月17日 09:00", "第1轮", "堪萨斯城", "阿根廷", "阿尔及利亚"], ["Group J", "6月17日 12:00", "第1轮", "旧金山湾区", "奥地利", "约旦"],
-                ["Group J", "6月23日 01:00", "第2轮", "达拉斯", "阿根廷", "奥地利"], ["Group J", "6月23日 11:00", "第2轮", "约旦", "阿尔及利亚"],
+                ["Group J", "6月23日 01:00", "第2轮", "达拉斯", "阿根廷", "奥地利"], ["Group J", "6月23日 11:00", "第2轮", "波士顿", "约旦", "阿尔及利亚"], // 补全 Venue -> 波士顿
                 ["Group J", "6月28日 10:00", "第3轮", "堪萨斯城", "阿尔及利亚", "奥地利"], ["Group J", "6月28日 10:00", "第3轮", "达拉斯", "约旦", "阿根廷"],
-                ["Group K", "6月18日 01:00", "第1轮", "休斯敦", "葡萄牙", "刚果(金)"], ["Group K", "6月18日 10:00", "第1轮", "乌兹别克斯坦", "哥伦比亚"],
-                ["Group K", "6月24日 01:00", "第2轮", "休斯敦", "葡萄牙", "乌兹别克斯坦"], ["Group K", "6月24日 10:00", "第2轮", "哥伦比亚", "刚果(金)"],
+                ["Group K", "6月18日 01:00", "第1轮", "休斯敦", "葡萄牙", "刚果(金)"], ["Group K", "6月18日 10:00", "第1轮", "旧金山湾区", "乌兹别克斯坦", "哥伦比亚"], // 补全 Venue -> 旧金山湾区
+                ["Group K", "6月24日 01:00", "第2轮", "休斯敦", "葡萄牙", "乌兹别克斯坦"], ["Group K", "6月24日 10:00", "第2轮", "多伦多", "哥伦比亚", "刚果(金)"], // 补全 Venue -> 多伦多
                 ["Group K", "6月28日 07:30", "第3轮", "迈阿密", "哥伦比亚", "葡萄牙"], ["Group K", "6月28日 07:30", "第3轮", "亚特兰大", "刚果(金)", "乌兹别克斯坦"],
-                ["Group L", "6月18日 04:00", "第1轮", "达拉斯", "英格兰", "克罗地亚"], ["Group L", "6月18日 07:00", "第1轮", "加纳", "巴拿马"],
-                ["Group L", "6月24日 04:00", "第2轮", "波士顿", "英格兰", "加纳"], ["Group L", "6月24日 07:00", "第2轮", "巴拿马", "克罗地亚"],
+                ["Group L", "6月18日 04:00", "第1轮", "达拉斯", "英格兰", "克罗地亚"], ["Group L", "6月18日 07:00", "第1轮", "纽约/新泽西", "加纳", "巴拿马"], // 补全 Venue -> 纽约/新泽西
+                ["Group L", "6月24日 04:00", "第2轮", "波士顿", "英格兰", "加纳"], ["Group L", "6月24日 07:00", "第2轮", "堪萨斯城", "巴拿马", "克罗地亚"], // 补全 Venue -> 堪萨斯城
                 ["Group L", "6月28日 05:00", "第3轮", "纽约/新泽西", "巴拿马", "英格兰"], ["Group L", "6月28日 05:00", "第3轮", "费城", "克罗地亚", "加纳"]
             ];
             const knockoutData = [
@@ -1353,6 +1382,9 @@
                             if (db.splashUrl === undefined) db.splashUrl = "https://i.ibb.co/7xmRFfjt/26WC.jpg";
                             if (db.mqttBrokerUrl === undefined) db.mqttBrokerUrl = "wss://broker.emqx.io:8084/mqtt";
                             
+                            // 数据全量清洗，安全合并
+                            migrateSaudiTeams(db);
+
                             db.matches.forEach(m => {
                                 if (m.handicap === undefined) {
                                     m.handicap = m.homeHandicap || '0';
@@ -1602,6 +1634,7 @@
 
         function resolveTeamName(team, db, matchContext = null) {
             if (!team) return "";
+            if (team === "沙特") return "沙特阿拉伯"; // 强行拦截并解析，确保整个视图层绝对不会出现拆分
             
             // 处理半决赛/决赛
             if (team === "半决胜1") return resolveTeamName("101胜者", db);
@@ -1712,8 +1745,16 @@
             const teams = new Set();
             db.matches.forEach(m => {
                 if (m.group === groupName) {
-                    if (m.home) teams.add(m.home);
-                    if (m.away) teams.add(m.away);
+                    if (m.home) {
+                        let h = resolveTeamName(m.home, db, m);
+                        if (h === "沙特") h = "沙特阿拉伯";
+                        if (h) teams.add(h);
+                    }
+                    if (m.away) {
+                        let a = resolveTeamName(m.away, db, m);
+                        if (a === "沙特") a = "沙特阿拉伯";
+                        if (a) teams.add(a);
+                    }
                 }
             });
             return Array.from(teams);
@@ -1730,7 +1771,10 @@
             matches.forEach(m => {
                 const score = parseScore(m.score);
                 if (score) {
-                    const h = m.home; const a = m.away;
+                    let h = resolveTeamName(m.home, db, m);
+                    if (h === "沙特") h = "沙特阿拉伯";
+                    let a = resolveTeamName(m.away, db, m);
+                    if (a === "沙特") a = "沙特阿拉伯";
                     if (stats[h] && stats[a]) {
                         stats[h].played++; stats[a].played++;
                         stats[h].gs += score.homeGoals; stats[h].ga += score.awayGoals;
@@ -1925,6 +1969,9 @@
             if (db.splashUrl === undefined) db.splashUrl = "https://i.ibb.co/7xmRFfjt/26WC.jpg";
             if (db.mqttBrokerUrl === undefined) db.mqttBrokerUrl = "wss://broker.emqx.io:8084/mqtt";
 
+            // 初始化加载时清洗合并
+            migrateSaudiTeams(db);
+
             db.matches.forEach(m => {
                 if (m.handicap === undefined) {
                     m.handicap = m.homeHandicap || '0';
@@ -2113,20 +2160,23 @@
                             }
                         }
 
-                        if (prediction === 'home') teamProfits[m.home] = (teamProfits[m.home] || 0) + netProfit;
-                        else if (prediction === 'away') teamProfits[m.away] = (teamProfits[m.away] || 0) + netProfit;
+                        let homeNormalized = resolveTeamName(m.home, db, m);
+                        let awayNormalized = resolveTeamName(m.away, db, m);
+
+                        if (prediction === 'home') teamProfits[homeNormalized] = (teamProfits[homeNormalized] || 0) + netProfit;
+                        else if (prediction === 'away') teamProfits[awayNormalized] = (teamProfits[awayNormalized] || 0) + netProfit;
                         else if (prediction === 'draw') {
-                            teamProfits[m.home] = (teamProfits[m.home] || 0) + (netProfit / 2);
-                            teamProfits[m.away] = (teamProfits[m.away] || 0) + (netProfit / 2);
+                            teamProfits[homeNormalized] = (teamProfits[homeNormalized] || 0) + (netProfit / 2);
+                            teamProfits[awayNormalized] = (teamProfits[awayNormalized] || 0) + (netProfit / 2);
                         }
 
                         if (isCorrect) {
-                            if (prediction === 'home') correctWins[m.home] = (correctWins[m.home] || 0) + 1;
-                            else if (prediction === 'away') correctWins[m.away] = (correctWins[m.away] || 0) + 1;
+                            if (prediction === 'home') correctWins[homeNormalized] = (correctWins[homeNormalized] || 0) + 1;
+                            else if (prediction === 'away') correctWins[awayNormalized] = (correctWins[awayNormalized] || 0) + 1;
                         } else {
                             if (matchWinners.length > 0) {
-                                if (prediction === 'away') correctLosses[m.home] = (correctLosses[m.home] || 0) + 1; 
-                                else if (prediction === 'home') correctLosses[m.away] = (correctLosses[m.away] || 0) + 1; 
+                                if (prediction === 'away') correctLosses[homeNormalized] = (correctLosses[homeNormalized] || 0) + 1; 
+                                else if (prediction === 'home') correctLosses[awayNormalized] = (correctLosses[awayNormalized] || 0) + 1; 
                             }
                         }
                     }
@@ -2266,44 +2316,26 @@
                     const p = db.players.find(x => x.id === pid);
                     if (p) {
                         const predVal = preds[pid];
-                        let predText = predVal === 'home' ? '主胜' : (predVal === 'away' ? '主负' : '平局');
+                        let predText = '无';
+                        if (predVal === 'home') predText = `主胜`;
+                        else if (predVal === 'away') predText = `主负`;
+                        else if (predVal === 'draw') predText = '平局';
+
+                        let tStr = getPlayerBetTimestamp(matchId, p.id);
+                        let displayTime = tStr ? formatTimestamp(new Date(tStr)).replace(/^\d{4}-/, '') : '';
                         
-                        let rightSideHTML = '';
-                        if (m.status === 'finished') {
-                            const isCorrect = (predVal === m.result);
-                            let winners = m.winners || [];
-                            let pool = Object.values(preds).filter(v => v !== 'none').length * b.stake;
-                            let netProfit = -b.stake;
-                            if (winners.length === 0) {
-                                netProfit = 0; 
-                            } else if (isCorrect) {
-                                netProfit = (pool / winners.length) - b.stake;
-                            }
-                            
-                            rightSideHTML = `
-                                <p class="${netProfit >= 0 ? (winners.length === 0 ? 'text-gray-400' : 'text-green-400') : 'text-red-400'} font-mono font-bold">
-                                    ${netProfit >= 0 ? (winners.length === 0 ? '' : '+') : ''}${netProfit.toFixed(0)}分 ${winners.length === 0 ? '(退还)' : ''}
-                                </p>
-                            `;
-                        } else {
-                            rightSideHTML = `
-                                <p class="text-yellow-400 font-bold font-mono">已投 ${b.stake}分</p>
-                            `;
-                        }
-
-                        let tStr = getPlayerBetTimestamp(m.id, p.id);
-
                         html += `
-                            <div class="bg-black/40 border border-white/5 p-2 rounded-xl flex justify-between items-center text-xs">
+                            <div class="bg-black/20 p-2.5 rounded-xl border border-white/5 flex items-center justify-between">
                                 <div class="flex items-center gap-2">
-                                    <img src="${p.avatar}" class="w-6 h-6 rounded-full bg-black object-cover">
+                                    <img src="${p.avatar}" class="w-8 h-8 rounded-full bg-black object-cover">
                                     <div>
-                                        <p class="font-bold text-white">${p.name} ${tStr ? `<span class="text-[9px] text-white/40 font-mono font-normal ml-2">${tStr}</span>` : ''}</p>
-                                        <p class="text-[9px] text-gray-400">选择: <span class="text-yellow-400 font-bold">“${predText}”</span></p>
+                                        <p class="font-bold text-white text-xs">${p.name}</p>
+                                        <p class="text-[9px] text-gray-400">预测: <span class="text-yellow-400 font-bold">“${predText}”</span></p>
                                     </div>
                                 </div>
                                 <div class="text-right">
-                                    ${rightSideHTML}
+                                    <p class="text-xs font-mono font-bold text-white">${b.stake} 分</p>
+                                    ${displayTime ? `<p class="text-[8px] text-white/30 font-mono">${displayTime}</p>` : ''}
                                 </div>
                             </div>
                         `;
@@ -2367,7 +2399,7 @@
                     <span class="bg-yellow-400 text-blue-950 font-black text-[9px] px-1 py-0.5 rounded skew-x-12 animate-pulse border border-yellow-300 shadow-[0_0_8px_rgba(250,204,21,0.8)]">WIN</span>
                 </div>` : '';
 
-            // 纯比分渲染 - 让球部分已被完全剔除
+            // 纯比分渲染
             const scoreHome = isFin && m.score ? m.score.split(':')[0].trim() : '';
             const scoreAway = isFin && m.score ? m.score.split(':')[1].trim() : '';
             let scoreDisplay = '';
@@ -2627,8 +2659,8 @@
             } else if (activeSecNav === 'country') {
                 const countries = new Set();
                 db.matches.forEach(m => {
-                    if (isRealCountry(m.home)) countries.add(m.home);
-                    if (isRealCountry(m.away)) countries.add(m.away);
+                    if (isRealCountry(m.home)) countries.add(resolveTeamName(m.home, db, m));
+                    if (isRealCountry(m.away)) countries.add(resolveTeamName(m.away, db, m));
                 });
                 const countryList = Array.from(countries).sort((a,b) => a.localeCompare(b, 'zh-CN'));
                 
@@ -2679,12 +2711,16 @@
             
             // 3. 国家维度过滤
             if (activeSecNav === 'country' && filterCountry !== 'all') {
-                list = list.filter(m => m.home === filterCountry || m.away === filterCountry);
+                list = list.filter(m => resolveTeamName(m.home, db, m) === filterCountry || resolveTeamName(m.away, db, m) === filterCountry);
             }
 
             // 4. 文字搜索检索过滤
             if (query) {
-                list = list.filter(m => m.home.toLowerCase().includes(query) || m.away.toLowerCase().includes(query) || m.group.toLowerCase().includes(query));
+                list = list.filter(m => {
+                    const resolvedHome = resolveTeamName(m.home, db, m).toLowerCase();
+                    const resolvedAway = resolveTeamName(m.away, db, m).toLowerCase();
+                    return resolvedHome.includes(query) || resolvedAway.includes(query) || m.group.toLowerCase().includes(query);
+                });
             }
 
             // 5. 排序处理
@@ -3216,7 +3252,7 @@
                         <!-- 球队倾向与运势 -->
                         <div class="pt-1">
                             <p class="text-[10px] text-yellow-400/80 font-black mb-2 flex items-center gap-1.5 uppercase tracking-wider">
-                                <i class="fa-solid fa-wand-magic-sparkles text-[11px]"></i> 球队倾向与运势分析
+                                <i class="fa-solid fa-wand-magic-sparkles text-[11px]"></i> 球队倾向与运势 analysis
                             </p>
                             <div class="grid grid-cols-2 gap-2">
                                 <div class="bg-white/5 rounded-xl p-2 border border-white/5 flex items-center gap-2">
@@ -3415,6 +3451,9 @@
                 if (db.buyAndClose === undefined) db.buyAndClose = true;
                 if (db.realtimeBracket === undefined) db.realtimeBracket = false;
                 
+                // 进行全网同步前的本地清洗
+                migrateSaudiTeams(db);
+
                 initUISettings();
                 updateDynamicStyles();
                 syncUIInputsFromDB();
@@ -3463,6 +3502,9 @@
                         if (db.buyAndClose === undefined) db.buyAndClose = true;
                         if (db.realtimeBracket === undefined) db.realtimeBracket = false;
                         
+                        // 强制合并导入的可能残留有拆分数据
+                        migrateSaudiTeams(db);
+
                         initUISettings();
                         updateDynamicStyles();
                         syncUIInputsFromDB();
@@ -3507,6 +3549,9 @@
                 if (db.buyAndClose === undefined) db.buyAndClose = true;
                 if (db.realtimeBracket === undefined) db.realtimeBracket = false;
                 
+                // 剪贴板统一化升级
+                migrateSaudiTeams(db);
+
                 initUISettings();
                 updateDynamicStyles();
                 syncUIInputsFromDB();
@@ -3570,16 +3615,24 @@
         function openEditMatch(id) {
             const m = db.matches.find(x => x.id === id); 
             document.getElementById('editMatchId').value = id;
-            document.getElementById('editHome').value = m.home; 
-            document.getElementById('editAway').value = m.away;
+            document.getElementById('editHome').value = resolveTeamName(m.home, db, m); 
+            document.getElementById('editAway').value = resolveTeamName(m.away, db, m);
             openModal('editMatchModal');
         }
 
         function saveMatchEdit() {
             const m = db.matches.find(x => x.id === parseInt(document.getElementById('editMatchId').value));
             const oldHome = m.home, oldAway = m.away;
-            m.home = document.getElementById('editHome').value.trim() || '主队'; 
-            m.away = document.getElementById('editAway').value.trim() || '客队';
+            
+            let h = document.getElementById('editHome').value.trim() || '主队'; 
+            let a = document.getElementById('editAway').value.trim() || '客队';
+            
+            // 手动保存前做终极拦截，如果输入的是“沙特”则强行修正为“沙特阿拉伯”，防止其生成新队
+            if (h === "沙特") h = "沙特阿拉伯";
+            if (a === "沙特") a = "沙特阿拉伯";
+
+            m.home = h;
+            m.away = a;
             
             addLog("编辑了对阵: [" + oldHome + " VS " + oldAway + "] 变更为 [" + m.home + " VS " + m.away + "]");
             broadcastData(true); closeModal('editMatchModal'); refreshAllUI();
@@ -3635,93 +3688,134 @@
                             <label><input type="radio" name="p_${p.id}" value="draw" class="peer hidden" ${cur==='draw'?'checked':''} ${disabledAttr} onchange="playAudio('click')"><div class="px-2.5 py-1.5 rounded-md text-xs font-bold text-white/40 peer-checked:bg-gray-500 peer-checked:text-white transition cursor-pointer">平</div></label>
                             <label><input type="radio" name="p_${p.id}" value="away" class="peer hidden" ${cur==='away'?'checked':''} ${disabledAttr} onchange="playAudio('click')"><div class="px-2.5 py-1.5 rounded-md text-xs font-bold text-white/40 peer-checked:bg-red-500 peer-checked:text-white transition cursor-pointer">主负</div></label>
                             <label><input type="radio" name="p_${p.id}" value="none" class="peer hidden" ${cur==='none'?'checked':''} ${disabledAttr} onchange="playAudio('click')"><div class="px-2.5 py-1.5 rounded-md text-xs font-bold text-white/20 peer-checked:text-yellow-500 transition cursor-pointer"><i class="fa-solid fa-ban"></i></div></label>
-                    </div>
-                </div>`;
-        });
-        list.innerHTML = html;
+                        </div>
+                    </div>`;
+            });
+            list.innerHTML = html;
 
-        const confirmBtn = document.getElementById('confirm-bet-btn');
-        if (confirmBtn) {
-            if (db.buyAndClose) {
-                confirmBtn.innerHTML = '确认下注 <span class="text-xs font-normal opacity-90">(无法更改)</span>';
+            const confirmBtn = document.getElementById('confirm-bet-btn');
+            if (confirmBtn) {
+                if (db.buyAndClose) {
+                    confirmBtn.innerHTML = '确认下注 <span class="text-xs font-normal opacity-90">(无法更改)</span>';
+                } else {
+                    confirmBtn.innerHTML = '确认下注';
+                }
+            }
+
+            openModal('betModal');
+        }
+
+        function saveBets() {
+            let stake = parseInt(document.getElementById('matchStake').value) || 0; 
+            let preds = {};
+            const m = db.matches.find(x => x.id === actMatchId);
+            const oldBetObj = db.bets[actMatchId] || { stake: 0, predictions: {}, timestamps: {} };
+            let times = oldBetObj.timestamps ? { ...oldBetObj.timestamps } : {};
+            
+            db.players.forEach(p => { 
+                let predictionVal = 'none';
+                const radios = document.getElementsByName(`p_${p.id}`);
+                for(let r of radios) {
+                    if(r.checked) { 
+                        predictionVal = r.value; 
+                        break; 
+                    } 
+                } 
+
+                const oldSelection = oldBetObj.predictions[p.id] || 'none';
+                
+                if (db.buyAndClose && oldSelection !== 'none') {
+                    preds[p.id] = oldSelection;
+                } else {
+                    preds[p.id] = predictionVal;
+                    if (oldSelection !== predictionVal) {
+                        const sideText = predictionVal === 'home' ? '主胜' : (predictionVal === 'away' ? '主负' : (predictionVal === 'draw' ? '平局' : '撤单'));
+                        if (predictionVal !== 'none') {
+                            addLog("玩家 [" + p.name + "] 针对比赛 [" + m.home + " VS " + m.away + "] 进行了投注: 预测 [" + sideText + "]，单注金额 " + stake);
+                            times[p.id] = formatTimestamp(new Date());
+                        } else {
+                            addLog("玩家 [" + p.name + "] 取消了对比赛 [" + m.home + " VS " + m.away + "] 的投注");
+                            delete times[p.id];
+                        }
+                    } else {
+                        if (oldBetObj.stake !== stake && predictionVal !== 'none') {
+                            times[p.id] = formatTimestamp(new Date());
+                        }
+                    }
+                }
+            });
+            
+            db.bets[actMatchId] = { stake, predictions: preds, timestamps: times }; 
+            broadcastData(true); closeModal('betModal'); refreshAllUI();
+        }
+
+        function openSettleModal(id) {
+            const m = db.matches.find(x => x.id === id); if (!db.bets[id]) return alert("该场比赛无人下注，无法开奖！");
+            document.getElementById('settleMatchId').value = id;
+            const resolvedHome = resolveTeamName(m.home, db, m);
+            const resolvedAway = resolveTeamName(m.away, db, m);
+            document.getElementById('settle-match-title').innerText = `${resolvedHome} vs ${resolvedAway}`;
+            document.getElementById('settleScoreHome').value = ''; document.getElementById('settleScoreAway').value = '';
+            document.querySelectorAll('.result-btn').forEach(b => { b.classList.remove('border-yellow-400', 'bg-yellow-400/20', 'text-yellow-400'); b.classList.add('border-white/10', 'bg-black/30'); });
+            document.getElementById('settleFinalResult').value = '';
+            openModal('settleModal');
+        }
+
+        function calculateAutoSettleResult() {
+            const id = document.getElementById('settleMatchId').value;
+            const m = db.matches.find(x => x.id == id);
+            if (!m) return;
+            
+            const scoreHVal = document.getElementById('settleScoreHome').value.trim();
+            const scoreAVal = document.getElementById('settleScoreAway').value.trim();
+            
+            if (scoreHVal !== '' && scoreAVal !== '') {
+                const scoreH = parseFloat(scoreHVal);
+                const scoreA = parseFloat(scoreAVal);
+                if (!isNaN(scoreH) && !isNaN(scoreA)) {
+                    const netResult = scoreH - scoreA;
+                    let res = '';
+                    if (Math.abs(netResult) < 0.0001) {
+                        res = 'draw';
+                    } else if (netResult > 0) {
+                        res = 'home';
+                    } else {
+                        res = 'away';
+                    }
+                    setResult(res);
+                }
             } else {
-                confirmBtn.innerHTML = '确认下注';
+                document.querySelectorAll('.result-btn').forEach(b => { b.classList.remove('border-yellow-400', 'bg-yellow-400/20', 'text-yellow-400'); b.classList.add('border-white/10', 'bg-black/30'); });
+                document.getElementById('settleFinalResult').value = '';
             }
         }
 
-        openModal('betModal');
-    }
-
-    function saveBets() {
-        let stake = parseInt(document.getElementById('matchStake').value) || 0; 
-        let preds = {};
-        const m = db.matches.find(x => x.id === actMatchId);
-        const oldBetObj = db.bets[actMatchId] || { stake: 0, predictions: {}, timestamps: {} };
-        let times = oldBetObj.timestamps ? { ...oldBetObj.timestamps } : {};
-        
-        db.players.forEach(p => { 
-            let predictionVal = 'none';
-            const radios = document.getElementsByName(`p_${p.id}`);
-            for(let r of radios) {
-                if(r.checked) { 
-                    predictionVal = r.value; 
-                    break; 
-                } 
-            } 
-
-            const oldSelection = oldBetObj.predictions[p.id] || 'none';
-            
-            if (db.buyAndClose && oldSelection !== 'none') {
-                preds[p.id] = oldSelection;
-            } else {
-                preds[p.id] = predictionVal;
-                if (oldSelection !== predictionVal) {
-                    const sideText = predictionVal === 'home' ? '主胜' : (predictionVal === 'away' ? '主负' : (predictionVal === 'draw' ? '平局' : '撤单'));
-                    if (predictionVal !== 'none') {
-                        addLog("玩家 [" + p.name + "] 针对比赛 [" + m.home + " VS " + m.away + "] 进行了投注: 预测 [" + sideText + "]，单注金额 " + stake);
-                        times[p.id] = formatTimestamp(new Date());
-                    } else {
-                        addLog("玩家 [" + p.name + "] 取消了对比赛 [" + m.home + " VS " + m.away + "] 的投注");
-                        delete times[p.id];
-                    }
-                } else {
-                    if (oldBetObj.stake !== stake && predictionVal !== 'none') {
-                        times[p.id] = formatTimestamp(new Date());
-                    }
-                }
+        function setResult(res) {
+            document.getElementById('settleFinalResult').value = res;
+            document.querySelectorAll('.result-btn').forEach(b => { b.classList.remove('border-yellow-400', 'bg-yellow-400/20', 'text-yellow-400'); b.classList.add('border-white/10', 'bg-black/30'); });
+            const activeBtn = document.getElementById(`res-${res}`);
+            if (activeBtn) {
+                activeBtn.classList.remove('border-white/10', 'bg-black/30', 'text-gray-400');
+                activeBtn.classList.add('border-yellow-400', 'bg-yellow-400/20', 'text-white');
             }
-        });
-        
-        db.bets[actMatchId] = { stake, predictions: preds, timestamps: times }; 
-        broadcastData(true); closeModal('betModal'); refreshAllUI();
-    }
+        }
 
-    function openSettleModal(id) {
-        const m = db.matches.find(x => x.id === id); if (!db.bets[id]) return alert("该场比赛无人下注，无法开奖！");
-        document.getElementById('settleMatchId').value = id;
-        const resolvedHome = resolveTeamName(m.home, db, m);
-        const resolvedAway = resolveTeamName(m.away, db, m);
-        document.getElementById('settle-match-title').innerText = `${resolvedHome} vs ${resolvedAway}`;
-        document.getElementById('settleScoreHome').value = ''; document.getElementById('settleScoreAway').value = '';
-        document.querySelectorAll('.result-btn').forEach(b => { b.classList.remove('border-yellow-400', 'bg-yellow-400/20', 'text-yellow-400'); b.classList.add('border-white/10', 'bg-black/30'); });
-        document.getElementById('settleFinalResult').value = '';
-        openModal('settleModal');
-    }
+        function confirmSettle() {
+            const id = document.getElementById('settleMatchId').value;
+            const m = db.matches.find(x => x.id == id);
+            if (!m) return;
 
-    function calculateAutoSettleResult() {
-        const id = document.getElementById('settleMatchId').value;
-        const m = db.matches.find(x => x.id == id);
-        if (!m) return;
-        
-        const scoreHVal = document.getElementById('settleScoreHome').value.trim();
-        const scoreAVal = document.getElementById('settleScoreAway').value.trim();
-        
-        if (scoreHVal !== '' && scoreAVal !== '') {
-            const scoreH = parseFloat(scoreHVal);
-            const scoreA = parseFloat(scoreAVal);
-            if (!isNaN(scoreH) && !isNaN(scoreA)) {
+            const scoreHVal = document.getElementById('settleScoreHome').value.trim();
+            const scoreAVal = document.getElementById('settleScoreAway').value.trim();
+            let res = document.getElementById('settleFinalResult').value;
+
+            if (scoreHVal !== '' && scoreAVal !== '') {
+                const scoreH = parseFloat(scoreHVal);
+                const scoreA = parseFloat(scoreAVal);
+                if (isNaN(scoreH) || isNaN(scoreA)) {
+                    return alert("请输入比分！");
+                }
                 const netResult = scoreH - scoreA;
-                let res = '';
                 if (Math.abs(netResult) < 0.0001) {
                     res = 'draw';
                 } else if (netResult > 0) {
@@ -3729,889 +3823,241 @@
                 } else {
                     res = 'away';
                 }
-                setResult(res);
+                document.getElementById('settleFinalResult').value = res;
             }
-        } else {
-            document.querySelectorAll('.result-btn').forEach(b => { b.classList.remove('border-yellow-400', 'bg-yellow-400/20', 'text-yellow-400'); b.classList.add('border-white/10', 'bg-black/30'); });
-            document.getElementById('settleFinalResult').value = '';
-        }
-    }
 
-    function setResult(res) {
-        document.getElementById('settleFinalResult').value = res;
-        document.querySelectorAll('.result-btn').forEach(b => { b.classList.remove('border-yellow-400', 'bg-yellow-400/20', 'text-yellow-400'); b.classList.add('border-white/10', 'bg-black/30'); });
-        const activeBtn = document.getElementById(`res-${res}`);
-        if (activeBtn) {
-            activeBtn.classList.remove('border-white/10', 'bg-black/30', 'text-gray-400');
-            activeBtn.classList.add('border-yellow-400', 'bg-yellow-400/20', 'text-yellow-400');
-        }
-    }
+            if(!res) return alert("必须确定赛果！");
 
-    function confirmSettle() {
-        const id = document.getElementById('settleMatchId').value;
-        const scoreHVal = document.getElementById('settleScoreHome').value.trim();
-        const scoreAVal = document.getElementById('settleScoreAway').value.trim();
-        
-        const m = db.matches.find(x => x.id == id);
-        let res = document.getElementById('settleFinalResult').value;
+            const b = db.bets[id];
+            let parts = [], wins = [];
+            let finalScoreText = (scoreHVal !== '' && scoreAVal !== '') ? `${scoreHVal} : ${scoreAVal}` : null;
 
-        if (scoreHVal !== '' && scoreAVal !== '') {
-            const scoreH = parseFloat(scoreHVal);
-            const scoreA = parseFloat(scoreAVal);
-            if (isNaN(scoreH) || isNaN(scoreA)) {
-                return alert("请输入比分！");
-            }
-            const netResult = scoreH - scoreA;
-            if (Math.abs(netResult) < 0.0001) {
-                res = 'draw';
-            } else if (netResult > 0) {
-                res = 'home';
-            } else {
-                res = 'away';
-            }
-            document.getElementById('settleFinalResult').value = res;
-        }
-
-        if(!res) return alert("必须确定赛果！");
-
-        const b = db.bets[id];
-        let parts = [], wins = [];
-        let finalScoreText = (scoreHVal !== '' && scoreAVal !== '') ? `${scoreHVal} : ${scoreAVal}` : null;
-
-        db.players.forEach(p => {
-            if(p.totalInvest===undefined) p.totalInvest = 0; if(!p.teamStats) p.teamStats = {};
-            if(p.highestBalance===undefined) p.highestBalance = p.balance; if(p.lowestBalance===undefined) p.lowestBalance = p.balance;
-            if(p.biggestWin===undefined) p.biggestWin = 0; if(p.biggestLoss===undefined) p.biggestLoss = 0;
-        });
-
-        for (let pid in b.predictions) {
-            if (b.predictions[pid] !== 'none') {
-                parts.push(pid);
-                if (b.predictions[pid] === res) wins.push(pid);
-            }
-        }
-
-        if(parts.length > 0) {
-            let pool = parts.length * b.stake;
-            parts.forEach(pid => {
-                let p = db.players.find(x => x.id === pid);
-                if(p) {
-                    p.totalBets++; p.totalInvest += b.stake; p.balance -= b.stake;
-                    let predTeam = b.predictions[pid] === 'home' ? m.home : (b.predictions[pid] === 'away' ? m.away : '平局');
-                    if (wins.length === 0) {
-                        p.balance += b.stake; 
-                    } else if (wins.includes(pid)) {
-                        p.correctGuesses++; let winAmt = pool / wins.length; p.balance += winAmt;
-                        let netProfit = winAmt - b.stake; p.biggestWin = Math.max(p.biggestWin, netProfit);
-                        p.teamStats[predTeam] = (p.teamStats[predTeam] || 0) + netProfit;
-                    } else {
-                        p.biggestLoss = Math.max(p.biggestLoss, b.stake); p.teamStats[predTeam] = (p.teamStats[predTeam] || 0) - b.stake;
-                    }
-                    p.highestBalance = Math.max(p.highestBalance, p.balance); p.lowestBalance = Math.min(p.lowestBalance, p.balance);
-                }
+            db.players.forEach(p => {
+                if(p.totalInvest===undefined) p.totalInvest = 0; if(!p.teamStats) p.teamStats = {};
+                if(p.highestBalance===undefined) p.highestBalance = p.balance; if(p.lowestBalance===undefined) p.lowestBalance = p.balance;
+                if(p.biggestWin===undefined) p.biggestWin = 0; if(p.biggestLoss===undefined) p.biggestLoss = 0;
             });
 
-            const resultText = res === 'home' ? '主胜' : (res === 'away' ? '主负' : '平局');
-            const scoreDesc = finalScoreText ? `，比分为 [${finalScoreText}]` : '';
-            addLog("赛事 [" + m.home + " VS " + m.away + "] 完成结算。赛果为: [" + resultText + "]" + scoreDesc);
-
-            if (wins.length > 0) {
-                playAudio('win');
-                if(typeof confetti !== 'undefined') confetti({particleCount: 200, spread: 100, origin:{y:0.6}, zIndex: 9999, colors: ['#FFD700', '#FF8C00', '#00F3FF']});
-                const winnerNames = wins.map(pid => db.players.find(x => x.id === pid)?.name).join(', ');
-                addLog("[" + m.home + " VS " + m.away + "] 结算赢家: [" + winnerNames + "]，各赢得奖池分享金 " + (pool/wins.length).toFixed(1));
-                setTimeout(() => alert(`结算完成!\n赢家: ${wins.map(pid=>db.players.find(x=>x.id===pid).name).join(', ')}\n各分得: ${(pool/wins.length).toFixed(1)}`), 500);
-            } else {
-                addLog("[" + m.home + " VS " + m.away + "] 结算结果：无人猜中，积分退还给所有下注玩家 🤝");
-                alert(`没有人猜中！积分已退还给下注的玩家。`);
+            for (let pid in b.predictions) {
+                if (b.predictions[pid] !== 'none') {
+                    parts.push(pid);
+                    if (b.predictions[pid] === res) wins.push(pid);
+                }
             }
-        }
-        m.status = 'finished'; m.result = res; m.score = finalScoreText; m.winners = wins;
-        broadcastData(true); closeModal('settleModal'); refreshAllUI();
-    }
 
-    // --- 回退并重新结算逻辑 (编辑已开奖比赛) ---
-    function revertSettle(id) {
-        const m = db.matches.find(x => x.id == id);
-        if (!m || m.status !== 'finished') return;
-        const b = db.bets[id];
-        if (!b) return;
-
-        let parts = [];
-        let oldWins = m.winners || [];
-
-        for (let pid in b.predictions) {
-            if (b.predictions[pid] !== 'none') {
-                parts.push(pid);
-            }
-        }
-
-        if (parts.length > 0) {
-            let pool = parts.length * b.stake;
-            parts.forEach(pid => {
-                let p = db.players.find(x => x.id === pid);
-                if (p) {
-                    p.totalBets = Math.max(0, p.totalBets - 1);
-                    p.totalInvest = Math.max(0, p.totalInvest - b.stake);
-
-                    let predTeam = b.predictions[pid] === 'home' ? m.home : (b.predictions[pid] === 'away' ? m.away : '平局');
-
-                    if (oldWins.length === 0) {
-                        // 旧结算无人猜中时余额未作变动，回滚时直接退本金
-                    } else if (oldWins.includes(pid)) {
-                        p.balance += b.stake;
-                        p.correctGuesses = Math.max(0, p.correctGuesses - 1);
-                        let winAmt = pool / oldWins.length;
-                        p.balance -= winAmt;
-                        
-                        let netProfit = winAmt - b.stake;
-                        if (p.teamStats && p.teamStats[predTeam] !== undefined) {
-                            p.teamStats[predTeam] -= netProfit;
+            if(parts.length > 0) {
+                let pool = parts.length * b.stake;
+                parts.forEach(pid => {
+                    let p = db.players.find(x => x.id === pid);
+                    if(p) {
+                        p.totalBets++; p.totalInvest += b.stake; p.balance -= b.stake;
+                        let predTeam = b.predictions[pid] === 'home' ? m.home : (b.predictions[pid] === 'away' ? m.away : '平局');
+                        if (wins.length === 0) {
+                            p.balance += b.stake; 
+                        } else if (wins.includes(pid)) {
+                            p.correctGuesses++; let winAmt = pool / wins.length; p.balance += winAmt;
+                            let netProfit = winAmt - b.stake; p.biggestWin = Math.max(p.biggestWin, netProfit);
+                            p.teamStats[predTeam] = (p.teamStats[predTeam] || 0) + netProfit;
+                        } else {
+                            p.biggestLoss = Math.max(p.biggestLoss, b.stake); p.teamStats[predTeam] = (p.teamStats[predTeam] || 0) - b.stake;
                         }
-                    } else {
-                        p.balance += b.stake;
-                        if (p.teamStats && p.teamStats[predTeam] !== undefined) {
-                            p.teamStats[predTeam] += b.stake;
+                        p.highestBalance = Math.max(p.highestBalance, p.balance); p.lowestBalance = Math.min(p.lowestBalance, p.balance);
+                    }
+                });
+
+                const resultText = res === 'home' ? '主胜' : (res === 'away' ? '主负' : '平局');
+                const scoreDesc = finalScoreText ? `，比分为 [${finalScoreText}]` : '';
+                addLog("赛事 [" + m.home + " VS " + m.away + "] 完成结算。赛果为: [" + resultText + "]" + scoreDesc);
+
+                if (wins.length > 0) {
+                    playAudio('win');
+                    if(typeof confetti !== 'undefined') confetti({particleCount: 200, spread: 100, origin:{y:0.6}, zIndex: 9999, colors: ['#FFD700', '#FF8C00', '#00F3FF']});
+                    const winnerNames = wins.map(pid => db.players.find(x => x.id === pid)?.name).join(', ');
+                    addLog("[" + m.home + " VS " + m.away + "] 结算赢家: [" + winnerNames + "]，各赢得奖池分享金 " + (pool/wins.length).toFixed(1));
+                    setTimeout(() => alert(`结算完成!\n赢家: ${wins.map(pid=>db.players.find(x=>x.id===pid).name).join(', ')}\n各分得: ${(pool/wins.length).toFixed(1)}`), 500);
+                } else {
+                    addLog("[" + m.home + " VS " + m.away + "] 结算结果：无人猜中，积分退还给所有下注玩家 🤝");
+                    alert(`没有人猜中！积分已退还给下注的玩家。`);
+                }
+            }
+            m.status = 'finished'; m.result = res; m.score = finalScoreText; m.winners = wins;
+            broadcastData(true); closeModal('settleModal'); refreshAllUI();
+        }
+
+        // --- 回退并重新结算逻辑 (编辑已开奖比赛) ---
+        function revertSettle(id) {
+            const m = db.matches.find(x => x.id == id);
+            if (!m || m.status !== 'finished') return;
+            const b = db.bets[id];
+            if (!b) return;
+
+            let parts = [];
+            let oldWins = m.winners || [];
+
+            for (let pid in b.predictions) {
+                if (b.predictions[pid] !== 'none') {
+                    parts.push(pid);
+                }
+            }
+
+            if (parts.length > 0) {
+                let pool = parts.length * b.stake;
+                parts.forEach(pid => {
+                    let p = db.players.find(x => x.id === pid);
+                    if (p) {
+                        p.totalBets = Math.max(0, p.totalBets - 1);
+                        p.totalInvest = Math.max(0, p.totalInvest - b.stake);
+
+                        let predTeam = b.predictions[pid] === 'home' ? m.home : (b.predictions[pid] === 'away' ? m.away : '平局');
+
+                        if (oldWins.length === 0) {
+                            // 旧结算无人猜中时余额未作变动，回滚时直接退本金
+                        } else if (oldWins.includes(pid)) {
+                            p.balance += b.stake;
+                            p.correctGuesses = Math.max(0, p.correctGuesses - 1);
+                            let winAmt = pool / oldWins.length;
+                            p.balance -= winAmt;
+                            
+                            let netProfit = winAmt - b.stake;
+                            if (p.teamStats && p.teamStats[predTeam] !== undefined) {
+                                p.teamStats[predTeam] -= netProfit;
+                            }
+                        } else {
+                            p.balance += b.stake;
+                            if (p.teamStats && p.teamStats[predTeam] !== undefined) {
+                                p.teamStats[predTeam] += b.stake;
+                            }
                         }
                     }
-                }
-            });
-        }
-        
-        m.status = 'upcoming';
-        m.result = null;
-        m.score = null;
-        m.winners = [];
-    }
-
-    function triggerReSettle(id) {
-        const m = db.matches.find(x => x.id === id);
-        if (!m) return;
-        const pwd = prompt(`🚨 敏感操作：重新编辑已结算赛事 🚨\n请输入安全验证密码以重置赛事「${m.home} VS ${m.away}」的赛果：`);
-        if (pwd !== "260612") {
-            alert("密码错误，安全核验失败！操作已撤销。");
-            return;
-        }
-        
-        const oldScore = m.score || '无';
-        const oldResultText = m.result === 'home' ? '主胜' : (m.result === 'away' ? '主负' : '平局');
-        
-        revertSettle(id);
-        addLog(`管理员重置并编辑了已结算赛事 [${m.home} VS ${m.away}]（原比分: ${oldScore}，原赛果: ${oldResultText}）`);
-        
-        broadcastData(true);
-        refreshAllUI();
-        openSettleModal(id);
-    }
-
-    function resetMatch(id) {
-        const m = db.matches.find(x => x.id === id);
-        if (!m) return;
-        const pwd = prompt(`🚨 敏感操作：重置赛事 🚨\n请输入安全验证密码以重置赛事「${m.home} VS ${m.away}」：`);
-        if (pwd !== "260612") {
-            alert("密码错误，安全核验失败！操作已撤销。");
-            return;
-        }
-        
-        revertSettle(id);
-        addLog(`管理员重置了赛事 [${m.home} VS ${m.away}] 状态为未开赛`);
-        
-        broadcastData(true);
-        refreshAllUI();
-        alert("该场赛事已成功重置为未开赛状态，现在可以重新下注及开奖！");
-    }
-
-    // --- 记账本系统 ---
-    let activeLedgerPlayerId = null;
-    let activeLedgerFilter = 'all';
-
-    function openLedger(playerId) {
-        activeLedgerPlayerId = playerId;
-        activeLedgerFilter = 'all';
-        
-        const p = db.players.find(x => x.id === playerId);
-        if (!p) return;
-        
-        document.getElementById('ledger-title').innerText = `「${p.name}」的记账本`;
-        
-        const datesSet = new Set();
-        db.matches.filter(m => m.status === 'finished').forEach(m => {
-            const b = db.bets[m.id];
-            if (b && b.predictions && b.predictions[playerId] && b.predictions[playerId] !== 'none') {
-                const match = m.date.match(/\d+月\d+日/);
-                if (match) datesSet.add(match[0]);
-            }
-        });
-        
-        const uniqueDates = Array.from(datesSet).sort((a, b) => {
-            const ma = a.match(/(\d+)月(\d+)日/);
-            const mb = b.match(/(\d+)月(\d+)日/);
-            if (!ma || !mb) return 0;
-            const da = parseInt(ma[1]) * 100 + parseInt(ma[2]);
-            const dbVal = parseInt(mb[1]) * 100 + parseInt(mb[2]);
-            return da - dbVal;
-        });
-        
-        const selectEl = document.getElementById('ledger-date-select');
-        selectEl.innerHTML = '';
-        if (uniqueDates.length === 0) {
-            selectEl.innerHTML = '<option value="">暂无投注日期</option>';
-        } else {
-            uniqueDates.forEach(d => {
-                const opt = document.createElement('option');
-                opt.value = d;
-                opt.innerText = d;
-                selectEl.appendChild(opt);
-            });
-        }
-        
-        filterLedgerTab('all');
-        openModal('ledgerModal');
-    }
-
-    function filterLedgerTab(type) {
-        activeLedgerFilter = type;
-        const btnAll = document.getElementById('lt-all');
-        const btnDate = document.getElementById('lt-date');
-        const dateContainer = document.getElementById('ledger-date-select-container');
-        
-        if (type === 'all') {
-            btnAll.className = 'flex-1 py-1 rounded-full text-xs font-bold bg-white text-blue-950 shadow-md transition';
-            btnDate.className = 'flex-1 py-1 rounded-full text-xs font-bold text-white hover:bg-white/10 transition';
-            dateContainer.classList.add('hidden');
-        } else {
-            btnAll.className = 'flex-1 py-1 rounded-full text-xs font-bold text-white hover:bg-white/10 transition';
-            btnDate.className = 'flex-1 py-1 rounded-full text-xs font-bold bg-white text-blue-950 shadow-md transition';
-            dateContainer.classList.remove('hidden');
-        }
-        renderLedgerDetails();
-    }
-
-    function renderLedgerDetails() {
-        const container = document.getElementById('ledger-list-container');
-        const countEl = document.getElementById('ledger-total-count');
-        const profitEl = document.getElementById('ledger-total-profit');
-        
-        if (!activeLedgerPlayerId) return;
-        const p = db.players.find(x => x.id === activeLedgerPlayerId);
-        if (!p) return;
-        
-        let records = [];
-        
-        db.matches.filter(m => m.status === 'finished').sort((a,b) => a.id - b.id).forEach(m => {
-            const b = db.bets[m.id];
-            if (b && b.predictions && b.predictions[p.id] && b.predictions[p.id] !== 'none') {
-                const prediction = b.predictions[p.id];
-                const isCorrect = (prediction === m.result);
-                
-                let matchParticipants = [];
-                let matchWinners = [];
-                for (let pid in b.predictions) {
-                    if (b.predictions[pid] !== 'none') {
-                        matchParticipants.push(pid);
-                        if (b.predictions[pid] === m.result) {
-                            matchWinners.push(pid);
-                        }
-                    }
-                }
-                
-                let pool = matchParticipants.length * b.stake;
-                let netProfit = -b.stake;
-                if (matchWinners.length === 0) {
-                    netProfit = 0; 
-                } else if (isCorrect) {
-                    let winAmt = pool / matchWinners.length;
-                    netProfit = winAmt - b.stake;
-                }
-                
-                let predText = '无';
-                if (prediction === 'home') predText = `主胜`;
-                else if (prediction === 'away') predText = `主负`;
-                else if (prediction === 'draw') predText = '平局';
-                
-                const matchDate = m.date.match(/\d+月\d+日/);
-                const dateStr = matchDate ? matchDate[0] : '未知日期';
-                
-                records.push({
-                    id: m.id,
-                    home: m.home,
-                    away: m.away,
-                    date: dateStr,
-                    predText: predText,
-                    netProfit: netProfit,
-                    score: m.score || m.result.replace('home','主胜').replace('away','主负').replace('draw','平局')
                 });
             }
-        });
-        
-        if (activeLedgerFilter === 'date') {
-            const selectedDate = document.getElementById('ledger-date-select').value;
-            records = records.filter(r => r.date === selectedDate);
-        }
-        
-        let totalProfit = 0;
-        records.forEach(r => totalProfit += r.netProfit);
-        
-        countEl.innerText = `${records.length} 场`;
-        profitEl.innerText = `${totalProfit >= 0 ? '+' : ''}${totalProfit.toFixed(0)}分`;
-        profitEl.className = `font-mono font-black ${totalProfit >= 0 ? 'text-green-400' : 'text-red-400'}`;
-        
-        if (records.length === 0) {
-            container.innerHTML = '<div class="text-center text-white/30 py-10 text-xs">暂无相关对账记录</div>';
-            return;
-        }
-        
-        let html = '';
-        records.forEach(r => {
-            const isWin = r.netProfit >= 0;
-            const isRefund = r.netProfit === 0 && m_winners_zero(r.id);
-            html += `
-                <div class="bg-black/20 border border-white/5 p-3 rounded-2xl flex justify-between items-center text-xs backdrop-blur-sm">
-                    <div class="min-w-0 flex-1 pr-2">
-                        <div class="font-extrabold text-white truncate flex items-center gap-1.5">
-                            <span class="bg-blue-500/10 text-blue-400 px-1.5 py-0.5 rounded text-[9px] font-mono shrink-0">第${r.id}场</span>
-                            <span class="truncate">${r.home} VS ${r.away}</span>
-                        </div>
-                        <div class="text-[10px] text-gray-400 mt-1 flex flex-wrap gap-x-2 gap-y-1">
-                            <span>下注: <span class="text-yellow-400 font-bold">“${r.predText}”</span></span>
-                            <span>|</span>
-                            <span>比分: <span class="text-white font-bold">${r.score}</span></span>
-                            <span>|</span>
-                            <span class="font-mono">${r.date}</span>
-                        </div>
-                    </div>
-                    <div class="shrink-0 text-right">
-                        <span class="${isWin ? (isRefund ? 'text-gray-400' : 'text-green-400') : 'text-red-400'} font-black font-mono text-sm">
-                            ${isWin ? (isRefund ? '' : '+') : ''}${r.netProfit.toFixed(0)}分${isRefund ? ' (退款)' : ''}
-                        </span>
-                    </div>
-                </div>`;
-        });
-        container.innerHTML = html;
-    }
-
-    // 辅助检测某场已结算赛事是否为 0 赢家
-    function m_winners_zero(matchId) {
-        const m = db.matches.find(x => x.id === matchId);
-        return m && m.status === 'finished' && (!m.winners || m.winners.length === 0);
-    }
-
-    // --- 网页背景图动态轮播逻辑 ---
-    let slideshowTimer = null;
-    let currentSlideIndex = 0;
-    let currentSlideActiveLayer = 1; 
-
-    function initSlideshow() {
-        if (!db.slideshow) {
-            db.slideshow = {
-                urls: [
-                    "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=1200",
-                    "https://images.unsplash.com/photo-1543351611-58f69d7c1781?q=80&w=1200",
-                    "https://images.unsplash.com/photo-1522778119026-d647f0596c20?q=80&w=1200"
-                ],
-                stayTime: 5000,
-                fadeTime: 1000,
-                opacity: 0.2
-            };
-        }
-        
-        const container = document.getElementById('bg-slideshow-container');
-        if (container) {
-            container.style.opacity = db.slideshow.opacity;
-        }
-        
-        startSlideshowLoop();
-    }
-
-    function startSlideshowLoop() {
-        if (slideshowTimer) clearInterval(slideshowTimer);
-        
-        const urls = db.slideshow.urls || [];
-        if (urls.length === 0) {
-            const slide1 = document.getElementById('bg-slide-1');
-            const slide2 = document.getElementById('bg-slide-2');
-            if (slide1) slide1.style.opacity = 0;
-            if (slide2) slide2.style.opacity = 0;
-            return;
-        }
-        
-        currentSlideIndex = 0;
-        const slide1 = document.getElementById('bg-slide-1');
-        const slide2 = document.getElementById('bg-slide-2');
-        
-        if (slide1 && slide2) {
-            const fadeSec = (db.slideshow.fadeTime || 1000) / 1000;
-            slide1.style.transition = `opacity ${fadeSec}s ease-in-out`;
-            slide2.style.transition = `opacity ${fadeSec}s ease-in-out`;
             
-            slide1.style.backgroundImage = `url('${urls[0]}')`;
-            slide1.style.opacity = 1;
-            slide2.style.opacity = 0;
-            currentSlideActiveLayer = 1;
+            m.status = 'upcoming';
+            m.result = null;
+            m.score = null;
+            m.winners = [];
         }
-        
-        if (urls.length <= 1) return; 
 
-        const cycleInterval = (db.slideshow.stayTime || 5000) + (db.slideshow.fadeTime || 1000);
-        
-        slideshowTimer = setInterval(() => {
-            const nextIndex = (currentSlideIndex + 1) % urls.length;
-            const activeEl = currentSlideActiveLayer === 1 ? document.getElementById('bg-slide-1') : document.getElementById('bg-slide-2');
-            const inactiveEl = currentSlideActiveLayer === 1 ? document.getElementById('bg-slide-2') : document.getElementById('bg-slide-1');
+        function triggerReSettle(id) {
+            const m = db.matches.find(x => x.id === id);
+            if (!m) return;
+            const pwd = prompt(`🚨 敏感操作：重新编辑已结算赛事 🚨\n请输入安全验证密码以重置赛事「${m.home} VS ${m.away}」的赛果：`);
+            if (pwd !== "260612") {
+                alert("密码错误，安全核验失败！操作已撤销。");
+                return;
+            }
             
-            if (activeEl && inactiveEl) {
-                const fadeSec = (db.slideshow.fadeTime || 1000) / 1000;
-                activeEl.style.transition = `opacity ${fadeSec}s ease-in-out`;
-                inactiveEl.style.transition = `opacity ${fadeSec}s ease-in-out`;
-                
-                inactiveEl.style.backgroundImage = `url('${urls[nextIndex]}')`;
-                inactiveEl.style.opacity = 1;
-                activeEl.style.opacity = 0;
-                
-                currentSlideActiveLayer = currentSlideActiveLayer === 1 ? 2 : 1;
-                currentSlideIndex = nextIndex;
-            }
-        }, cycleInterval);
-    }
-
-    function updateLocalSlideshowOpacity(val) {
-        const container = document.getElementById('bg-slideshow-container');
-        if (container) {
-            container.style.opacity = val;
-        }
-    }
-
-    function loadSlideshowSettingsToAdmin() {
-        if (!db.slideshow) return;
-        const urlsTextarea = document.getElementById('admin-bg-urls');
-        const stayInput = document.getElementById('admin-bg-stay');
-        const fadeInput = document.getElementById('admin-bg-fade');
-        const opacityInput = document.getElementById('admin-bg-opacity');
-        const opacityVal = document.getElementById('admin-bg-opacity-val');
-        
-        if (urlsTextarea) urlsTextarea.value = (db.slideshow.urls || []).join('\n');
-        if (stayInput) stayInput.value = (db.slideshow.stayTime || 5000) / 1000;
-        if (fadeInput) fadeInput.value = (db.slideshow.fadeTime || 1000) / 1000;
-        if (opacityInput) opacityInput.value = db.slideshow.opacity !== undefined ? db.slideshow.opacity : 0.2;
-        if (opacityVal) opacityVal.innerText = db.slideshow.opacity !== undefined ? db.slideshow.opacity : 0.2;
-    }
-
-    function saveSlideshowSettings() {
-        const urlsTextarea = document.getElementById('admin-bg-urls');
-        const stayInput = document.getElementById('admin-bg-stay');
-        const fadeInput = document.getElementById('admin-bg-fade');
-        const opacityInput = document.getElementById('admin-bg-opacity');
-        
-        if (!urlsTextarea || !stayInput || !fadeInput || !opacityInput) return;
-        
-        const urls = urlsTextarea.value.split('\n').map(u => u.trim()).filter(u => u.length > 0);
-        const stayTime = parseFloat(stayInput.value) * 1000;
-        const fadeTime = parseFloat(fadeInput.value) * 1000;
-        const opacity = parseFloat(opacityInput.value);
-        
-        db.slideshow = {
-            urls: urls,
-            stayTime: isNaN(stayTime) || stayTime < 500 ? 5000 : stayTime,
-            fadeTime: isNaN(fadeTime) || fadeTime < 100 ? 1000 : fadeTime,
-            opacity: isNaN(opacity) ? 0.2 : opacity
-        };
-        
-        addLog("管理员修改并同步了动态背景轮播面板设置");
-        broadcastData(true);
-        
-        updateLocalSlideshowOpacity(db.slideshow.opacity);
-        startSlideshowLoop();
-        alert("动态轮播背景板保存成功并广播全网！");
-    }
-
-    // --- UI 设置初始化与动态渲染引擎 ---
-    function initUISettings() {
-        if (!db.uiSettings) {
-            db.uiSettings = {
-                opacities: { leaderboard: 40, match: 30, stats: 30, player: 30, banner: 100 },
-                marquee: {
-                    leaderboard: { enabled: false, speed: 3, thickness: 2, opacity: 80 },
-                    match: { enabled: false, speed: 3, thickness: 2, opacity: 80 },
-                    flag: { enabled: false, speed: 3, thickness: 2, opacity: 80 },
-                    stats: { enabled: false, speed: 3, thickness: 2, opacity: 80 },
-                    player: { enabled: false, speed: 3, thickness: 2, opacity: 80 },
-                    banner: { enabled: false, speed: 3, thickness: 2, opacity: 80 }
-                },
-                fonts: {
-                    leaderboard: { size: 14, color: '#ffffff', strokeEnabled: false, strokeWidth: 1, strokeColor: '#000000' },
-                    match: { size: 14, color: '#1a1a1a', strokeEnabled: false, strokeWidth: 1, strokeColor: '#000000' },
-                    stats: { size: 14, color: '#ffffff', strokeEnabled: false, strokeWidth: 1, strokeColor: '#000000' },
-                    player: { size: 14, color: '#ffffff', strokeEnabled: false, strokeWidth: 1, strokeColor: '#000000' },
-                    bannerLabel: { size: 14, color: '#bfdbfe' },
-                    bannerValue: { size: 36, color: '#facc15' },
-                    jackpot: { size: 10 }
-                },
-                spacing: {
-                    bannerGap: 4
-                },
-                bracket: {
-                    flagSize: 24,
-                    fontSize: 10,
-                    height: 900,
-                    width: 900,
-                    teamGap: 4
-                },
-                ticker: {
-                    height: 32,
-                    fontSize: 12,
-                    bgColor: '#000000',
-                    textColor: '#facc15',
-                    speed: 15
-                }
-            };
-        }
-        if (!db.uiSettings.opacities) db.uiSettings.opacities = { leaderboard: 40, match: 30, stats: 30, player: 30, banner: 100 };
-        if (db.uiSettings.opacities.banner === undefined) db.uiSettings.opacities.banner = 100;
-
-        if (!db.uiSettings.marquee) db.uiSettings.marquee = {
-            leaderboard: { enabled: false, speed: 3, thickness: 2, opacity: 80 },
-            match: { enabled: false, speed: 3, thickness: 2, opacity: 80 },
-            flag: { enabled: false, speed: 3, thickness: 2, opacity: 80 },
-            stats: { enabled: false, speed: 3, thickness: 2, opacity: 80 },
-            player: { enabled: false, speed: 3, thickness: 2, opacity: 80 },
-            banner: { enabled: false, speed: 3, thickness: 2, opacity: 80 }
-        };
-        if (db.uiSettings.marquee.banner === undefined) db.uiSettings.marquee.banner = { enabled: false, speed: 3, thickness: 2, opacity: 80 };
-        if (db.uiSettings.marquee.flag === undefined) db.uiSettings.marquee.flag = { enabled: false, speed: 3, thickness: 2, opacity: 80 };
-
-        if (!db.uiSettings.fonts) db.uiSettings.fonts = {
-            leaderboard: { size: 14, color: '#ffffff', strokeEnabled: false, strokeWidth: 1, strokeColor: '#000000' },
-            match: { size: 14, color: '#1a1a1a', strokeEnabled: false, strokeWidth: 1, strokeColor: '#000000' },
-            stats: { size: 14, color: '#ffffff', strokeEnabled: false, strokeWidth: 1, strokeColor: '#000000' },
-            player: { size: 14, color: '#ffffff', strokeEnabled: false, strokeWidth: 1, strokeColor: '#000000' },
-            bannerLabel: { size: 14, color: '#bfdbfe' },
-            bannerValue: { size: 36, color: '#facc15' },
-            jackpot: { size: 10 }
-        };
-        if (db.uiSettings.fonts.bannerLabel === undefined) db.uiSettings.fonts.bannerLabel = { size: 14, color: '#bfdbfe' };
-        if (db.uiSettings.fonts.bannerValue === undefined) db.uiSettings.fonts.bannerValue = { size: 36, color: '#facc15' };
-        if (db.uiSettings.fonts.jackpot === undefined) db.uiSettings.fonts.jackpot = { size: 10 };
-
-        if (!db.uiSettings.spacing) db.uiSettings.spacing = { bannerGap: 4 };
-        if (db.uiSettings.spacing.bannerGap === undefined) db.uiSettings.spacing.bannerGap = 4;
-
-        if (!db.uiSettings.bracket) {
-            db.uiSettings.bracket = { flagSize: 24, fontSize: 10, height: 900, width: 900, teamGap: 4 };
-        }
-        if (db.uiSettings.bracket.height === undefined) {
-            db.uiSettings.bracket.height = 900;
-        } else if (db.uiSettings.bracket.height < 400) {
-            db.uiSettings.bracket.height = 900; 
-        }
-        if (db.uiSettings.bracket.width === undefined) db.uiSettings.bracket.width = 900;
-        if (db.uiSettings.bracket.teamGap === undefined) db.uiSettings.bracket.teamGap = 4;
-
-        if (!db.uiSettings.ticker) {
-            db.uiSettings.ticker = { height: 32, fontSize: 12, bgColor: '#000000', textColor: '#facc15', speed: 15 };
-        }
-    }
-
-    function updateDynamicStyles() {
-        let styleEl = document.getElementById('dynamic-ui-styles');
-        if (!styleEl) {
-            styleEl = document.createElement('style');
-            styleEl.id = 'dynamic-ui-styles';
-            document.head.appendChild(styleEl);
-        }
-        const ui = db.uiSettings;
-        if (!ui) return;
-
-        const ticker = ui.ticker || { height: 32, fontSize: 12, bgColor: '#000000', textColor: '#facc15', speed: 15 };
-
-        styleEl.innerHTML = `
-            .leaderboard-card-item, .match-card-item, .stats-card-item, .player-card-item, .marquee-gb {
-                transform: translate3d(0, 0, 0);
-                -webkit-transform: translate3d(0, 0, 0);
-                backface-visibility: hidden;
-                -webkit-backface-visibility: hidden;
-                will-change: transform, background-position;
-                contain: paint;
-            }
-
-            #top-ticker-container {
-                height: ${ticker.height}px !important;
-                background-color: ${ticker.bgColor} !important;
-            }
-            #ticker-text {
-                font-size: ${ticker.fontSize}px !important;
-                color: ${ticker.textColor} !important;
-                animation-duration: ${ticker.speed}s !important;
-                line-height: ${ticker.height}px !important;
-            }
-
-            .marquee-gb {
-                background: linear-gradient(135deg, rgba(37, 99, 235, ${ui.opacities.banner / 100}) 0%, rgba(49, 46, 129, ${ui.opacities.banner / 100}) 100%) !important;
-            }
-            #global-money-label {
-                font-size: ${ui.fonts.bannerLabel.size}px !important;
-                color: ${ui.fonts.bannerLabel.color} !important;
-                margin-bottom: ${ui.spacing.bannerGap}px !important;
-            }
-            #global-money {
-                font-size: ${ui.fonts.bannerValue.size}px !important;
-                color: ${ui.fonts.bannerValue.color} !important;
-            }
-
-            .font-jackpot-size {
-                font-size: ${ui.fonts.jackpot.size}px !important;
-            }
-
-            .bracket-flag {
-                font-size: ${ui.bracket ? ui.bracket.flagSize : 24}px !important;
-            }
-            .bracket-font-size {
-                font-size: ${ui.bracket ? ui.bracket.fontSize : 10}px !important;
-            }
-            #bracket-wrapper {
-                height: ${ui.bracket ? ui.bracket.height : 900}px !important;
-                width: ${ui.bracket ? ui.bracket.width : 900}px !important;
-            }
-            .bracket-team-gap-top {
-                margin-bottom: ${ui.bracket ? ui.bracket.teamGap : 4}px !important;
-            }
-            .bracket-team-gap-bottom {
-                margin-top: ${ui.bracket ? ui.bracket.teamGap : 4}px !important;
-            }
-
-            .leaderboard-card-item {
-                background-color: rgba(0, 0, 0, ${ui.opacities.leaderboard / 100}) !important;
-                font-size: ${ui.fonts.leaderboard.size}px !important;
-                color: ${ui.fonts.leaderboard.color} !important;
-                ${ui.fonts.leaderboard.strokeEnabled ? `-webkit-text-stroke: ${ui.fonts.leaderboard.strokeWidth}px ${ui.fonts.leaderboard.strokeColor}; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);` : '-webkit-text-stroke: 0px !important; text-shadow: none !important;'}
-            }
-            .leaderboard-card-item h3 {
-                font-size: ${ui.fonts.leaderboard.size}px !important;
-                color: inherit !important;
-            }
-
-            .match-card-item {
-                font-size: ${ui.fonts.match.size}px !important;
-                color: ${ui.fonts.match.color} !important;
-                ${ui.fonts.match.strokeEnabled ? `-webkit-text-stroke: ${ui.fonts.match.strokeWidth}px ${ui.fonts.match.strokeColor}; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);` : '-webkit-text-stroke: 0px !important; text-shadow: none !important;'}
-            }
-            .match-card-item span, .match-card-item div, .match-card-item input {
-                color: inherit !important;
-            }
-            .match-card-item-bg-yellow { background: linear-gradient(135deg, rgba(255, 251, 230, ${ui.opacities.match / 100}) 0%, rgba(255, 214, 102, ${ui.opacities.match / 100}) 100%) !important; }
-            .match-card-item-bg-blue { background: linear-gradient(135deg, rgba(230, 247, 255, ${ui.opacities.match / 100}) 0%, rgba(105, 192, 255, ${ui.opacities.match / 100}) 100%) !important; }
-            .match-card-item-bg-red { background: linear-gradient(135deg, rgba(255, 240, 246, ${ui.opacities.match / 100}) 0%, rgba(255, 133, 192, ${ui.opacities.match / 100}) 100%) !important; }
-            .match-card-item-bg-green { background: linear-gradient(135deg, rgba(246, 255, 237, ${ui.opacities.match / 100}) 0%, rgba(149, 222, 100, ${ui.opacities.match / 100}) 100%) !important; }
-            .match-card-item-bg-gray { background: linear-gradient(135deg, rgba(200, 200, 200, ${ui.opacities.match / 100}) 0%, rgba(140, 140, 140, ${ui.opacities.match / 100}) 100%) !important; }
-
-            .stats-card-item {
-                background-color: rgba(0, 0, 0, ${ui.opacities.stats / 100}) !important;
-                font-size: ${ui.fonts.stats.size}px !important;
-                color: ${ui.fonts.stats.color} !important;
-                ${ui.fonts.stats.strokeEnabled ? `-webkit-text-stroke: ${ui.fonts.stats.strokeWidth}px ${ui.fonts.stats.strokeColor}; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);` : '-webkit-text-stroke: 0px !important; text-shadow: none !important;'}
-            }
-            .stats-card-item h3 {
-                font-size: calc(${ui.fonts.stats.size}px + 4px) !important;
-                color: inherit !important;
-            }
-
-            .player-card-item {
-                background-color: rgba(0, 0, 0, ${ui.opacities.player / 100}) !important;
-                font-size: ${ui.fonts.player.size}px !important;
-                color: ${ui.fonts.player.color} !important;
-                ${ui.fonts.player.strokeEnabled ? `-webkit-text-stroke: ${ui.fonts.player.strokeWidth}px ${ui.fonts.player.strokeColor}; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);` : '-webkit-text-stroke: 0px !important; text-shadow: none !important;'}
-            }
-            .player-card-item h4 {
-                font-size: ${ui.fonts.player.size}px !important;
-                color: inherit !important;
-            }
-
-            ${['leaderboard', 'match', 'flag', 'stats', 'player', 'banner'].map(sec => {
-                const m = ui.marquee[sec];
-                const prefix = sec === 'leaderboard' ? 'marquee-lb' : sec === 'match' ? 'marquee-mc' : sec === 'flag' ? 'marquee-fl' : sec === 'stats' ? 'marquee-st' : sec === 'player' ? 'marquee-pc' : 'marquee-gb';
-                if (!m.enabled) {
-                    return `.${prefix}::after { display: none !important; } .${prefix} { border: 1px solid rgba(255,255,255,0.1) !important; }`;
-                }
-                return `
-                    .${prefix} {
-                        position: relative;
-                    }
-                    .${prefix}::after {
-                        content: '';
-                        position: absolute;
-                        inset: 0;
-                        border-radius: inherit;
-                        padding: ${m.thickness}px;
-                        background: linear-gradient(90deg, #ff007f, #00f3ff, #e600ff, #ff007f);
-                        background-size: 200% auto;
-                        animation: borderRotate ${m.speed}s linear infinite;
-                        -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-                        -webkit-mask-composite: destination-out;
-                        mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-                        mask-composite: exclude;
-                        opacity: ${m.opacity / 100};
-                        pointer-events: none;
-                        z-index: 5;
-                    }
-                `;
-            }).join('\n')}
-        `;
-    }
-
-    function updateUIConfig(category, subCategory, val, property = null) {
-        initUISettings();
-        const ui = db.uiSettings;
-        
-        let parsedVal = val;
-        if (typeof val === 'string' && !val.startsWith('#') && !isNaN(val) && val.trim() !== '') {
-            parsedVal = parseFloat(val);
-        } else if (val === 'true' || val === true) {
-            parsedVal = true;
-        } else if (val === 'false' || val === false) {
-            parsedVal = false;
-        }
-
-        if (property) {
-            if (!ui[category][subCategory]) ui[category][subCategory] = {};
-            ui[category][subCategory][property] = parsedVal;
-        } else {
-            ui[category][subCategory] = parsedVal;
-        }
-
-        updateDynamicStyles();
-        syncUIInputsFromDB();
-        broadcastData(true);
-
-        // 如果修改了对阵图，即时自适应
-        if (category === 'bracket' && currentTab === 'knockout' && activeKnockoutSubTab === 'bracket') {
-            updateBracketUI();
-        }
-    }
-
-    function syncUIInputsFromDB() {
-        initUISettings();
-        const ui = db.uiSettings;
-
-        const opL = document.getElementById('cfg-op-lb'); if (opL) opL.value = ui.opacities.leaderboard;
-        const opM = document.getElementById('cfg-op-mc'); if (opM) opM.value = ui.opacities.match;
-        const opS = document.getElementById('cfg-op-st'); if (opS) opS.value = ui.opacities.stats;
-        const opP = document.getElementById('cfg-op-pc'); if (opP) opP.value = ui.opacities.player;
-        const opB = document.getElementById('cfg-op-gb'); if (opB) opB.value = ui.opacities.banner;
-
-        const valOpL = document.getElementById('val-op-lb'); if (valOpL) valOpL.innerText = ui.opacities.leaderboard;
-        const valOpM = document.getElementById('val-op-mc'); if (valOpM) valOpM.innerText = ui.opacities.match;
-        const valOpS = document.getElementById('val-op-st'); if (valOpS) valOpS.innerText = ui.opacities.stats;
-        const valOpP = document.getElementById('val-op-pc'); if (valOpP) valOpP.innerText = ui.opacities.player;
-        const valOpB = document.getElementById('val-op-gb'); if (valOpB) valOpB.innerText = ui.opacities.banner;
-
-        // 同步开屏画面 URL 设置项
-        const splashInput = document.getElementById('admin-splash-url');
-        if (splashInput) splashInput.value = db.splashUrl || "https://i.ibb.co/7xmRFfjt/26WC.jpg";
-
-        // 同步联机服务器网络配置
-        const mqttInput = document.getElementById('cfg-mqtt-broker');
-        if (mqttInput) mqttInput.value = db.mqttBrokerUrl || 'wss://broker.emqx.io:8084/mqtt';
-
-        const bkFl = document.getElementById('cfg-bk-fl'); if (bkFl) bkFl.value = ui.bracket.flagSize;
-        const bkFt = document.getElementById('cfg-bk-ft'); if (bkFt) bkFt.value = ui.bracket.fontSize;
-        const bkHt = document.getElementById('cfg-bk-ht'); if (bkHt) bkHt.value = ui.bracket.height;
-        const bkWd = document.getElementById('cfg-bk-wd'); if (bkWd) bkWd.value = ui.bracket.width;
-        const bkTg = document.getElementById('cfg-bk-tg'); if (bkTg) bkTg.value = ui.bracket.teamGap;
-
-        const valBkFl = document.getElementById('val-bk-fl'); if (valBkFl) valBkFl.innerText = ui.bracket.flagSize;
-        const valBkFt = document.getElementById('val-bk-ft'); if (valBkFt) valBkFt.innerText = ui.bracket.fontSize;
-        const valBkHt = document.getElementById('val-bk-ht'); if (valBkHt) valBkHt.innerText = ui.bracket.height;
-        const valBkWd = document.getElementById('val-bk-wd'); if (valBkWd) valBkWd.innerText = ui.bracket.width;
-        const valBkTg = document.getElementById('val-bk-tg'); if (valBkTg) valBkTg.innerText = ui.bracket.teamGap;
-
-        const rtBracket = document.getElementById('cfg-rt-bracket'); if (rtBracket) rtBracket.checked = !!db.realtimeBracket;
-
-        const tkHt = document.getElementById('cfg-tk-ht'); if (tkHt) tkHt.value = ui.ticker.height;
-        const tkFs = document.getElementById('cfg-tk-fs'); if (tkFs) tkFs.value = ui.ticker.fontSize;
-        const tkSp = document.getElementById('cfg-tk-sp'); if (tkSp) tkSp.value = ui.ticker.speed;
-        const tkBg = document.getElementById('cfg-tk-bg'); if (tkBg) tkBg.value = ui.ticker.bgColor;
-        const tkBgTxt = document.getElementById('cfg-tk-bg-txt'); if (tkBgTxt) tkBgTxt.value = ui.ticker.bgColor;
-        const tkTc = document.getElementById('cfg-tk-tc'); if (tkTc) tkTc.value = ui.ticker.textColor;
-        const tkTcTxt = document.getElementById('cfg-tk-tc-txt'); if (tkTcTxt) tkTcTxt.value = ui.ticker.textColor;
-
-        const valTkHt = document.getElementById('val-tk-ht'); if (valTkHt) valTkHt.innerText = ui.ticker.height;
-        const valTkFs = document.getElementById('val-tk-fs'); if (valTkFs) valTkFs.innerText = ui.ticker.fontSize;
-        const valTkSp = document.getElementById('val-tk-sp'); if (valTkSp) valTkSp.innerText = ui.ticker.speed;
-
-        ['leaderboard', 'match', 'flag', 'stats', 'player', 'banner'].forEach(sec => {
-            const m = ui.marquee[sec];
-            const code = sec === 'leaderboard' ? 'lb' : sec === 'match' ? 'mc' : sec === 'flag' ? 'fl' : sec === 'stats' ? 'st' : sec === 'player' ? 'pc' : 'gb';
-
-            const en = document.getElementById(`cfg-mq-${code}-en`); if (en) en.checked = !!m.enabled;
-            const sp = document.getElementById(`cfg-mq-${code}-sp`); if (sp) sp.value = m.speed;
-            const th = document.getElementById(`cfg-mq-${code}-th`); if (th) th.value = m.thickness;
-            const op = document.getElementById(`cfg-mq-${code}-op`); if (op) op.value = m.opacity;
-
-            const valSp = document.getElementById(`val-mq-${code}-sp`); if (valSp) valSp.innerText = m.speed;
-            const valTh = document.getElementById(`val-mq-${code}-th`); if (valTh) valTh.innerText = m.thickness;
-            const valOp = document.getElementById(`val-mq-${code}-op`); if (valOp) valOp.innerText = m.opacity;
-        });
-
-        const mapFonts = [
-            {sec: 'leaderboard', code: 'lb'},
-            {sec: 'match', code: 'mc'},
-            {sec: 'stats', code: 'st'},
-            {sec: 'player', code: 'pc'},
-            {sec: 'bannerLabel', code: 'gbl'},
-            {sec: 'bannerValue', code: 'gbv'}
-        ];
-
-        mapFonts.forEach(item => {
-            const f = ui.fonts[item.sec];
-            const code = item.code;
-
-            const sz = document.getElementById(`cfg-ft-${code}-sz`); if (sz) sz.value = f.size;
-            const cl = document.getElementById(`cfg-ft-${code}-cl`); if (cl) cl.value = f.color;
-            const clT = document.getElementById(`cfg-ft-${code}-cl-txt`); if (clT) clT.value = f.color;
+            const oldScore = m.score || '无';
+            const oldResultText = m.result === 'home' ? '主胜' : (m.result === 'away' ? '主负' : '平局');
             
-            const valSz = document.getElementById(`val-ft-${code}-sz`); if (valSz) valSz.innerText = f.size;
-
-            if (['lb', 'mc', 'st', 'pc'].includes(code)) {
-                const stEn = document.getElementById(`cfg-ft-${code}-st-en`); if (stEn) stEn.checked = !!f.strokeEnabled;
-                const stWi = document.getElementById(`cfg-ft-${code}-st-wi`); if (stWi) stWi.value = f.strokeWidth;
-                const stCl = document.getElementById(`cfg-ft-${code}-st-cl`); if (stCl) stCl.value = f.strokeColor;
-                const stClT = document.getElementById(`cfg-ft-${code}-st-cl-txt`); if (stClT) stClT.value = f.strokeColor;
-
-                const valStWi = document.getElementById(`val-ft-${code}-st-wi`); if (valStWi) valStWi.innerText = f.strokeWidth;
-            }
-        });
-
-        const jkSz = document.getElementById('cfg-ft-jk-sz'); if (jkSz) jkSz.value = ui.fonts.jackpot.size;
-        const valJkSz = document.getElementById('val-ft-jk-sz'); if (valJkSz) valJkSz.innerText = ui.fonts.jackpot.size;
-
-        const spBg = document.getElementById('cfg-sp-banner-gap'); if (spBg) spBg.value = ui.spacing.bannerGap;
-        const valSpBg = document.getElementById('val-sp-banner-gap'); if (valSpBg) valSpBg.innerText = ui.spacing.bannerGap;
-    }
-
-    function updateTicker() {
-        const tickerTextEl = document.getElementById('ticker-text');
-        if (!tickerTextEl) return;
-        
-        const todayMatches = db.matches.filter(m => {
-            if (!m || !m.date) return false;
-            const match = m.date.match(/\d+月\d+日/);
-            return match && match[0] === activeTodayDate;
-        });
-        
-        if (todayMatches.length === 0) {
-            tickerTextEl.innerText = `今日（${activeTodayDate || '无'}）无比赛安排`;
-            return;
-        }
-        
-        let tickerParts = [];
-        todayMatches.forEach(m => {
-            const resolvedHome = resolveTeamName(m.home, db, m);
-            const resolvedAway = resolveTeamName(m.away, db, m);
+            revertSettle(id);
+            addLog(`管理员重置并编辑了已结算赛事 [${m.home} VS ${m.away}]（原比分: ${oldScore}，原赛果: ${oldResultText}）`);
             
-            if (m.status === 'finished') {
-                const score = m.score || '0:0';
+            broadcastData(true);
+            refreshAllUI();
+            openSettleModal(id);
+        }
+
+        function resetMatch(id) {
+            const m = db.matches.find(x => x.id === id);
+            if (!m) return;
+            const pwd = prompt(`🚨 敏感操作：重置赛事 🚨\n请输入安全验证密码以重置赛事「${m.home} VS ${m.away}」：`);
+            if (pwd !== "260612") {
+                alert("密码错误，安全核验失败！操作已撤销。");
+                return;
+            }
+            
+            revertSettle(id);
+            addLog(`管理员重置了赛事 [${m.home} VS ${m.away}] 状态为未开赛`);
+            
+            broadcastData(true);
+            refreshAllUI();
+            alert("该场赛事已成功重置为未开赛状态，现在可以重新下注及开奖！");
+        }
+
+        // --- 记账本系统 ---
+        let activeLedgerPlayerId = null;
+        let activeLedgerFilter = 'all';
+
+        function openLedger(playerId) {
+            activeLedgerPlayerId = playerId;
+            activeLedgerFilter = 'all';
+            
+            const p = db.players.find(x => x.id === playerId);
+            if (!p) return;
+            
+            document.getElementById('ledger-title').innerText = `「${p.name}」的记账本`;
+            
+            const datesSet = new Set();
+            db.matches.filter(m => m.status === 'finished').forEach(m => {
                 const b = db.bets[m.id];
-                let winnerStrings = [];
-                if (b && b.predictions) {
+                if (b && b.predictions && b.predictions[playerId] && b.predictions[playerId] !== 'none') {
+                    const match = m.date.match(/\d+月\d+日/);
+                    if (match) datesSet.add(match[0]);
+                }
+            });
+            
+            const uniqueDates = Array.from(datesSet).sort((a, b) => {
+                const ma = a.match(/(\d+)月(\d+)日/);
+                const mb = b.match(/(\d+)月(\d+)日/);
+                if (!ma || !mb) return 0;
+                const da = parseInt(ma[1]) * 100 + parseInt(ma[2]);
+                const dbVal = parseInt(mb[1]) * 100 + parseInt(mb[2]);
+                return da - dbVal;
+            });
+            
+            const selectEl = document.getElementById('ledger-date-select');
+            selectEl.innerHTML = '';
+            if (uniqueDates.length === 0) {
+                selectEl.innerHTML = '<option value="">暂无投注日期</option>';
+            } else {
+                uniqueDates.forEach(d => {
+                    const opt = document.createElement('option');
+                    opt.value = d;
+                    opt.innerText = d;
+                    selectEl.appendChild(opt);
+                });
+            }
+            
+            filterLedgerTab('all');
+            openModal('ledgerModal');
+        }
+
+        function filterLedgerTab(type) {
+            activeLedgerFilter = type;
+            const btnAll = document.getElementById('lt-all');
+            const btnDate = document.getElementById('lt-date');
+            const dateContainer = document.getElementById('ledger-date-select-container');
+            
+            if (type === 'all') {
+                btnAll.className = 'flex-1 py-1 rounded-full text-xs font-bold bg-white text-blue-950 shadow-md transition';
+                btnDate.className = 'flex-1 py-1 rounded-full text-xs font-bold text-white hover:bg-white/10 transition';
+                dateContainer.classList.add('hidden');
+            } else {
+                btnAll.className = 'flex-1 py-1 rounded-full text-xs font-bold text-white hover:bg-white/10 transition';
+                btnDate.className = 'flex-1 py-1 rounded-full text-xs font-bold bg-white text-blue-950 shadow-md transition';
+                dateContainer.classList.remove('hidden');
+            }
+            renderLedgerDetails();
+        }
+
+        function renderLedgerDetails() {
+            const container = document.getElementById('ledger-list-container');
+            const countEl = document.getElementById('ledger-total-count');
+            const profitEl = document.getElementById('ledger-total-profit');
+            
+            if (!activeLedgerPlayerId) return;
+            const p = db.players.find(x => x.id === activeLedgerPlayerId);
+            if (!p) return;
+            
+            let records = [];
+            
+            db.matches.filter(m => m.status === 'finished').sort((a,b) => a.id - b.id).forEach(m => {
+                const b = db.bets[m.id];
+                if (b && b.predictions && b.predictions[p.id] && b.predictions[p.id] !== 'none') {
+                    const prediction = b.predictions[p.id];
+                    const isCorrect = (prediction === m.result);
+                    
                     let matchParticipants = [];
                     let matchWinners = [];
                     for (let pid in b.predictions) {
@@ -4622,55 +4068,626 @@
                             }
                         }
                     }
-                    const pool = matchParticipants.length * b.stake;
-                    if (matchWinners.length > 0) {
-                        const winAmt = pool / matchWinners.length;
-                        const netProfit = winAmt - b.stake;
-                        matchWinners.forEach(pid => {
-                            const p = db.players.find(x => x.id === pid);
-                            if (p) {
-                                const sign = netProfit >= 0 ? '+' : '';
-                                winnerStrings.push(`${p.name} ${sign}${netProfit.toFixed(0)}分`);
-                            }
-                        });
+                    
+                    let pool = matchParticipants.length * b.stake;
+                    let netProfit = -b.stake;
+                    if (matchWinners.length === 0) {
+                        netProfit = 0; 
+                    } else if (isCorrect) {
+                        let winAmt = pool / matchWinners.length;
+                        netProfit = winAmt - b.stake;
                     }
+                    
+                    let predText = '无';
+                    if (prediction === 'home') predText = `主胜`;
+                    else if (prediction === 'away') predText = `主负`;
+                    else if (prediction === 'draw') predText = '平局';
+                    
+                    const matchDate = m.date.match(/\d+月\d+日/);
+                    const dateStr = matchDate ? matchDate[0] : '未知日期';
+                    
+                    records.push({
+                        id: m.id,
+                        home: resolveTeamName(m.home, db, m),
+                        away: resolveTeamName(m.away, db, m),
+                        date: dateStr,
+                        predText: predText,
+                        netProfit: netProfit,
+                        score: m.score || m.result.replace('home','主胜').replace('away','主负').replace('draw','平局')
+                    });
                 }
-                
-                const winnerText = winnerStrings.length > 0 ? `猜中玩家：${winnerStrings.join(' ')}` : '无猜中玩家（本金退回）';
-                tickerParts.push(`${resolvedHome} ${score} ${resolvedAway} - ${winnerText}`);
-            } else {
-                tickerParts.push(`${resolvedHome} VS ${resolvedAway}（未开赛）`);
+            });
+            
+            if (activeLedgerFilter === 'date') {
+                const selectedDate = document.getElementById('ledger-date-select').value;
+                records = records.filter(r => r.date === selectedDate);
             }
-        });
-        
-        tickerTextEl.innerText = `今日比赛：【` + tickerParts.join('】   【') + `】`;
-    }
+            
+            let totalProfit = 0;
+            records.forEach(r => totalProfit += r.netProfit);
+            
+            countEl.innerText = `${records.length} 场`;
+            profitEl.innerText = `${totalProfit >= 0 ? '+' : ''}${totalProfit.toFixed(0)}分`;
+            profitEl.className = `font-mono font-black ${totalProfit >= 0 ? 'text-green-400' : 'text-red-400'}`;
+            
+            if (records.length === 0) {
+                container.innerHTML = '<div class="text-center text-white/30 py-10 text-xs">暂无相关对账记录</div>';
+                return;
+            }
+            
+            let html = '';
+            records.forEach(r => {
+                const isWin = r.netProfit >= 0;
+                const isRefund = r.netProfit === 0 && m_winners_zero(r.id);
+                html += `
+                    <div class="bg-black/20 border border-white/5 p-3 rounded-2xl flex justify-between items-center text-xs backdrop-blur-sm">
+                        <div class="min-w-0 flex-1 pr-2">
+                            <div class="font-extrabold text-white truncate flex items-center gap-1.5">
+                                <span class="bg-blue-500/10 text-blue-400 px-1.5 py-0.5 rounded text-[9px] font-mono shrink-0">第${r.id}场</span>
+                                <span class="truncate">${r.home} VS ${r.away}</span>
+                            </div>
+                            <div class="text-[10px] text-gray-400 mt-1 flex flex-wrap gap-x-2 gap-y-1">
+                                <span>下注: <span class="text-yellow-400 font-bold">“${r.predText}”</span></span>
+                                <span>|</span>
+                                <span>比分: <span class="text-white font-bold">${r.score}</span></span>
+                                <span>|</span>
+                                <span class="font-mono">${r.date}</span>
+                            </div>
+                        </div>
+                        <div class="shrink-0 text-right">
+                            <span class="${isWin ? (isRefund ? 'text-gray-400' : 'text-green-400') : 'text-red-400'} font-black font-mono text-sm">
+                                ${isWin ? (isRefund ? '' : '+') : ''}${r.netProfit.toFixed(0)}分${isRefund ? ' (退款)' : ''}
+                            </span>
+                        </div>
+                    </div>`;
+            });
+            container.innerHTML = html;
+        }
 
-    // --- 风琴式折叠面板控制核心 ---
-    function toggleAccordion(id) {
-        const content = document.getElementById(`${id}-content`);
-        const icon = document.getElementById(`${id}-icon`);
-        if (content && icon) {
-            const isHidden = content.classList.contains('hidden');
-            if (isHidden) {
-                if (id === 'admin-ui-settings') {
-                    const pwd = prompt("请输入安全验证密码以展开UI配置面板：");
-                    if (pwd !== "260612") {
-                        alert("密码错误，安全核验失败！");
-                        return;
-                    }
+        // 辅助检测某场已结算赛事是否为 0 赢家
+        function m_winners_zero(matchId) {
+            const m = db.matches.find(x => x.id === matchId);
+            return m && m.status === 'finished' && (!m.winners || m.winners.length === 0);
+        }
+
+        // --- 网页背景图动态轮播逻辑 ---
+        let slideshowTimer = null;
+        let currentSlideIndex = 0;
+        let currentSlideActiveLayer = 1; 
+
+        function initSlideshow() {
+            if (!db.slideshow) {
+                db.slideshow = {
+                    urls: [
+                        "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=1200",
+                        "https://images.unsplash.com/photo-1543351611-58f69d7c1781?q=80&w=1200",
+                        "https://images.unsplash.com/photo-1522778119026-d647f0596c20?q=80&w=1200"
+                    ],
+                    stayTime: 5000,
+                    fadeTime: 1000,
+                    opacity: 0.2
+                };
+            }
+            
+            const container = document.getElementById('bg-slideshow-container');
+            if (container) {
+                container.style.opacity = db.slideshow.opacity;
+            }
+            
+            startSlideshowLoop();
+        }
+
+        function startSlideshowLoop() {
+            if (slideshowTimer) clearInterval(slideshowTimer);
+            
+            const urls = db.slideshow.urls || [];
+            if (urls.length === 0) {
+                const slide1 = document.getElementById('bg-slide-1');
+                const slide2 = document.getElementById('bg-slide-2');
+                if (slide1) slide1.style.opacity = 0;
+                if (slide2) slide2.style.opacity = 0;
+                return;
+            }
+            
+            currentSlideIndex = 0;
+            const slide1 = document.getElementById('bg-slide-1');
+            const slide2 = document.getElementById('bg-slide-2');
+            
+            if (slide1 && slide2) {
+                const fadeSec = (db.slideshow.fadeTime || 1000) / 1000;
+                slide1.style.transition = `opacity ${fadeSec}s ease-in-out`;
+                slide2.style.transition = `opacity ${fadeSec}s ease-in-out`;
+                
+                slide1.style.backgroundImage = `url('${urls[0]}')`;
+                slide1.style.opacity = 1;
+                slide2.style.opacity = 0;
+                currentSlideActiveLayer = 1;
+            }
+            
+            if (urls.length <= 1) return; 
+
+            const cycleInterval = (db.slideshow.stayTime || 5000) + (db.slideshow.fadeTime || 1000);
+            
+            slideshowTimer = setInterval(() => {
+                const nextIndex = (currentSlideIndex + 1) % urls.length;
+                const activeEl = currentSlideActiveLayer === 1 ? document.getElementById('bg-slide-1') : document.getElementById('bg-slide-2');
+                const inactiveEl = currentSlideActiveLayer === 1 ? document.getElementById('bg-slide-2') : document.getElementById('bg-slide-1');
+                
+                if (activeEl && inactiveEl) {
+                    const fadeSec = (db.slideshow.fadeTime || 1000) / 1000;
+                    activeEl.style.transition = `opacity ${fadeSec}s ease-in-out`;
+                    inactiveEl.style.transition = `opacity ${fadeSec}s ease-in-out`;
+                    
+                    inactiveEl.style.backgroundImage = `url('${urls[nextIndex]}')`;
+                    inactiveEl.style.opacity = 1;
+                    activeEl.style.opacity = 0;
+                    
+                    currentSlideActiveLayer = currentSlideActiveLayer === 1 ? 2 : 1;
+                    currentSlideIndex = nextIndex;
                 }
-                content.classList.remove('hidden');
-                icon.classList.remove('fa-chevron-down');
-                icon.classList.add('fa-chevron-up');
-            } else {
-                content.classList.add('hidden');
-                icon.classList.remove('fa-chevron-up');
-                icon.classList.add('fa-chevron-down');
+            }, cycleInterval);
+        }
+
+        function updateLocalSlideshowOpacity(val) {
+            const container = document.getElementById('bg-slideshow-container');
+            if (container) {
+                container.style.opacity = val;
             }
         }
-    }
-</script>
+
+        function loadSlideshowSettingsToAdmin() {
+            if (!db.slideshow) return;
+            const urlsTextarea = document.getElementById('admin-bg-urls');
+            const stayInput = document.getElementById('admin-bg-stay');
+            const fadeInput = document.getElementById('admin-bg-fade');
+            const opacityInput = document.getElementById('admin-bg-opacity');
+            const opacityVal = document.getElementById('admin-bg-opacity-val');
+            
+            if (urlsTextarea) urlsTextarea.value = (db.slideshow.urls || []).join('\n');
+            if (stayInput) stayInput.value = (db.slideshow.stayTime || 5000) / 1000;
+            if (fadeInput) fadeInput.value = (db.slideshow.fadeTime || 1000) / 1000;
+            if (opacityInput) opacityInput.value = db.slideshow.opacity !== undefined ? db.slideshow.opacity : 0.2;
+            if (opacityVal) opacityVal.innerText = db.slideshow.opacity !== undefined ? db.slideshow.opacity : 0.2;
+        }
+
+        function saveSlideshowSettings() {
+            const urlsTextarea = document.getElementById('admin-bg-urls');
+            const stayInput = document.getElementById('admin-bg-stay');
+            const fadeInput = document.getElementById('admin-bg-fade');
+            const opacityInput = document.getElementById('admin-bg-opacity');
+            
+            if (!urlsTextarea || !stayInput || !fadeInput || !opacityInput) return;
+            
+            const urls = urlsTextarea.value.split('\n').map(u => u.trim()).filter(u => u.length > 0);
+            const stayTime = parseFloat(stayInput.value) * 1000;
+            const fadeTime = parseFloat(fadeInput.value) * 1000;
+            const opacity = parseFloat(opacityInput.value);
+            
+            db.slideshow = {
+                urls: urls,
+                stayTime: isNaN(stayTime) || stayTime < 500 ? 5000 : stayTime,
+                fadeTime: isNaN(fadeTime) || fadeTime < 100 ? 1000 : fadeTime,
+                opacity: isNaN(opacity) ? 0.2 : opacity
+            };
+            
+            addLog("管理员修改并同步了动态背景轮播面板设置");
+            broadcastData(true);
+            
+            updateLocalSlideshowOpacity(db.slideshow.opacity);
+            startSlideshowLoop();
+            alert("动态轮播背景板保存成功并广播全网！");
+        }
+
+        // --- UI 设置初始化与动态渲染引擎 ---
+        function initUISettings() {
+            if (!db.uiSettings) {
+                db.uiSettings = {
+                    opacities: { leaderboard: 40, match: 30, stats: 30, player: 30, banner: 100 },
+                    marquee: {
+                        leaderboard: { enabled: false, speed: 3, thickness: 2, opacity: 80 },
+                        match: { enabled: false, speed: 3, thickness: 2, opacity: 80 },
+                        flag: { enabled: false, speed: 3, thickness: 2, opacity: 80 },
+                        stats: { enabled: false, speed: 3, thickness: 2, opacity: 80 },
+                        player: { enabled: false, speed: 3, thickness: 2, opacity: 80 },
+                        banner: { enabled: false, speed: 3, thickness: 2, opacity: 80 }
+                    },
+                    fonts: {
+                        leaderboard: { size: 14, color: '#ffffff', strokeEnabled: false, strokeWidth: 1, strokeColor: '#000000' },
+                        match: { size: 14, color: '#1a1a1a', strokeEnabled: false, strokeWidth: 1, strokeColor: '#000000' },
+                        stats: { size: 14, color: '#ffffff', strokeEnabled: false, strokeWidth: 1, strokeColor: '#000000' },
+                        player: { size: 14, color: '#ffffff', strokeEnabled: false, strokeWidth: 1, strokeColor: '#000000' },
+                        bannerLabel: { size: 14, color: '#bfdbfe' },
+                        bannerValue: { size: 36, color: '#facc15' },
+                        jackpot: { size: 10 }
+                    },
+                    spacing: {
+                        bannerGap: 4
+                    },
+                    bracket: {
+                        flagSize: 24,
+                        fontSize: 10,
+                        height: 900,
+                        width: 900,
+                        teamGap: 4
+                    },
+                    ticker: {
+                        height: 32,
+                        fontSize: 12,
+                        bgColor: '#000000',
+                        textColor: '#facc15',
+                        speed: 15
+                    }
+                };
+            }
+            if (!db.uiSettings.opacities) db.uiSettings.opacities = { leaderboard: 40, match: 30, stats: 30, player: 30, banner: 100 };
+            if (db.uiSettings.opacities.banner === undefined) db.uiSettings.opacities.banner = 100;
+
+            if (!db.uiSettings.marquee) db.uiSettings.marquee = {
+                leaderboard: { enabled: false, speed: 3, thickness: 2, opacity: 80 },
+                match: { enabled: false, speed: 3, thickness: 2, opacity: 80 },
+                flag: { enabled: false, speed: 3, thickness: 2, opacity: 80 },
+                stats: { enabled: false, speed: 3, thickness: 2, opacity: 80 },
+                player: { enabled: false, speed: 3, thickness: 2, opacity: 80 },
+                banner: { enabled: false, speed: 3, thickness: 2, opacity: 80 }
+            };
+            if (!db.uiSettings.fonts) {
+                db.uiSettings.fonts = {
+                    leaderboard: { size: 14, color: '#ffffff', strokeEnabled: false, strokeWidth: 1, strokeColor: '#000000' },
+                    match: { size: 14, color: '#1a1a1a', strokeEnabled: false, strokeWidth: 1, strokeColor: '#000000' },
+                    stats: { size: 14, color: '#ffffff', strokeEnabled: false, strokeWidth: 1, strokeColor: '#000000' },
+                    player: { size: 14, color: '#ffffff', strokeEnabled: false, strokeWidth: 1, strokeColor: '#000000' },
+                    bannerLabel: { size: 14, color: '#bfdbfe' },
+                    bannerValue: { size: 36, color: '#facc15' },
+                    jackpot: { size: 10 }
+                };
+            }
+        }
+
+        function updateUIConfig(section, key, value, subkey = null) {
+            initUISettings();
+            if (subkey) {
+                if (!db.uiSettings[section][key]) db.uiSettings[section][key] = {};
+                db.uiSettings[section][key][subkey] = (typeof value === 'boolean') ? value : (isNaN(value) || value.startsWith('#') ? value : parseFloat(value));
+            } else {
+                db.uiSettings[section][key] = (typeof value === 'boolean') ? value : (isNaN(value) || value.startsWith('#') ? value : parseFloat(value));
+            }
+            updateDynamicStyles();
+            syncUIInputsFromDB();
+            broadcastData(true);
+            if (section === 'bracket') {
+                updateBracketUI();
+            }
+        }
+
+        function syncUIInputsFromDB() {
+            initUISettings();
+            const ui = db.uiSettings;
+
+            const opL = document.getElementById('cfg-op-lb'); if (opL) opL.value = ui.opacities.leaderboard;
+            const opM = document.getElementById('cfg-op-mc'); if (opM) opM.value = ui.opacities.match;
+            const opS = document.getElementById('cfg-op-st'); if (opS) opS.value = ui.opacities.stats;
+            const opP = document.getElementById('cfg-op-pc'); if (opP) opP.value = ui.opacities.player;
+            const opB = document.getElementById('cfg-op-gb'); if (opB) opB.value = ui.opacities.banner;
+
+            const valOpL = document.getElementById('val-op-lb'); if (valOpL) valOpL.innerText = ui.opacities.leaderboard;
+            const valOpM = document.getElementById('val-op-mc'); if (valOpM) valOpM.innerText = ui.opacities.match;
+            const valOpS = document.getElementById('val-op-st'); if (valOpS) valOpS.innerText = ui.opacities.stats;
+            const valOpP = document.getElementById('val-op-pc'); if (valOpP) valOpP.innerText = ui.opacities.player;
+            const valOpB = document.getElementById('val-op-gb'); if (valOpB) valOpB.innerText = ui.opacities.banner;
+
+            // 同步开屏画面 URL 设置项
+            const splashInput = document.getElementById('admin-splash-url');
+            if (splashInput) splashInput.value = db.splashUrl || "https://i.ibb.co/7xmRFfjt/26WC.jpg";
+
+            // 同步联机服务器网络配置
+            const mqttInput = document.getElementById('cfg-mqtt-broker');
+            if (mqttInput) mqttInput.value = db.mqttBrokerUrl || 'wss://broker.emqx.io:8084/mqtt';
+
+            const bkFl = document.getElementById('cfg-bk-fl'); if (bkFl) bkFl.value = ui.bracket.flagSize;
+            const bkFt = document.getElementById('cfg-bk-ft'); if (bkFt) bkFt.value = ui.bracket.fontSize;
+            const bkHt = document.getElementById('cfg-bk-ht'); if (bkHt) bkHt.value = ui.bracket.height;
+            const bkWd = document.getElementById('cfg-bk-wd'); if (bkWd) bkWd.value = ui.bracket.width;
+            const bkTg = document.getElementById('cfg-bk-tg'); if (bkTg) bkTg.value = ui.bracket.teamGap;
+
+            const valBkFl = document.getElementById('val-bk-fl'); if (valBkFl) valBkFl.innerText = ui.bracket.flagSize;
+            const valBkFt = document.getElementById('val-bk-ft'); if (valBkFt) valBkFt.innerText = ui.bracket.fontSize;
+            const valBkHt = document.getElementById('val-bk-ht'); if (valBkHt) valBkHt.innerText = ui.bracket.height;
+            const valBkWd = document.getElementById('val-bk-wd'); if (valBkWd) valBkWd.innerText = ui.bracket.width;
+            const valBkTg = document.getElementById('val-bk-tg'); if (valBkTg) valBkTg.innerText = ui.bracket.teamGap;
+
+            const rtBracket = document.getElementById('cfg-rt-bracket'); if (rtBracket) rtBracket.checked = !!db.realtimeBracket;
+
+            const tkHt = document.getElementById('cfg-tk-ht'); if (tkHt) tkHt.value = ui.ticker.height;
+            const tkFs = document.getElementById('cfg-tk-fs'); if (tkFs) tkFs.value = ui.ticker.fontSize;
+            const tkSp = document.getElementById('cfg-tk-sp'); if (tkSp) tkSp.value = ui.ticker.speed;
+            const tkBg = document.getElementById('cfg-tk-bg'); if (tkBg) tkBg.value = ui.ticker.bgColor;
+            const tkBgTxt = document.getElementById('cfg-tk-bg-txt'); if (tkBgTxt) tkBgTxt.value = ui.ticker.bgColor;
+            const tkTc = document.getElementById('cfg-tk-tc'); if (tkTc) tkTc.value = ui.ticker.textColor;
+            const tkTcTxt = document.getElementById('cfg-tk-tc-txt'); if (tkTcTxt) tkTcTxt.value = ui.ticker.textColor;
+
+            const valTkHt = document.getElementById('val-tk-ht'); if (valTkHt) valTkHt.innerText = ui.ticker.height;
+            const valTkFs = document.getElementById('val-tk-fs'); if (valTkFs) valTkFs.innerText = ui.ticker.fontSize;
+            const valTkSp = document.getElementById('val-tk-sp'); if (valTkSp) valTkSp.innerText = ui.ticker.speed;
+
+            ['leaderboard', 'match', 'flag', 'stats', 'player', 'banner'].forEach(sec => {
+                const m = ui.marquee[sec];
+                const code = sec === 'leaderboard' ? 'lb' : sec === 'match' ? 'mc' : sec === 'flag' ? 'fl' : sec === 'stats' ? 'st' : sec === 'player' ? 'pc' : 'gb';
+
+                const en = document.getElementById(`cfg-mq-${code}-en`); if (en) en.checked = !!m.enabled;
+                const sp = document.getElementById(`cfg-mq-${code}-sp`); if (sp) sp.value = m.speed;
+                const th = document.getElementById(`cfg-mq-${code}-th`); if (th) th.value = m.thickness;
+                const op = document.getElementById(`cfg-mq-${code}-op`); if (op) op.value = m.opacity;
+
+                const valSp = document.getElementById(`val-mq-${code}-sp`); if (valSp) valSp.innerText = m.speed;
+                const valTh = document.getElementById(`val-mq-${code}-th`); if (valTh) valTh.innerText = m.thickness;
+                const valOp = document.getElementById(`val-mq-${code}-op`); if (valOp) valOp.innerText = m.opacity;
+            });
+
+            const mapFonts = [
+                {sec: 'leaderboard', code: 'lb'},
+                {sec: 'match', code: 'mc'},
+                {sec: 'stats', code: 'st'},
+                {sec: 'player', code: 'pc'},
+                {sec: 'bannerLabel', code: 'gbl'},
+                {sec: 'bannerValue', code: 'gbv'}
+            ];
+
+            mapFonts.forEach(item => {
+                const f = ui.fonts[item.sec];
+                const code = item.code;
+
+                const sz = document.getElementById(`cfg-ft-${code}-sz`); if (sz) sz.value = f.size;
+                const cl = document.getElementById(`cfg-ft-${code}-cl`); if (cl) cl.value = f.color;
+                const clT = document.getElementById(`cfg-ft-${code}-cl-txt`); if (clT) clT.value = f.color;
+                
+                const valSz = document.getElementById(`val-ft-${code}-sz`); if (valSz) valSz.innerText = f.size;
+
+                if (['lb', 'mc', 'st', 'pc'].includes(code)) {
+                    const stEn = document.getElementById(`cfg-ft-${code}-st-en`); if (stEn) stEn.checked = !!f.strokeEnabled;
+                    const stWi = document.getElementById(`cfg-ft-${code}-st-wi`); if (stWi) stWi.value = f.strokeWidth;
+                    const stCl = document.getElementById(`cfg-ft-${code}-st-cl`); if (stCl) stCl.value = f.strokeColor;
+                    const stClT = document.getElementById(`cfg-ft-${code}-st-cl-txt`); if (stClT) stClT.value = f.strokeColor;
+
+                    const valStWi = document.getElementById(`val-ft-${code}-st-wi`); if (valStWi) valStWi.innerText = f.strokeWidth;
+                }
+            });
+
+            const jkSz = document.getElementById('cfg-ft-jk-sz'); if (jkSz) jkSz.value = ui.fonts.jackpot.size;
+            const valJkSz = document.getElementById('val-ft-jk-sz'); if (valJkSz) valJkSz.innerText = ui.fonts.jackpot.size;
+
+            const spBg = document.getElementById('cfg-sp-banner-gap'); if (spBg) spBg.value = ui.spacing.bannerGap;
+            const valSpBg = document.getElementById('val-sp-banner-gap'); if (valSpBg) valSpBg.innerText = ui.spacing.bannerGap;
+        }
+
+        function updateDynamicStyles() {
+            let styleEl = document.getElementById('dynamic-ui-styles');
+            if (!styleEl) {
+                styleEl = document.createElement('style');
+                styleEl.id = 'dynamic-ui-styles';
+                document.head.appendChild(styleEl);
+            }
+            const ui = db.uiSettings;
+            if (!ui) return;
+
+            const ticker = ui.ticker || { height: 32, fontSize: 12, bgColor: '#000000', textColor: '#facc15', speed: 15 };
+
+            styleEl.innerHTML = `
+                .leaderboard-card-item, .match-card-item, .stats-card-item, .player-card-item, .marquee-gb {
+                    transform: translate3d(0, 0, 0);
+                    -webkit-transform: translate3d(0, 0, 0);
+                    backface-visibility: hidden;
+                    -webkit-backface-visibility: hidden;
+                    will-change: transform, background-position;
+                    contain: paint;
+                }
+
+                #top-ticker-container {
+                    height: ${ticker.height}px !important;
+                    background-color: ${ticker.bgColor} !important;
+                }
+                #ticker-text {
+                    font-size: ${ticker.fontSize}px !important;
+                    color: ${ticker.textColor} !important;
+                    animation-duration: ${ticker.speed}s !important;
+                    line-height: ${ticker.height}px !important;
+                }
+
+                .marquee-gb {
+                    background: linear-gradient(135deg, rgba(37, 99, 235, ${ui.opacities.banner / 100}) 0%, rgba(49, 46, 129, ${ui.opacities.banner / 100}) 100%) !important;
+                }
+                #global-money-label {
+                    font-size: ${ui.fonts.bannerLabel.size}px !important;
+                    color: ${ui.fonts.bannerLabel.color} !important;
+                    margin-bottom: ${ui.spacing.bannerGap}px !important;
+                }
+                #global-money {
+                    font-size: ${ui.fonts.bannerValue.size}px !important;
+                    color: ${ui.fonts.bannerValue.color} !important;
+                }
+
+                .font-jackpot-size {
+                    font-size: ${ui.fonts.jackpot.size}px !important;
+                }
+
+                .bracket-flag {
+                    font-size: ${ui.bracket ? ui.bracket.flagSize : 24}px !important;
+                }
+                .bracket-font-size {
+                    font-size: ${ui.bracket ? ui.bracket.fontSize : 10}px !important;
+                }
+                #bracket-wrapper {
+                    height: ${ui.bracket ? ui.bracket.height : 900}px !important;
+                    width: ${ui.bracket ? ui.bracket.width : 900}px !important;
+                }
+                .bracket-team-gap-top {
+                    margin-bottom: ${ui.bracket ? ui.bracket.teamGap : 4}px !important;
+                }
+                .bracket-team-gap-bottom {
+                    margin-top: ${ui.bracket ? ui.bracket.teamGap : 4}px !important;
+                }
+
+                .leaderboard-card-item {
+                    background-color: rgba(0, 0, 0, ${ui.opacities.leaderboard / 100}) !important;
+                    font-size: ${ui.fonts.leaderboard.size}px !important;
+                    color: ${ui.fonts.leaderboard.color} !important;
+                    ${ui.fonts.leaderboard.strokeEnabled ? `-webkit-text-stroke: ${ui.fonts.leaderboard.strokeWidth}px ${ui.fonts.leaderboard.strokeColor}; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);` : '-webkit-text-stroke: 0px !important; text-shadow: none !important;'}
+                }
+                .leaderboard-card-item h3 {
+                    font-size: ${ui.fonts.leaderboard.size}px !important;
+                    color: inherit !important;
+                }
+
+                .match-card-item {
+                    font-size: ${ui.fonts.match.size}px !important;
+                    color: ${ui.fonts.match.color} !important;
+                    ${ui.fonts.match.strokeEnabled ? `-webkit-text-stroke: ${ui.fonts.match.strokeWidth}px ${ui.fonts.match.strokeColor}; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);` : '-webkit-text-stroke: 0px !important; text-shadow: none !important;'}
+                }
+                .match-card-item span, .match-card-item div, .match-card-item input {
+                    color: inherit !important;
+                }
+                .match-card-item-bg-yellow { background: linear-gradient(135deg, rgba(255, 251, 230, ${ui.opacities.match / 100}) 0%, rgba(255, 214, 102, ${ui.opacities.match / 100}) 100%) !important; }
+                .match-card-item-bg-blue { background: linear-gradient(135deg, rgba(230, 247, 255, ${ui.opacities.match / 100}) 0%, rgba(105, 192, 255, ${ui.opacities.match / 100}) 100%) !important; }
+                .match-card-item-bg-red { background: linear-gradient(135deg, rgba(255, 240, 246, ${ui.opacities.match / 100}) 0%, rgba(255, 133, 192, ${ui.opacities.match / 100}) 100%) !important; }
+                .match-card-item-bg-green { background: linear-gradient(135deg, rgba(246, 255, 237, ${ui.opacities.match / 100}) 0%, rgba(149, 222, 100, ${ui.opacities.match / 100}) 100%) !important; }
+                .match-card-item-bg-gray { background: linear-gradient(135deg, rgba(200, 200, 200, ${ui.opacities.match / 100}) 0%, rgba(140, 140, 140, ${ui.opacities.match / 100}) 100%) !important; }
+
+                .stats-card-item {
+                    background-color: rgba(0, 0, 0, ${ui.opacities.stats / 100}) !important;
+                    font-size: ${ui.fonts.stats.size}px !important;
+                    color: ${ui.fonts.stats.color} !important;
+                    ${ui.fonts.stats.strokeEnabled ? `-webkit-text-stroke: ${ui.fonts.stats.strokeWidth}px ${ui.fonts.stats.strokeColor}; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);` : '-webkit-text-stroke: 0px !important; text-shadow: none !important;'}
+                }
+                .stats-card-item h3 {
+                    font-size: calc(${ui.fonts.stats.size}px + 4px) !important;
+                    color: inherit !important;
+                }
+
+                .player-card-item {
+                    background-color: rgba(0, 0, 0, ${ui.opacities.player / 100}) !important;
+                    font-size: ${ui.fonts.player.size}px !important;
+                    color: ${ui.fonts.player.color} !important;
+                    ${ui.fonts.player.strokeEnabled ? `-webkit-text-stroke: ${ui.fonts.player.strokeWidth}px ${ui.fonts.player.strokeColor}; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);` : '-webkit-text-stroke: 0px !important; text-shadow: none !important;'}
+                }
+                .player-card-item h4 {
+                    font-size: ${ui.fonts.player.size}px !important;
+                    color: inherit !important;
+                }
+
+                ${['leaderboard', 'match', 'flag', 'stats', 'player', 'banner'].map(sec => {
+                    const m = ui.marquee[sec];
+                    const prefix = sec === 'leaderboard' ? 'marquee-lb' : sec === 'match' ? 'marquee-mc' : sec === 'flag' ? 'marquee-fl' : sec === 'stats' ? 'marquee-st' : sec === 'player' ? 'marquee-pc' : 'marquee-gb';
+                    if (!m.enabled) {
+                        return `.${prefix}::after { display: none !important; } .${prefix} { border: 1px solid rgba(255,255,255,0.1) !important; }`;
+                    }
+                    return `
+                        .${prefix} {
+                            position: relative;
+                        }
+                        .${prefix}::after {
+                            content: '';
+                            position: absolute;
+                            inset: 0;
+                            border-radius: inherit;
+                            padding: ${m.thickness}px;
+                            background: linear-gradient(90deg, #ff007f, #00f3ff, #e600ff, #ff007f);
+                            background-size: 200% auto;
+                            animation: borderRotate ${m.speed}s linear infinite;
+                            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+                            -webkit-mask-composite: destination-out;
+                            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+                            mask-composite: exclude;
+                            opacity: ${m.opacity / 100};
+                            pointer-events: none;
+                            z-index: 5;
+                        }
+                    `;
+                }).join('\n')}
+            `;
+        }
+
+        function updateTicker() {
+            const tickerTextEl = document.getElementById('ticker-text');
+            if (!tickerTextEl) return;
+            
+            const todayMatches = db.matches.filter(m => {
+                if (!m || !m.date) return false;
+                const match = m.date.match(/\d+月\d+日/);
+                return match && match[0] === activeTodayDate;
+            });
+            
+            if (todayMatches.length === 0) {
+                tickerTextEl.innerText = `今日（${activeTodayDate || '无'}）无比赛安排`;
+                return;
+            }
+            
+            let tickerParts = [];
+            todayMatches.forEach(m => {
+                const resolvedHome = resolveTeamName(m.home, db, m);
+                const resolvedAway = resolveTeamName(m.away, db, m);
+                
+                if (m.status === 'finished') {
+                    const score = m.score || '0:0';
+                    const b = db.bets[m.id];
+                    let winnerStrings = [];
+                    if (b && b.predictions) {
+                        let matchParticipants = [];
+                        let matchWinners = [];
+                        for (let pid in b.predictions) {
+                            if (b.predictions[pid] !== 'none') {
+                                matchParticipants.push(pid);
+                                if (b.predictions[pid] === m.result) {
+                                    matchWinners.push(pid);
+                                }
+                            }
+                        }
+                        const pool = matchParticipants.length * b.stake;
+                        if (matchWinners.length > 0) {
+                            const winAmt = pool / matchWinners.length;
+                            const netProfit = winAmt - b.stake;
+                            matchWinners.forEach(pid => {
+                                const p = db.players.find(x => x.id === pid);
+                                if (p) {
+                                    const sign = netProfit >= 0 ? '+' : '';
+                                    winnerStrings.push(`${p.name} ${sign}${netProfit.toFixed(0)}分`);
+                                }
+                            });
+                        }
+                    }
+                    
+                    const winnerText = winnerStrings.length > 0 ? `猜中玩家：${winnerStrings.join(' ')}` : '无猜中玩家（本金退回）';
+                    tickerParts.push(`${resolvedHome} ${score} ${resolvedAway} - ${winnerText}`);
+                } else {
+                    tickerParts.push(`${resolvedHome} VS ${resolvedAway}（未开赛）`);
+                }
+            });
+            
+            tickerTextEl.innerText = `今日比赛：【` + tickerParts.join('】   【') + `】`;
+        }
+
+        // --- 风琴式折叠面板控制核心 ---
+        function toggleAccordion(id) {
+            const content = document.getElementById(`${id}-content`);
+            const icon = document.getElementById(`${id}-icon`);
+            if (content && icon) {
+                const isHidden = content.classList.contains('hidden');
+                if (isHidden) {
+                    if (id === 'admin-ui-settings') {
+                        const pwd = prompt("请输入安全验证密码以展开UI配置面板：");
+                        if (pwd !== "260612") {
+                            alert("密码错误，安全核验失败！");
+                            return;
+                        }
+                    }
+                    content.classList.remove('hidden');
+                    icon.classList.remove('fa-chevron-down');
+                    icon.classList.add('fa-chevron-up');
+                } else {
+                    content.classList.add('hidden');
+                    icon.classList.remove('fa-chevron-up');
+                    icon.classList.add('fa-chevron-down');
+                }
+            }
+        }
+    </script>
 </body>
 </html>
-

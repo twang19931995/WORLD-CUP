@@ -283,6 +283,10 @@
                 <div class="text-xs text-yellow-300 bg-yellow-400/10 border border-yellow-400/20 rounded-xl p-3 text-center leading-relaxed font-bold">
                     💡 点击你觉得会夺冠的球队，进行下注，夺冠或走到所有玩家选择的球队里最后的球队，赢得所有积分。一只球队可供多人选择。
                 </div>
+<!-- 已投注夺冠玩家看板容器 -->
+                <div id="champion-bets-dashboard" class="flex gap-2 overflow-x-auto py-2 px-1 no-scrollbar scroll-smooth">
+                    <!-- 动态载入已下注夺冠的玩家卡片 -->
+                </div>
                 <div id="bracket-container" class="w-full overflow-x-auto no-scrollbar py-4 flex justify-start md:justify-center">
                     <div id="bracket-wrapper" class="flex items-stretch justify-between select-none relative" style="width: 900px; height: 900px; will-change: transform;">
                         <!-- SVG background lines layer -->
@@ -3079,9 +3083,10 @@
             renderKnockoutData();
         }
 
-        function renderKnockoutData() {
+function renderKnockoutData() {
             if (activeKnockoutSubTab === 'bracket') {
                 renderBracket();
+                renderChampionBetsDashboard(); // 运行渲染已投注夺冠的玩家看板
             } else if (activeKnockoutSubTab === 'group-standings') {
                 renderGroupStandings();
             } else if (activeKnockoutSubTab === 'third-standings') {
@@ -3149,6 +3154,58 @@
                     </div>
                 </div>
             `;
+        }
+
+// =================================================================
+        // 【修改对阵下注冠军玩家信息UI调整区】
+        // 提示：小白用户可直接在此处修改数值来调整国旗大小、国家及玩家字体的尺寸。
+        // =================================================================
+        const CHAMP_UI_CONFIG = {
+            flagSize: "28px",        // 国旗图标的大小 (可调整如 "32px" 或 "24px")
+            countryFontSize: "10px",  // 中间“国家名字”的字体大小 (可调整如 "11px" 等)
+            playerFontSize: "11px",   // 下方“玩家名字”的字体大小 (可调整如 "12px" 等)
+            cardWidth: "75px"         // 每个玩家小卡片的宽度 (可调整如 "80px" 等)
+        };
+        // =================================================================
+
+        function renderChampionBetsDashboard() {
+            const container = document.getElementById('champion-bets-dashboard');
+            if (!container) return;
+
+            // 如果目前数据库里没有任何夺冠下注，显示温馨提示
+            if (!db.championBets || Object.keys(db.championBets).length === 0) {
+                container.innerHTML = '<div class="text-[10px] text-white/40 text-center py-2 w-full">目前暂无玩家下注夺冠球队 🏆</div>';
+                return;
+            }
+
+            let html = '';
+            for (let playerId in db.championBets) {
+                const country = db.championBets[playerId];
+                if (country === 'none' || !country) continue;
+                
+                const p = db.players.find(x => x.id === playerId);
+                if (!p) continue; // 防御保护：如果找不到该玩家则跳过
+
+                const flag = getFlag(country); // 自动匹配获取国旗
+
+                // 构建小卡片 HTML，严格遵循：上面国旗，中间国家名字，下方玩家名字
+                html += `
+                    <div class="shrink-0 flex flex-col items-center justify-center p-2 rounded-xl bg-black/40 border border-white/10 text-center" style="width: ${CHAMP_UI_CONFIG.cardWidth}; min-width: ${CHAMP_UI_CONFIG.cardWidth};">
+                        <!-- 上方国旗 -->
+                        <span class="select-none leading-none mb-1" style="font-size: ${CHAMP_UI_CONFIG.flagSize};">${flag}</span>
+                        <!-- 中间国家名字 -->
+                        <span class="font-extrabold text-cyan-400 truncate w-full mb-1 leading-tight" style="font-size: ${CHAMP_UI_CONFIG.countryFontSize};" title="${country}">${country}</span>
+                        <!-- 下方玩家名字 -->
+                        <span class="font-black text-yellow-400 truncate w-full leading-none" style="font-size: ${CHAMP_UI_CONFIG.playerFontSize};" title="${p.name}">${p.name}</span>
+                    </div>
+                `;
+            }
+
+            if (html === '') {
+                container.innerHTML = '<div class="text-[10px] text-white/40 text-center py-2 w-full">目前暂无玩家下注夺冠球队 🏆</div>';
+            } else {
+                container.innerHTML = html;
+            }
         }
 
         function renderCenterColumn() {

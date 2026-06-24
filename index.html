@@ -170,12 +170,9 @@
         <div class="flex-1 w-full flex items-center justify-center overflow-hidden rounded-3xl border border-white/10 shadow-2xl relative max-w-md mx-auto">
             <img id="splash-image" src="https://i.ibb.co/7xmRFfjt/26WC.jpg" class="w-full h-full object-cover object-center absolute inset-0">
         </div>
-        <div class="pt-6 w-full max-w-xs flex flex-col items-center shrink-0 gap-3">
+        <div class="pt-6 w-full max-w-xs flex flex-col items-center shrink-0">
             <button onclick="dismissSplashScreen(); playAudio('coin')" class="w-full btn-3d bg-gradient-to-b from-yellow-400 to-amber-600 text-blue-950 font-black text-lg py-3.5 shadow-lg tracking-widest animate-pulse">
                 进入程序
-            </button>
-            <button onclick="enterSplashToChampionBet(); playAudio('coin')" class="w-full btn-3d bg-gradient-to-b from-cyan-400 to-blue-600 text-white font-black text-base py-3 shadow-lg tracking-wider">
-                下注夺冠球队！
             </button>
         </div>
     </div>
@@ -277,10 +274,6 @@
 
             <!-- 界面0: 对阵图 -->
             <div id="ko-panel-bracket" class="space-y-4 overflow-hidden">
-                <!-- 夺冠竞猜顶部小贴士 -->
-                <div class="text-xs text-yellow-300 bg-yellow-400/10 border border-yellow-400/20 rounded-xl p-3 text-center leading-relaxed font-bold">
-                    💡 点击你觉得会夺冠的球队，进行下注，夺冠或走到所有玩家选择的球队里最后的球队，赢得所有积分。一只球队可供多人选择。
-                </div>
                 <div id="bracket-container" class="w-full overflow-x-auto no-scrollbar py-4 flex justify-start md:justify-center">
                     <div id="bracket-wrapper" class="flex items-stretch justify-between select-none relative" style="width: 900px; height: 900px; will-change: transform;">
                         <!-- SVG background lines layer -->
@@ -422,20 +415,10 @@
                             <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-400"></div>
                         </label>
                     </div>
-                    <!-- 新增：夺冠竞猜单注积分配置 -->
-                    <div class="flex items-center justify-between bg-black/20 p-3 rounded-xl border border-white/5">
-                        <div>
-                            <p class="text-xs font-bold text-white">夺冠竞猜单注积分</p>
-                            <p class="text-[9px] text-gray-400">设置玩家下注夺冠球队时扣除的积分额度</p>
-                        </div>
-                        <div class="flex items-center bg-black rounded-lg p-1 border border-white/20">
-                            <input type="number" id="cfg-champion-stake" onchange="updateChampionStake(this.value); playAudio('click')" class="w-20 bg-transparent text-center text-white font-mono text-xs font-bold outline-none" value="1000">
-                        </div>
-                    </div>
                 </div>
             </div>
 
-            <!-- 2.5 联机服务器网络配置 -->
+            <!-- 新增板块：2.5 联机服务器网络配置 -->
             <div class="bg-black/30 border border-white/10 rounded-2xl shadow-xl backdrop-blur-md overflow-hidden">
                 <button onclick="toggleAccordion('admin-mqtt-config'); playAudio('click')" class="w-full px-4 py-3 flex justify-between items-center bg-black/20 hover:bg-black/40 text-left transition-colors">
                     <span class="text-sm font-black text-cyan-400 flex items-center gap-2">
@@ -537,14 +520,9 @@
                                 <label class="text-[9px] text-gray-400 block">横向宽度: <span id="val-bk-wd">900</span>px</label>
                                 <input type="range" min="700" max="2000" step="50" id="cfg-bk-wd" oninput="updateUIConfig('bracket', 'width', this.value)" class="w-full accent-cyan-400 cursor-pointer">
                             </div>
-                            <div>
+                            <div class="col-span-2">
                                 <label class="text-[9px] text-gray-400 block">国旗纵向间距: <span id="val-bk-tg">4</span>px</label>
                                 <input type="range" min="0" max="30" step="1" id="cfg-bk-tg" oninput="updateUIConfig('bracket', 'teamGap', this.value)" class="w-full accent-cyan-400 cursor-pointer">
-                            </div>
-                            <!-- 国旗上名字大小微调 -->
-                            <div>
-                                <label class="text-[9px] text-gray-400 block">国旗上名字大小: <span id="val-bk-pns">8</span>px</label>
-                                <input type="range" min="6" max="16" id="cfg-bk-pns" oninput="updateUIConfig('bracket', 'playerNameSize', this.value)" class="w-full accent-cyan-400 cursor-pointer">
                             </div>
                         </div>
 
@@ -1093,44 +1071,6 @@
         </div>
     </div>
 
-    <!-- 夺冠球队竞猜下注弹窗 -->
-    <div id="championBetModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden flex justify-center items-center z-50 p-4">
-        <div class="bg-gradient-to-b from-[#1e293b] to-[#0f172a] p-6 rounded-3xl border border-white/20 w-full max-w-sm relative shadow-2xl">
-            <button onclick="closeModal('championBetModal'); playAudio('click')" class="absolute top-4 right-4 text-white/50 hover:text-white"><i class="fa-solid fa-times text-xl"></i></button>
-            <h3 class="text-lg font-black text-center text-yellow-400 mb-4">
-                🏆 夺冠球队下注
-            </h3>
-            
-            <!-- 优化：上面国旗，下面国家的立体展现卡片 -->
-            <div class="flex flex-col items-center justify-center bg-black/40 border border-white/10 rounded-2xl py-3 px-4 mb-4">
-                <p class="text-[10px] text-gray-400 font-bold mb-1">下注支持球队</p>
-                <span id="cb-modal-flag" class="text-5xl leading-none mb-1.5 select-none">⚽</span>
-                <span id="cb-modal-country" class="text-base font-black text-cyan-400">国家</span>
-            </div>
-            
-            <div class="space-y-4">
-                <div>
-                    <label class="text-[11px] text-gray-400 font-bold block mb-1">选择下注玩家：</label>
-                    <select id="cb-player-select" class="w-full bg-black/50 border border-white/20 rounded-xl p-3 text-white font-bold outline-none focus:border-yellow-400">
-                        <!-- 动态载入 -->
-                    </select>
-                </div>
-                
-                <div class="bg-black/20 p-3 rounded-xl border border-white/5 text-[10px] text-gray-400 leading-relaxed space-y-1">
-                    <p class="font-bold text-yellow-400">下注夺冠规则：</p>
-                    <p>1. 夺冠竞猜下注固定金额为 <span id="cb-modal-rule-stake" class="text-white font-bold">1000</span> 积分。</p>
-                    <p>2. 积分计算：最终走到最远的球队玩家平分总积分池。</p>
-                    <p>3. 修改锁定：一旦下注，可以且只能在 <span class="text-yellow-400 font-bold">2026年6月29日凌晨3:00 之前</span> 进行更改，之后锁定无法更改。</p>
-                </div>
-
-                <div class="flex gap-2">
-                    <button onclick="closeModal('championBetModal'); playAudio('click')" class="flex-1 py-2.5 text-xs font-bold rounded-xl border border-white/20 hover:bg-white/10 text-white transition">取消</button>
-                    <button onclick="confirmChampionBet()" class="flex-1 btn-3d py-2.5 text-xs font-bold bg-gradient-to-b from-yellow-400 to-amber-600 text-blue-950">确定下注</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- 开奖结算 -->
     <div id="settleModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden flex justify-center items-center z-50 p-4">
         <div class="bg-gradient-to-b from-[#7f1d1d] to-[#450a0a] p-6 rounded-3xl border border-white/20 w-full max-w-sm relative shadow-2xl text-center font-semibold">
@@ -1322,14 +1262,6 @@
                     }
                 });
             }
-            // 清洗夺冠竞猜中的“沙特”数据
-            if (database.championBets) {
-                for (let pid in database.championBets) {
-                    if (database.championBets[pid] === "沙特") {
-                        database.championBets[pid] = "沙特阿拉伯";
-                    }
-                }
-            }
         }
 
         // 生成赛程数据 (104场) - 补全所有缺省Venue城市的小组赛，使之全量规整为标准的 6 元素数组
@@ -1349,19 +1281,19 @@
                 ["Group D", "6月26日 10:00", "第3轮", "洛杉矶", "土耳其", "美国"], ["Group D", "6月26日 10:00", "第3轮", "旧金山湾区", "巴拉圭", "澳大利亚"],
                 ["Group E", "6月15日 01:00", "第1轮", "休斯敦", "德国", "库拉索"], ["Group E", "6月15日 07:00", "第1轮", "费城", "科特div瓦", "厄瓜多尔"],
                 ["Group E", "6月21日 04:00", "第2轮", "多伦多", "德国", "科特div瓦"], ["Group E", "6月21日 08:00", "第2轮", "堪萨斯城", "厄瓜多尔", "库拉索"],
-                ["Group E", "6月26日 04:00", "第3轮", "纽约/新泽西", "厄瓜多尔", "德国"], ["Group E", "6月26日 04:00", "第3轮", "费城", "库拉索", "科特div瓦"],
+                ["Group E", "6月26日 04:00", "第3轮", "纽约/新泽西", "厄瓜原尔", "德国"], ["Group E", "6月26日 04:00", "第3轮", "费城", "库拉索", "科特div瓦"],
                 ["Group F", "6月15日 04:00", "第1轮", "达拉斯", "荷兰", "日本"], ["Group F", "6月15日 10:00", "第1轮", "蒙特雷", "瑞典", "突尼斯"],
                 ["Group F", "6月21日 01:00", "第2轮", "休斯敦", "荷兰", "瑞典"], ["Group F", "6月21日 12:00", "第2轮", "堪萨斯城", "突尼斯", "日本"], // 补全 Venue -> 堪萨斯城
                 ["Group F", "6月26日 07:00", "第3轮", "达拉斯", "日本", "瑞典"], ["Group F", "6月26日 07:00", "第3轮", "堪萨斯城", "突尼斯", "荷兰"],
                 ["Group G", "6月16日 03:00", "第1轮", "西雅图", "比利时", "埃及"], ["Group G", "6月16日 09:00", "第1轮", "旧金山湾区", "伊朗", "新西兰"], // 补全 Venue -> 旧金山湾区
                 ["Group G", "6月22日 03:00", "第2轮", "洛杉矶", "比利时", "伊朗"], ["Group G", "6月22日 09:00", "第2轮", "亚特兰大", "新西兰", "埃及"], // 补全 Venue -> 亚特兰大
-                ["Group G", "6月27日 11:00", "第3轮", "西雅图", "埃及", "伊朗"], ["Group G", "6月27日 11:00", "第3轮", "温哥华", "新西兰", "比利时"],
+                ["Group G", "67月27日 11:00", "第3轮", "西雅图", "埃及", "伊朗"], ["Group G", "6月27日 11:00", "第3轮", "温哥华", "新西兰", "比利时"],
                 ["Group H", "6月16日 00:00", "第1轮", "亚特兰大", "西班牙", "佛得角"], ["Group H", "6月16日 06:00", "第1轮", "纽约/新泽西", "沙特阿拉伯", "乌拉圭"], // 补全 Venue -> 纽约/新泽西，核心解决沙特阿拉伯 vs 乌拉圭丢失城市造成的undefined拆分队 bug
                 ["Group H", "6月22日 00:00", "第2轮", "亚特兰大", "西班牙", "沙特阿拉伯"], ["Group H", "6月22日 06:00", "第2轮", "迈阿密", "乌拉圭", "佛得角"],
                 ["Group H", "6月27日 08:00", "第3轮", "休斯敦", "佛得角", "沙特阿拉伯"], ["Group H", "6月27日 08:00", "第3轮", "瓜达拉哈拉", "乌拉圭", "西班牙"],
                 ["Group I", "6月17日 03:00", "第1轮", "纽约/新泽西", "法国", "塞内加尔"], ["Group I", "6月17日 06:00", "第1轮", "西雅图", "伊拉克", "挪威"], // 补全 Venue -> 西雅图
                 ["Group I", "6月23日 05:00", "第2轮", "费城", "法国", "伊拉克"], ["Group I", "6月23日 08:00", "第2轮", "纽约/新泽西", "挪威", "塞内加尔"],
-                ["Group I", "6月27日 03:00", "第3轮", "波士顿", "挪威", "法国"], ["Group I", "6月27日 03:00", "第3轮", "多伦多", "塞内加尔", "伊拉克"],
+                ["Group I", "6月27日 03:00", "第3轮", "波士顿", "挪威", "法国"], ["Group I", "6月27日 03:00", "第3轮", "多伦多", "塞内加言", "伊拉克"],
                 ["Group J", "6月17日 09:00", "第1轮", "堪萨斯城", "阿根廷", "阿尔及利亚"], ["Group J", "6月17日 12:00", "第1轮", "旧金山湾区", "奥地利", "约旦"],
                 ["Group J", "6月23日 01:00", "第2轮", "达拉斯", "阿根廷", "奥地利"], ["Group J", "6月23日 11:00", "第2轮", "波士顿", "约旦", "阿尔及利亚"], // 补全 Venue -> 波士顿
                 ["Group J", "6月28日 10:00", "第3轮", "堪萨斯城", "阿尔及利亚", "奥地利"], ["Group J", "6月28日 10:00", "第3轮", "达拉斯", "约旦", "阿根廷"],
@@ -1393,18 +1325,12 @@
 
         // 分配本设备唯一 Client ID
         const myClientId = 'device_' + Math.random().toString(36).substr(2, 9);
-        let db = { players: [], matches: [], bets: {}, logs: [], lockBets15Min: false, buyAndClose: true, realtimeBracket: false, championBets: {}, championBetStake: 1000, splashUrl: 'https://i.ibb.co/7xmRFfjt/26WC.jpg', mqttBrokerUrl: 'wss://broker.emqx.io:8084/mqtt', timestamp: 0 };
+        let db = { players: [], matches: [], bets: {}, logs: [], lockBets15Min: false, buyAndClose: true, realtimeBracket: false, splashUrl: 'https://i.ibb.co/7xmRFfjt/26WC.jpg', mqttBrokerUrl: 'wss://broker.emqx.io:8084/mqtt', timestamp: 0 };
         const roomId = new URLSearchParams(window.location.search).get('room') || 'public_wc2026';
 
         // MQTT 连接
         let mqttClient = null, isReceiving = false;
         const syncTopic = `wc_betmaster_sync_v4_${roomId}`;
-
-        function enterSplashToChampionBet() {
-            dismissSplashScreen();
-            switchTab('knockout');
-            switchKnockoutSubTab('bracket');
-        }
 
         function initMQTT() {
             if (typeof mqtt === 'undefined') { setSyncStatus(false, "离线单机版 (联机脚本组件未载入)"); return; }
@@ -1450,8 +1376,6 @@
                             if (!db.matches) db.matches = [];
                             if (!db.bets) db.bets = {};
                             if (!db.logs) db.logs = [];
-                            if (!db.championBets) db.championBets = {};
-                            if (db.championBetStake === undefined) db.championBetStake = 1000;
                             if (db.lockBets15Min === undefined) db.lockBets15Min = false;
                             if (db.buyAndClose === undefined) db.buyAndClose = true;
                             if (db.realtimeBracket === undefined) db.realtimeBracket = false;
@@ -1652,10 +1576,6 @@
             }
             if (confirm(`确定要彻底删除玩家「${p.name}」并移除其对应的数据资料吗？`)) {
                 db.players = db.players.filter(x => x.id !== playerId);
-                // 同步删除夺冠下注
-                if (db.championBets && db.championBets[playerId]) {
-                    delete db.championBets[playerId];
-                }
                 addLog(`删除了玩家: [${p.name}]`);
                 broadcastData(true);
                 refreshAllUI();
@@ -1714,7 +1634,7 @@
 
         function resolveTeamName(team, db, matchContext = null) {
             if (!team) return "";
-            if (team === "沙特" || team === "沙特阿拉伯") return "沙特阿拉伯"; // 强行拦截并解析，确保整个视图层绝对不会出现拆分
+            if (team === "沙特") return "沙特阿拉伯"; // 强行拦截并解析，确保整个视图层绝对不会出现拆分
             
             // 处理半决赛/决赛
             if (team === "半决胜1") return resolveTeamName("101胜者", db);
@@ -2004,7 +1924,7 @@
             broadcastData(true);
         }
 
-        // 手动修改联机服务器地址逻辑并重连
+        // 新增：手动修改联机服务器地址逻辑并重连
         function saveMqttBrokerSetting() {
             const input = document.getElementById('cfg-mqtt-broker');
             if (!input) return;
@@ -2024,180 +1944,6 @@
             alert("联机服务器配置已成功保存！正在为您建立网络连接通道...");
         }
 
-        // 新增：获取参赛国目前在世界杯晋级到了哪一轮
-        function getTeamProgressStage(team, db) {
-            if (!team || !isRealCountry(team)) return 0;
-            
-            // 决赛
-            const m104 = db.matches.find(x => x.id === 104);
-            if (m104 && m104.status === 'finished') {
-                const homeRes = resolveTeamName(m104.home, db, m104);
-                const awayRes = resolveTeamName(m104.away, db, m104);
-                if (homeRes === team) return m104.result === 'home' ? 8 : 7;
-                if (awayRes === team) return m104.result === 'away' ? 8 : 7;
-            }
-            
-            // 三四名决赛
-            const m103 = db.matches.find(x => x.id === 103);
-            if (m103 && m103.status === 'finished') {
-                const homeRes = resolveTeamName(m103.home, db, m103);
-                const awayRes = resolveTeamName(m103.away, db, m103);
-                if (homeRes === team) return m103.result === 'home' ? 6 : 5;
-                if (awayRes === team) return m103.result === 'away' ? 6 : 5;
-            }
-            
-            // 1/4决赛 (100, 99, 98, 97)
-            const quarterIds = [97, 98, 99, 100];
-            for (let id of quarterIds) {
-                const m = db.matches.find(x => x.id === id);
-                if (m) {
-                    const h = resolveTeamName(m.home, db, m);
-                    const a = resolveTeamName(m.away, db, m);
-                    if (h === team || a === team) {
-                        if (m.status === 'finished') {
-                            const won = (h === team && m.result === 'home') || (a === team && m.result === 'away');
-                            if (!won) return 4; // 止步 8 强
-                        }
-                    }
-                }
-            }
-            
-            // 1/8 决赛 (89-96)
-            for (let id = 89; id <= 96; id++) {
-                const m = db.matches.find(x => x.id === id);
-                if (m) {
-                    const h = resolveTeamName(m.home, db, m);
-                    const a = resolveTeamName(m.away, db, m);
-                    if (h === team || a === team) {
-                        if (m.status === 'finished') {
-                            const won = (h === team && m.result === 'home') || (a === team && m.result === 'away');
-                            if (!won) return 3; // 止步 16 强
-                        }
-                    }
-                }
-            }
-            
-            // 1/16 决赛 (73-88)
-            for (let id = 73; id <= 88; id++) {
-                const m = db.matches.find(x => x.id === id);
-                if (m) {
-                    const h = resolveTeamName(m.home, db, m);
-                    const a = resolveTeamName(m.away, db, m);
-                    if (h === team || a === team) {
-                        if (m.status === 'finished') {
-                            const won = (h === team && m.result === 'home') || (a === team && m.result === 'away');
-                            if (!won) return 2; // 止步 32 强
-                        }
-                    }
-                }
-            }
-            
-            // 小组赛
-            const hasPlayedGroup = db.matches.some(m => {
-                if (m.round !== '淘汰赛') {
-                    const h = resolveTeamName(m.home, db, m);
-                    const a = resolveTeamName(m.away, db, m);
-                    return h === team || a === team;
-                }
-                return false;
-            });
-            if (hasPlayedGroup) return 1;
-            
-            return 0;
-        }
-
-        // 新增：获取某国家下注夺冠的玩家列表 HTML
-        function getChampionPlayersHtml(countryName) {
-            if (!isRealCountry(countryName) || !db.championBets) return '';
-            const pids = [];
-            for (let pid in db.championBets) {
-                if (db.championBets[pid] === countryName) {
-                    pids.push(pid);
-                }
-            }
-            if (pids.length === 0) return '';
-            const nameSize = (db.uiSettings && db.uiSettings.bracket && db.uiSettings.bracket.playerNameSize) || 8;
-            return pids.map(pid => {
-                const p = db.players.find(x => x.id === pid);
-                if (!p) return '';
-                return `<span class="bg-yellow-400 text-blue-950 font-black px-1 py-0.5 rounded-sm truncate max-w-[45px] leading-none text-center select-none" style="font-size: ${nameSize}px;" title="${p.name}">${p.name}</span>`;
-            }).join('');
-        }
-
-        // 新增：夺冠国旗点击触发机制
-        function handleChampionBetClick(countryName, event) {
-            if (event) event.stopPropagation();
-            if (!isRealCountry(countryName)) return;
-
-            // 检查截止时间红线：2026年6月29日 03:00:00 之前
-            const deadline = new Date(2026, 5, 29, 3, 0, 0); // 5 代表 6 月 (0-indexed)
-            if (new Date() >= deadline) {
-                alert("⚠️ 操作受限！夺冠竞猜下注及修改已在 2026年6月29日凌晨3:00 截止锁定。");
-                return;
-            }
-
-            if (!db.players || db.players.length === 0) {
-                alert("请先前往管理控制台添加竞猜玩家！");
-                return;
-            }
-
-            document.getElementById('cb-modal-flag').innerText = getFlag(countryName);
-            document.getElementById('cb-modal-country').innerText = countryName;
-            
-            // 动态更新积分显示 (从配置中载入，默认1000)
-            const stake = db.championBetStake !== undefined ? db.championBetStake : 1000;
-            document.getElementById('cb-modal-rule-stake').innerText = stake;
-
-            const selectEl = document.getElementById('cb-player-select');
-            selectEl.innerHTML = '';
-            db.players.forEach(p => {
-                const opt = document.createElement('option');
-                opt.value = p.id;
-                const currentBet = db.championBets ? db.championBets[p.id] : null;
-                const betText = currentBet ? ` (当前已选: ${currentBet})` : ' (未选择)';
-                opt.innerText = p.name + betText;
-                selectEl.appendChild(opt);
-            });
-
-            openModal('championBetModal');
-        }
-
-        // 新增：执行下注并提示二次确认
-        function confirmChampionBet() {
-            const country = document.getElementById('cb-modal-country').innerText;
-            const playerId = document.getElementById('cb-player-select').value;
-            const p = db.players.find(x => x.id === playerId);
-            if (!p) return;
-
-            if (!db.championBets) db.championBets = {};
-            const oldBet = db.championBets[playerId];
-
-            // 检查买定离手
-            if (db.buyAndClose && oldBet && oldBet !== 'none') {
-                alert(`⚠️ 由于开启了「买定离手」，玩家 [${p.name}] 已经下注过夺冠球队 [${oldBet}]，无法做出变更！`);
-                return;
-            }
-
-            const stake = db.championBetStake !== undefined ? db.championBetStake : 1000;
-            const confirmMsg = `您确定要为玩家 [${p.name}] 下注 [${country}] 夺冠吗？\n\n提示：下注单笔扣减 ${stake} 积分。支持在“2026年6月29日凌晨3点之前”进行修改，之后锁定无法更改。`;
-            if (confirm(confirmMsg)) {
-                db.championBets[playerId] = country;
-                addLog(`玩家 [${p.name}] 进行夺冠竞猜下注：[${country}]`);
-                broadcastData(true);
-                closeModal('championBetModal');
-                refreshAllUI();
-            }
-        }
-
-        // 新增：管理员更新夺冠投注积分设置
-        function updateChampionStake(val) {
-            const parsed = parseInt(val, 10);
-            db.championBetStake = isNaN(parsed) || parsed < 0 ? 1000 : parsed;
-            addLog(`设置: 夺冠竞猜单注积分已修改为 [${db.championBetStake}]`);
-            broadcastData(true);
-            refreshAllUI();
-        }
-
         // 初始化入口
         window.onload = () => {
             initMQTT();
@@ -2209,7 +1955,7 @@
             } catch(e) {}
             
             if (!db || typeof db !== 'object') {
-                db = { players: [], matches: [], bets: {}, logs: [], lockBets15Min: false, buyAndClose: true, realtimeBracket: false, championBets: {}, championBetStake: 1000, splashUrl: 'https://i.ibb.co/7xmRFfjt/26WC.jpg', mqttBrokerUrl: 'wss://broker.emqx.io:8084/mqtt', timestamp: 0 };
+                db = { players: [], matches: [], bets: {}, logs: [], lockBets15Min: false, buyAndClose: true, realtimeBracket: false, splashUrl: 'https://i.ibb.co/7xmRFfjt/26WC.jpg', mqttBrokerUrl: 'wss://broker.emqx.io:8084/mqtt', timestamp: 0 };
             }
             if (!db.players) db.players = [];
             if (!db.matches || db.matches.length < 104) { 
@@ -2217,8 +1963,6 @@
             }
             if (!db.bets) db.bets = {};
             if (!db.logs) db.logs = [];
-            if (!db.championBets) db.championBets = {};
-            if (db.championBetStake === undefined) db.championBetStake = 1000;
             if (db.lockBets15Min === undefined) db.lockBets15Min = false;
             if (db.buyAndClose === undefined) db.buyAndClose = true;
             if (db.realtimeBracket === undefined) db.realtimeBracket = false;
@@ -2462,48 +2206,6 @@
                 }
                 p.mostLossPredictStr = maxCLTeam !== '无' ? `${maxCLTeam} (${maxCLCount}次)` : '无';
             });
-
-            // 夺冠下注资金结算逻辑
-            if (db.championBets) {
-                const participants = Object.keys(db.championBets).filter(pid => db.players.some(x => x.id === pid));
-                if (participants.length > 0) {
-                    const stake = db.championBetStake !== undefined ? db.championBetStake : 1000;
-                    const pool = participants.length * stake;
-                    
-                    // 1. 每位玩家先行扣除对应单注积分
-                    participants.forEach(pid => {
-                        const p = db.players.find(x => x.id === pid);
-                        if (p) {
-                            p.totalInvest += stake;
-                            p.balance -= stake;
-                        }
-                    });
-
-                    // 2. 统计各下注国家目前最高晋级轮次
-                    let maxStage = -1;
-                    const playerStages = {};
-                    participants.forEach(pid => {
-                        const countryName = db.championBets[pid];
-                        const stage = getTeamProgressStage(countryName, db);
-                        playerStages[pid] = stage;
-                        if (stage > maxStage) {
-                            maxStage = stage;
-                        }
-                    });
-
-                    // 3. 找出晋级最远的优胜者
-                    const winners = participants.filter(pid => playerStages[pid] === maxStage);
-                    if (winners.length > 0) {
-                        const share = pool / winners.length;
-                        winners.forEach(pid => {
-                            const p = db.players.find(x => x.id === pid);
-                            if (p) {
-                                p.balance += share;
-                            }
-                        });
-                    }
-                }
-            }
         }
 
         // --- View 1: 首页排行榜 ---
@@ -2544,12 +2246,6 @@
                     totalM += db.bets[mId].stake * Object.values(db.bets[mId].predictions).filter(v => v !== 'none').length;
                 }
             }
-            // 加上夺冠积分池总量
-            if (db.championBets) {
-                const partsCount = Object.keys(db.championBets).filter(pid => db.players.some(x => x.id === pid)).length;
-                const stake = db.championBetStake !== undefined ? db.championBetStake : 1000;
-                totalM += partsCount * stake;
-            }
             document.getElementById('global-money').innerText = totalM;
         }
 
@@ -2562,7 +2258,7 @@
             dates.forEach(dStr => {
                 const match = dStr.match(/(\d+)月(\d+)日/);
                 const month = match[1]; const day = match[2];
-                const weekday = getWeekday(dateStr);
+                const weekday = getWeekday(dStr);
                 const isActive = dStr === activeTodayDate;
                 
                 const activeClasses = 'bg-yellow-400 text-blue-950 border-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.5)]';
@@ -2990,104 +2686,113 @@
             panel.innerHTML = html;
         }
 
-        function setFilterGroup(val) { filterGroup = val; renderMatches(); }
-        function setFilterCountry(val) { filterCountry = val; renderMatches(); }
+        function setFilterGroup(val) { filterGroup = val; renderSecNavPanel(); renderMatches(); }
+        function setFilterCountry(val) { filterCountry = val; renderSecNavPanel(); renderMatches(); }
 
         function renderMatches() {
-            const container = document.getElementById('matches-container');
-            const searchVal = document.getElementById('match-search').value.toLowerCase().trim();
-            if (!container) return;
-
-            // 过滤基础列表
-            let filtered = db.matches.filter(m => {
-                const homeRes = resolveTeamName(m.home, db, m).toLowerCase();
-                const awayRes = resolveTeamName(m.away, db, m).toLowerCase();
-                const roundText = m.round.toLowerCase();
-                const groupText = m.group.toLowerCase();
-                const venueText = m.venue.toLowerCase();
-
-                // 搜索文本过滤
-                if (searchVal) {
-                    const matchSearch = homeRes.includes(searchVal) || awayRes.includes(searchVal) || roundText.includes(searchVal) || groupText.includes(searchVal) || venueText.includes(searchVal);
-                    if (!matchSearch) return false;
+            const c = document.getElementById('matches-container');
+            if (!c) return;
+            const query = document.getElementById('match-search').value.toLowerCase();
+            let list = db.matches || [];
+            
+            // 1. 状态维度过滤
+            if (currentFilter !== 'all') {
+                list = list.filter(m => m.status === currentFilter);
+            }
+            
+            // 2. 小组维度过滤
+            if (activeSecNav === 'group' && filterGroup !== 'all') {
+                if (filterGroup === '淘汰赛') {
+                    list = list.filter(m => m.round === '淘汰赛' || m.group.includes('决赛') || m.group.includes('半决赛') || m.group.includes('1/'));
+                } else {
+                    list = list.filter(m => m.group === filterGroup);
                 }
-
-                // 三级二级导航过滤
-                if (filterGroup !== 'all') {
-                    if (filterGroup === '淘汰赛') {
-                        if (m.round !== '淘汰赛') return false;
-                    } else {
-                        if (m.group !== filterGroup) return false;
-                    }
-                }
-
-                if (filterCountry !== 'all') {
-                    if (homeRes !== filterCountry && awayRes !== filterCountry) return false;
-                }
-
-                return true;
-            });
-
-            // 依据已完赛/未开赛/全部的主过滤器进行多级排列
-            const mainFilter = currentFilter; 
-            if (mainFilter === 'finished') {
-                filtered = filtered.filter(m => m.status === 'finished');
-            } else if (mainFilter === 'upcoming') {
-                filtered = filtered.filter(m => m.status === 'upcoming');
+            }
+            
+            // 3. 国家维度过滤
+            if (activeSecNav === 'country' && filterCountry !== 'all') {
+                list = list.filter(m => resolveTeamName(m.home, db, m) === filterCountry || resolveTeamName(m.away, db, m) === filterCountry);
             }
 
-            // 排序逻辑
-            filtered.sort((a, b) => {
-                const dateA = parseMatchDate(a.date);
-                const dateB = parseMatchDate(b.date);
-                return matchSortOrder === 'asc' ? dateA - dateB : dateB - dateA;
-            });
+            // 4. 文字搜索检索过滤
+            if (query) {
+                list = list.filter(m => {
+                    const resolvedHome = resolveTeamName(m.home, db, m).toLowerCase();
+                    const resolvedAway = resolveTeamName(m.away, db, m).toLowerCase();
+                    return resolvedHome.includes(query) || resolvedAway.includes(query) || m.group.toLowerCase().includes(query);
+                });
+            }
 
-            if (filtered.length === 0) {
-                container.innerHTML = '<div class="text-center text-white/30 py-10 text-sm">无匹配比赛场次</div>';
-                return;
+            // 5. 排序处理
+            if (matchSortOrder === 'desc') {
+                list = [...list].sort((a, b) => {
+                    const timeA = parseMatchDate(a.date);
+                    const timeB = parseMatchDate(b.date);
+                    if (timeA !== timeB) return timeB - timeA;
+                    return b.id - a.id;
+                });
+            } else {
+                list = [...list].sort((a, b) => {
+                    const timeA = parseMatchDate(a.date);
+                    const timeB = parseMatchDate(b.date);
+                    if (timeA !== timeB) return timeA - timeB;
+                    return a.id - b.id;
+                });
             }
 
             let html = '';
-            filtered.forEach((m, idx) => {
-                html += renderSingleMatchCard(m, idx);
+            list.forEach((m, index) => {
+                html += renderSimplifiedMatchCard(m, index);
             });
-            container.innerHTML = html;
+            c.innerHTML = html;
         }
 
-        // --- View 8: 淘汰赛数据子Tab控制 ---
+        // ==========================================
+        // 淘汰赛数据及子Tab渲染器
+        // ==========================================
         function switchKnockoutSubTab(subTabId) {
             activeKnockoutSubTab = subTabId;
-            ['bracket', 'group-standings', 'third-standings'].forEach(id => {
-                const panel = document.getElementById(`ko-panel-${id}`);
-                const btn = document.getElementById(`ko-tab-${id === 'bracket' ? 'br' : id === 'group-standings' ? 'gs' : 'ts'}`);
-                if (panel) panel.classList.add('hidden');
-                if (btn) {
-                    btn.className = 'flex-1 py-1.5 rounded-full text-xs font-bold text-white hover:bg-white/20 transition';
-                }
+            const btnBr = document.getElementById('ko-tab-br');
+            const btnGs = document.getElementById('ko-tab-gs');
+            const btnTs = document.getElementById('ko-tab-ts');
+            const panelBr = document.getElementById('ko-panel-bracket');
+            const panelGs = document.getElementById('ko-panel-group-standings');
+            const panelTs = document.getElementById('ko-panel-third-standings');
+            
+            [btnBr, btnGs, btnTs].forEach(btn => {
+                if (btn) btn.className = 'flex-1 py-1.5 rounded-full text-xs font-bold text-white hover:bg-white/20 transition';
+            });
+            [panelBr, panelGs, panelTs].forEach(p => {
+                if (p) p.classList.add('hidden');
             });
 
-            const targetPanel = document.getElementById(`ko-panel-${subTabId}`);
-            const targetBtn = document.getElementById(`ko-tab-${subTabId === 'bracket' ? 'br' : subTabId === 'group-standings' ? 'gs' : 'ts'}`);
-            if (targetPanel) targetPanel.classList.remove('hidden');
-            if (targetBtn) {
-                targetBtn.className = 'flex-1 py-1.5 rounded-full text-xs font-bold bg-white text-blue-900 shadow-md transition';
+            if (subTabId === 'bracket') {
+                if (btnBr) btnBr.className = 'flex-1 py-1.5 rounded-full text-xs font-bold bg-white text-blue-900 shadow-md transition';
+                if (panelBr) panelBr.classList.remove('hidden');
+                updateBracketUI();
+            } else if (subTabId === 'group-standings') {
+                if (btnGs) btnGs.className = 'flex-1 py-1.5 rounded-full text-xs font-bold bg-white text-blue-900 shadow-md transition';
+                if (panelGs) panelGs.classList.remove('hidden');
+            } else {
+                if (btnTs) btnTs.className = 'flex-1 py-1.5 rounded-full text-xs font-bold bg-white text-blue-900 shadow-md transition';
+                if (panelTs) panelTs.classList.remove('hidden');
             }
-
             renderKnockoutData();
         }
 
         function renderKnockoutData() {
             if (activeKnockoutSubTab === 'bracket') {
-                renderBracket();
+                // 已经在 updateBracketUI 里绘制
             } else if (activeKnockoutSubTab === 'group-standings') {
                 renderGroupStandings();
-            } else if (activeKnockoutSubTab === 'third-standings') {
+            } else {
                 renderThirdStandings();
             }
         }
 
-        // --- 淘汰赛 3D 拓扑对阵图绘制模块 ---
+        // ==========================================
+        // 对阵图渲染及SVG连线绘制模块
+        // ==========================================
         function createBracketMatchNode(matchId) {
             const m = db.matches.find(x => x.id === matchId);
             if (!m) return '';
@@ -3103,33 +2808,12 @@
             const isHomeWinner = isFin && m.result === 'home';
             const isAwayWinner = isFin && m.result === 'away';
 
-            // 判断是否可以下注夺冠球队
-            const isHomeReal = isRealCountry(resolvedHome);
-            const homeCursor = isHomeReal ? 'cursor-pointer hover:scale-115 active:scale-90 transition-transform' : 'opacity-40';
-            const homeTitle = isHomeReal ? '点击下注此队夺冠！' : '';
-
-            const isAwayReal = isRealCountry(resolvedAway);
-            const awayCursor = isAwayReal ? 'cursor-pointer hover:scale-115 active:scale-90 transition-transform' : 'opacity-40';
-            const awayTitle = isAwayReal ? '点击下注此队夺冠！' : '';
-
-            const homeWinCover = (isFin && m.result === 'home') ? `
-                <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <span class="bg-yellow-400 text-blue-950 font-black text-[9px] px-1 py-0.5 rounded skew-x-12 animate-pulse border border-yellow-300 shadow-[0_0_8px_rgba(250,204,21,0.8)]">WIN</span>
-                </div>` : '';
-            const awayWinCover = (isFin && m.result === 'away') ? `
-                <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <span class="bg-yellow-400 text-blue-950 font-black text-[9px] px-1 py-0.5 rounded skew-x-12 animate-pulse border border-yellow-300 shadow-[0_0_8px_rgba(250,204,21,0.8)]">WIN</span>
-                </div>` : '';
-
             return `
                 <div id="bracket-match-${matchId}" onclick="showMatchDetails(${matchId}, event); event.stopPropagation();" class="flex flex-col items-center justify-center p-1 rounded-xl bg-black/40 border border-white/10 shadow-lg hover:bg-black/60 transition-all cursor-pointer relative" style="width: 80px; min-height: 54px;">
                     <!-- 上队 -->
                     <div class="flex flex-col items-center relative w-full bracket-team-gap-top ${isAwayWinner ? 'opacity-40' : ''}">
-                        <span class="leading-none bracket-flag select-none ${homeCursor}" onclick="handleChampionBetClick('${resolvedHome}', event)" title="${homeTitle}">${flagHome}</span>
+                        <span class="leading-none bracket-flag select-none">${flagHome}</span>
                         <span class="text-[9px] font-black text-white truncate w-full text-center mt-0.5 bracket-font-size leading-none">${resolvedHome}</span>
-                        <div class="flex flex-wrap gap-0.5 justify-center mt-0.5 max-w-full">
-                            ${getChampionPlayersHtml(resolvedHome)}
-                        </div>
                         ${isHomeWinner ? '<span class="absolute -top-1 right-0 text-[8px] text-green-400 font-bold">W</span>' : ''}
                     </div>
                     <!-- 中间比分 -->
@@ -3138,11 +2822,8 @@
                     </div>
                     <!-- 下队 -->
                     <div class="flex flex-col items-center relative w-full bracket-team-gap-bottom ${isHomeWinner ? 'opacity-40' : ''}">
-                        <span class="leading-none bracket-flag select-none ${awayCursor}" onclick="handleChampionBetClick('${resolvedAway}', event)" title="${awayTitle}">${flagAway}</span>
+                        <span class="leading-none bracket-flag select-none">${flagAway}</span>
                         <span class="text-[9px] font-black text-white truncate w-full text-center mt-0.5 bracket-font-size leading-none">${resolvedAway}</span>
-                        <div class="flex flex-wrap gap-0.5 justify-center mt-0.5 max-w-full">
-                            ${getChampionPlayersHtml(resolvedAway)}
-                        </div>
                         ${isAwayWinner ? '<span class="absolute -top-1 right-0 text-[8px] text-green-400 font-bold">W</span>' : ''}
                     </div>
                 </div>
@@ -3168,10 +2849,6 @@
                 trophyGlow = "drop-shadow-[0_0_15px_rgba(250,204,21,0.8)] animate-pulse";
             }
 
-            const isChampReal = isRealCountry(championName);
-            const champCursor = isChampReal ? 'cursor-pointer hover:scale-115 active:scale-90 transition-transform' : 'opacity-40';
-            const champTitle = isChampReal ? '点击下注此队夺冠！' : '';
-
             col.innerHTML = `
                 <div class="flex flex-col items-center text-center justify-center space-y-3 relative">
                     <!-- 奖杯与冠军卡 -->
@@ -3179,11 +2856,8 @@
                         <i class="fa-solid fa-trophy text-yellow-400 text-5xl ${trophyGlow}"></i>
                         <span class="text-xs font-black text-yellow-400 tracking-widest mt-1">CHAMPION</span>
                         <div class="mt-2 p-2 rounded-2xl bg-gradient-to-b from-yellow-500/20 to-transparent border border-yellow-500/30 flex flex-col items-center w-[90px] shadow-[0_0_15px_rgba(250,204,21,0.2)]">
-                            <span class="select-none leading-none bracket-flag ${champCursor}" style="font-size: 36px !important;" onclick="handleChampionBetClick('${championName}', event)" title="${champTitle}">${championFlag}</span>
+                            <span class="select-none leading-none bracket-flag" style="font-size: 36px !important;">${championFlag}</span>
                             <span class="text-xs font-black text-white truncate w-full text-center mt-1 bracket-font-size">${championName}</span>
-                            <div class="flex flex-wrap gap-0.5 justify-center mt-0.5 max-w-full">
-                                ${getChampionPlayersHtml(championName)}
-                            </div>
                         </div>
                     </div>
                     <!-- 决赛 -->
@@ -3275,6 +2949,7 @@
                 svg.appendChild(path);
             }
 
+            // 绘制左半区连线
             leftConnections.forEach(conn => {
                 const childEl = document.getElementById(`bracket-match-${conn.child}`);
                 if (!childEl) return;
@@ -3295,6 +2970,7 @@
                 });
             });
 
+            // 绘制右半区连线
             rightConnections.forEach(conn => {
                 const childEl = document.getElementById(`bracket-match-${conn.child}`);
                 if (!childEl) return;
@@ -3324,11 +3000,21 @@
             }, 50);
         }
 
-        function renderBracket() {
-            updateBracketUI();
-        }
+        // 添加节流重绘机制，防止手机端重绘过频卡顿
+        let resizeTimeout;
+        window.addEventListener('resize', () => {
+            if (resizeTimeout) clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                if (currentTab === 'knockout' && activeKnockoutSubTab === 'bracket') {
+                    resizeBracket();
+                    drawBracketLines();
+                }
+            }, 100);
+        });
 
-        // --- 淘汰赛数据子Tab面板渲染 ---
+        // ==========================================
+        // 小组得分排名及第三名统计渲染
+        // ==========================================
         function renderGroupStandings() {
             const container = document.getElementById('group-standings-container');
             if (!container) return;
@@ -3421,6 +3107,7 @@
             });
             tableBody.innerHTML = tableHtml;
             
+            // 还原第三名大对阵落位
             const matchups = getThirdPlaceMatchups(db);
             let matchupsHtml = '';
             
@@ -3479,23 +3166,19 @@
                 let balanceSign = p.balance >= 0 ? '+' : '';
                 let winRate = p.totalBets > 0 ? Math.round(p.correctGuesses / p.totalBets * 100) : 0;
                 let winStreakText = p.maxWinStreak > 0 ? `${p.maxWinStreak} 局` : '0 局';
-                let lossStreakText = p.maxLossStreak >  0 ? `${p.maxLossStreak} 局` : '0 局';
+                let lossStreakText = p.maxLossStreak > 0 ? `${p.maxLossStreak} 局` : '0 局';
                 
-                // 提取下注夺冠信息展示
-                const hasChampBet = db.championBets && db.championBets[p.id];
-                const champBetText = hasChampBet ? `${getFlag(db.championBets[p.id])} ${db.championBets[p.id]}` : '尚未选择';
-
                 html += `
                     <div class="stats-card-item marquee-st border border-white/10 rounded-2xl p-4 shadow-xl space-y-4">
                         <div class="flex items-center gap-3 pb-3 border-b border-white/10">
                             <div class="relative">
                                 <img src="${p.avatar}" class="w-14 h-14 rounded-full border-2 border-yellow-400 bg-black object-cover shadow-md">
-                                <span class="absolute -top-1 -left-1 bg-yellow-400 text-blue-950 font-black text-[10px] px-1 py-0.5 rounded-full shadow">#${idx + 1}</span>
+                                <span class="absolute -top-1 -left-1 bg-yellow-400 text-blue-950 font-black text-[10px] px-1.5 py-0.5 rounded-full shadow">#${idx + 1}</span>
                             </div>
                             <div class="flex-1 min-w-0">
                                 <h3 class="text-lg font-black text-white truncate">${p.name}</h3>
                                 <div class="flex gap-1.5 mt-1">
-                                    <span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-500/20 text-blue-300 border border-white/5">
+                                    <span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30">
                                         胜率 ${winRate}%
                                     </span>
                                     <span class="px-1.5 py-0.5 rounded text-[9px] font-bold ${roi >= 0 ? 'bg-green-500/20 text-green-300 border-green-500/30' : 'bg-red-500/20 text-red-300 border-red-500/30'} border">
@@ -3520,28 +3203,22 @@
                             </p>
                             <div class="grid grid-cols-4 gap-2">
                                 <div class="bg-white/5 rounded-xl p-2 text-center border border-white/5">
-                                    <p class="text-[9px] text-gray-400">总投资</p>
+                                    <p class="text-[9px] text-white/40 font-bold">总投资</p>
                                     <p class="text-sm font-extrabold text-white font-mono mt-0.5">${p.totalInvest}</p>
                                 </div>
                                 <div class="bg-white/5 rounded-xl p-2 text-center border border-white/5">
-                                    <p class="text-[9px] text-gray-400">参与局数</p>
-                                    <p class="text-sm font-extrabold text-blue-300 font-mono mt-0.5">${p.totalBets}</p>
+                                    <p class="text-[9px] text-white/40 font-bold">参与局数</p>
+                                    <p class="text-sm font-extrabold text-blue-300 font-mono mt-0.5">${p.totalBets} 局</p>
                                 </div>
                                 <div class="bg-white/5 rounded-xl p-2 text-center border border-white/5">
-                                    <p class="text-[9px] text-gray-400">ROI</p>
+                                    <p class="text-[9px] text-white/40 font-bold">ROI</p>
                                     <p class="text-sm font-extrabold ${roiClass} font-mono mt-0.5">${roi}%</p>
                                 </div>
                                 <div class="bg-white/5 rounded-xl p-2 text-center border border-white/5">
-                                    <p class="text-[9px] text-gray-400">胜率</p>
+                                    <p class="text-[9px] text-white/40 font-bold">胜率</p>
                                     <p class="text-sm font-extrabold text-yellow-400 font-mono mt-0.5">${winRate}%</p>
                                 </div>
                             </div>
-                        </div>
-
-                        <!-- 夺冠竞猜下注展示 -->
-                        <div class="bg-white/5 rounded-xl p-2.5 border border-white/5 flex justify-between items-center text-xs">
-                            <span class="text-white/60 font-black flex items-center gap-1"><i class="fa-solid fa-trophy text-yellow-400"></i> 下注夺冠预测：</span>
-                            <span class="text-yellow-400 font-black font-mono bg-yellow-400/10 px-2 py-0.5 rounded">${champBetText}</span>
                         </div>
 
                         <div class="grid grid-cols-2 gap-2">
@@ -3567,7 +3244,7 @@
                                 </div>
                                 <div class="flex justify-between items-center text-xs mt-1">
                                     <span class="text-white/60">单局最赚:</span>
-                                    <span class="text-green-400 font-black font-mono">+${p.biggestWin || 0}</span>
+                                    <span class="text-green-400 font-extrabold font-mono">+${p.biggestWin || 0}</span>
                                 </div>
                             </div>
                         </div>
@@ -3575,7 +3252,7 @@
                         <!-- 球队倾向与运势 -->
                         <div class="pt-1">
                             <p class="text-[10px] text-yellow-400/80 font-black mb-2 flex items-center gap-1.5 uppercase tracking-wider">
-                                <i class="fa-solid fa-chart-bar text-[11px]"></i> 球队倾向与运势
+                                <i class="fa-solid fa-wand-magic-sparkles text-[11px]"></i> 球队倾向与运势 analysis
                             </p>
                             <div class="grid grid-cols-2 gap-2">
                                 <div class="bg-white/5 rounded-xl p-2 border border-white/5 flex items-center gap-2">
@@ -3602,7 +3279,7 @@
                                 <div class="bg-red-500/5 rounded-xl p-2 border border-red-500/10 flex items-center gap-2">
                                     <div class="text-red-400 text-lg shrink-0 w-6 text-center"><i class="fa-solid fa-face-frown"></i></div>
                                     <div class="min-w-0">
-                                        <p class="text-[9px] text-red-300/60 font-bold">打铁球队</p>
+                                        <p class="text-[9px] text-red-300/60 font-bold">厄运球队</p>
                                         <p class="text-xs font-black text-red-300 truncate mt-0.5">${p.unluckyTeamStr}</p>
                                     </div>
                                 </div>
@@ -3617,31 +3294,11 @@
         function addPlayer() {
             const name = document.getElementById('newPlayerName').value.trim();
             const avatarInput = document.getElementById('newPlayerAvatar').value.trim();
-            if (!name) return alert("玩家姓名不能为空！");
+            if (!name) return alert("代号必填！");
             const avatar = avatarInput || `https://api.dicebear.com/6.x/bottts/svg?seed=${name}&backgroundColor=00f3ff`;
-            
-            const newPlayer = {
-                id: 'player_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
-                name: name,
-                avatar: avatar,
-                balance: 0,
-                totalInvest: 0,
-                correctGuesses: 0,
-                totalBets: 0,
-                highestBalance: 0,
-                lowestBalance: 0,
-                biggestWin: 0,
-                biggestLoss: 0,
-                teamStats: {}
-            };
-
-            db.players.push(newPlayer);
-            addLog(`管理员新增了玩家: [${name}]`);
-            broadcastData(true);
-            closeModal('addPlayerModal');
-            document.getElementById('newPlayerName').value = '';
-            document.getElementById('newPlayerAvatar').value = '';
-            refreshAllUI();
+            db.players.push({ id: 'P_'+Date.now(), name, avatar, balance: 0, totalInvest: 0, correctGuesses: 0, totalBets: 0, highestBalance: 0, lowestBalance: 0, biggestWin: 0, biggestLoss: 0, teamStats: {} });
+            addLog("新增了玩家: [" + name + "]");
+            broadcastData(true); closeModal('addPlayerModal'); refreshAllUI();
         }
 
         function editPlayerAvatar(playerId) {
@@ -3750,7 +3407,7 @@
         function clearLogs() {
             const pwd = prompt("请输入安全密码以清空操作日志：");
             if (pwd !== "260612") {
-                alert("密码错误，安全验证失败！");
+                alert("密码错误，安全验证失败！操作已撤销。");
                 return;
             }
             if (confirm("确定要清空所有的历史操作日志吗？清空后将无法挽回！")) {
@@ -3790,8 +3447,6 @@
                 }
                 db = parsed;
                 if (!db.logs) db.logs = [];
-                if (!db.championBets) db.championBets = {};
-                if (db.championBetStake === undefined) db.championBetStake = 1000;
                 if (db.lockBets15Min === undefined) db.lockBets15Min = false;
                 if (db.buyAndClose === undefined) db.buyAndClose = true;
                 if (db.realtimeBracket === undefined) db.realtimeBracket = false;
@@ -3843,7 +3498,6 @@
                     if (confirm("确定要导入此备份吗？导入后将全面覆盖本地现存的所有数据！")) {
                         db = parsed;
                         if (!db.logs) db.logs = [];
-                        if (!db.championBets) db.championBets = {};
                         if (db.lockBets15Min === undefined) db.lockBets15Min = false;
                         if (db.buyAndClose === undefined) db.buyAndClose = true;
                         if (db.realtimeBracket === undefined) db.realtimeBracket = false;
@@ -3891,7 +3545,6 @@
                 }
                 db = parsed;
                 if (!db.logs) db.logs = [];
-                if (!db.championBets) db.championBets = {};
                 if (db.lockBets15Min === undefined) db.lockBets15Min = false;
                 if (db.buyAndClose === undefined) db.buyAndClose = true;
                 if (db.realtimeBracket === undefined) db.realtimeBracket = false;
@@ -3916,7 +3569,7 @@
         function resetEntireDatabase() {
             const pwd = prompt("🚨 极度危险操作提示 🚨\n请键入管理重置密码以彻底恢复出厂数据：");
             if (pwd !== "260612") {
-                alert("密码错误，身份核验失败！");
+                alert("密码错误，身份核验失败！操作已拒绝。");
                 return;
             }
             if (confirm("🚨 警告：这会清空本房所有玩家记录、所有历史注单、清空操作日志并重置全部104场比赛！确定执行此项重置吗？")) {
@@ -3928,8 +3581,6 @@
                     lockBets15Min: false, 
                     buyAndClose: true,
                     realtimeBracket: false,
-                    championBets: {},
-                    championBetStake: 1000,
                     splashUrl: 'https://i.ibb.co/7xmRFfjt/26WC.jpg',
                     mqttBrokerUrl: 'wss://broker.emqx.io:8084/mqtt',
                     slideshow: {
@@ -4292,7 +3943,7 @@
             if (!m) return;
             const pwd = prompt(`🚨 敏感操作：重新编辑已结算赛事 🚨\n请输入安全验证密码以重置赛事「${m.home} VS ${m.away}」的赛果：`);
             if (pwd !== "260612") {
-                alert("密码错误，安全核验失败！");
+                alert("密码错误，安全核验失败！操作已撤销。");
                 return;
             }
             
@@ -4312,7 +3963,7 @@
             if (!m) return;
             const pwd = prompt(`🚨 敏感操作：重置赛事 🚨\n请输入安全验证密码以重置赛事「${m.home} VS ${m.away}」：`);
             if (pwd !== "260612") {
-                alert("密码错误，安全核验失败！");
+                alert("密码错误，安全核验失败！操作已撤销。");
                 return;
             }
             
@@ -4455,41 +4106,6 @@
             let totalProfit = 0;
             records.forEach(r => totalProfit += r.netProfit);
             
-            // 加上夺冠竞猜数据展示到记账本 (读取配置，默认1000)
-            const hasChampBet = db.championBets && db.championBets[p.id];
-            if (hasChampBet && activeLedgerFilter === 'all') {
-                const stake = db.championBetStake !== undefined ? db.championBetStake : 1000;
-                totalProfit -= stake;
-                
-                // 检查是否算作夺冠奖励分配优胜者
-                const participants = Object.keys(db.championBets).filter(pid => db.players.some(x => x.id === pid));
-                const pool = participants.length * stake;
-                let maxStage = -1;
-                const playerStages = {};
-                participants.forEach(pid => {
-                    const countryName = db.championBets[pid];
-                    const stage = getTeamProgressStage(countryName, db);
-                    playerStages[pid] = stage;
-                    if (stage > maxStage) maxStage = stage;
-                });
-                const winners = participants.filter(pid => playerStages[pid] === maxStage);
-                let reward = 0;
-                if (winners.includes(p.id)) {
-                    reward = pool / winners.length;
-                    totalProfit += reward;
-                }
-
-                records.push({
-                    id: '夺冠',
-                    home: '2026世界杯',
-                    away: '冠军竞猜总奖池',
-                    date: '终局结算',
-                    predText: `支持: ${db.championBets[p.id]}`,
-                    netProfit: reward - stake,
-                    score: `平分 ${reward.toFixed(0)}分`
-                });
-            }
-
             countEl.innerText = `${records.length} 场`;
             profitEl.innerText = `${totalProfit >= 0 ? '+' : ''}${totalProfit.toFixed(0)}分`;
             profitEl.className = `font-mono font-black ${totalProfit >= 0 ? 'text-green-400' : 'text-red-400'}`;
@@ -4502,13 +4118,13 @@
             let html = '';
             records.forEach(r => {
                 const isWin = r.netProfit >= 0;
-                const isRefund = r.netProfit === 0 && r.id !== '夺冠' && m_winners_zero(r.id);
+                const isRefund = r.netProfit === 0 && m_winners_zero(r.id);
                 html += `
                     <div class="bg-black/20 border border-white/5 p-3 rounded-2xl flex justify-between items-center text-xs backdrop-blur-sm">
                         <div class="min-w-0 flex-1 pr-2">
                             <div class="font-extrabold text-white truncate flex items-center gap-1.5">
-                                <span class="bg-blue-500/10 text-blue-400 px-1.5 py-0.5 rounded text-[9px] font-mono shrink-0">${r.id === '夺冠' ? '🏆 夺冠' : `第${r.id}场`}</span>
-                                <span class="truncate">${r.home} ${r.id === '夺冠' ? '' : 'VS'} ${r.away}</span>
+                                <span class="bg-blue-500/10 text-blue-400 px-1.5 py-0.5 rounded text-[9px] font-mono shrink-0">第${r.id}场</span>
+                                <span class="truncate">${r.home} VS ${r.away}</span>
                             </div>
                             <div class="text-[10px] text-gray-400 mt-1 flex flex-wrap gap-x-2 gap-y-1">
                                 <span>下注: <span class="text-yellow-400 font-bold">“${r.predText}”</span></span>
@@ -4692,8 +4308,7 @@
                         fontSize: 10,
                         height: 900,
                         width: 900,
-                        teamGap: 4,
-                        playerNameSize: 8
+                        teamGap: 4
                     },
                     ticker: {
                         height: 32,
@@ -4726,10 +4341,6 @@
                     jackpot: { size: 10 }
                 };
             }
-            if (!db.uiSettings.bracket) {
-                db.uiSettings.bracket = { flagSize: 24, fontSize: 10, height: 900, width: 900, teamGap: 4, playerNameSize: 8 };
-            }
-            if (db.uiSettings.bracket.playerNameSize === undefined) db.uiSettings.bracket.playerNameSize = 8;
         }
 
         function updateUIConfig(section, key, value, subkey = null) {
@@ -4777,14 +4388,12 @@
             const bkHt = document.getElementById('cfg-bk-ht'); if (bkHt) bkHt.value = ui.bracket.height;
             const bkWd = document.getElementById('cfg-bk-wd'); if (bkWd) bkWd.value = ui.bracket.width;
             const bkTg = document.getElementById('cfg-bk-tg'); if (bkTg) bkTg.value = ui.bracket.teamGap;
-            const bkPns = document.getElementById('cfg-bk-pns'); if (bkPns) bkPns.value = ui.bracket.playerNameSize || 8;
 
             const valBkFl = document.getElementById('val-bk-fl'); if (valBkFl) valBkFl.innerText = ui.bracket.flagSize;
             const valBkFt = document.getElementById('val-bk-ft'); if (valBkFt) valBkFt.innerText = ui.bracket.fontSize;
             const valBkHt = document.getElementById('val-bk-ht'); if (valBkHt) valBkHt.innerText = ui.bracket.height;
             const valBkWd = document.getElementById('val-bk-wd'); if (valBkWd) valBkWd.innerText = ui.bracket.width;
             const valBkTg = document.getElementById('val-bk-tg'); if (valBkTg) valBkTg.innerText = ui.bracket.teamGap;
-            const valBkPns = document.getElementById('val-bk-pns'); if (valBkPns) valBkPns.innerText = ui.bracket.playerNameSize || 8;
 
             const rtBracket = document.getElementById('cfg-rt-bracket'); if (rtBracket) rtBracket.checked = !!db.realtimeBracket;
 
@@ -4799,10 +4408,6 @@
             const valTkHt = document.getElementById('val-tk-ht'); if (valTkHt) valTkHt.innerText = ui.ticker.height;
             const valTkFs = document.getElementById('val-tk-fs'); if (valTkFs) valTkFs.innerText = ui.ticker.fontSize;
             const valTkSp = document.getElementById('val-tk-sp'); if (valTkSp) valTkSp.innerText = ui.ticker.speed;
-
-            // 同步夺冠竞猜单注积分设置项到后台 input
-            const stakeInput = document.getElementById('cfg-champion-stake');
-            if (stakeInput) stakeInput.value = db.championBetStake !== undefined ? db.championBetStake : 1000;
 
             ['leaderboard', 'match', 'flag', 'stats', 'player', 'banner'].forEach(sec => {
                 const m = ui.marquee[sec];

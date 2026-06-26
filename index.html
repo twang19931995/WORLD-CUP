@@ -156,10 +156,32 @@
             contain: paint; /* 隔离卡片渲染范围，防止回流波及全页 */
         }
 
-        /* 启用原生滚动，增强操作跟手感 */
+/* 启用原生滚动，增强操作跟手感 */
         .no-scrollbar, #logs-container, #bet-players-list, #ledger-list-container, #md-players-list {
             -webkit-overflow-scrolling: touch;
             will-change: scroll-position;
+        }
+
+        /* 新增：锁定对局无变数的跑马灯描边效果 */
+        .marquee-determined-match {
+            position: relative;
+            border-color: transparent !important;
+        }
+        .marquee-determined-match::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            padding: 1.5px;
+            background: linear-gradient(90deg, #00f3ff, #e600ff, #00f3ff);
+            background-size: 200% auto;
+            animation: borderRotate 4s linear infinite;
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: destination-out;
+            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            mask-composite: exclude;
+            pointer-events: none;
+            z-index: 5;
         }
     </style>
 </head>
@@ -1718,6 +1740,60 @@
             return true;
         }
 
+// 新增：递归检测某支队伍或占位符是否已经完全锁定，没有后续变数
+        function isTeamDetermined(team, db) {
+            if (!team) return false;
+            
+            // 1. 沙特阿拉伯标准化
+            if (team === "沙特" || team === "沙特阿拉伯") return true;
+
+            // 2. 占位映射别名
+            if (team === "半决胜1") return isTeamDetermined("101胜者", db);
+            if (team === "半决胜2") return isTeamDetermined("102胜者", db);
+            if (team === "半决负1") return isTeamDetermined("101负者", db);
+            if (team === "半决负2") return isTeamDetermined("102负者", db);
+
+            // 3. 胜者追溯
+            const winnerMatch = team.match(/^(\d+)胜者$/);
+            if (winnerMatch) {
+                const mId = parseInt(winnerMatch[1], 10);
+                const targetMatch = db.matches.find(x => x.id === mId);
+                if (targetMatch && targetMatch.status === 'finished') {
+                    return isTeamDetermined(targetMatch.home, db) && isTeamDetermined(targetMatch.away, db);
+                }
+                return false;
+            }
+
+            // 4. 负者追溯
+            const loserMatch = team.match(/^(\d+)负者$/);
+            if (loserMatch) {
+                const mId = parseInt(loserMatch[1], 10);
+                const targetMatch = db.matches.find(x => x.id === mId);
+                if (targetMatch && targetMatch.status === 'finished') {
+                    return isTeamDetermined(targetMatch.home, db) && isTeamDetermined(targetMatch.away, db);
+                }
+                return false;
+            }
+
+            // 5. 小组前两名确定性校验（同组的6场小组赛打完，说明小组排名完全确定）
+            const groupMatch = team.match(/^([A-L])([1-4])$/);
+            if (groupMatch) {
+                const gLetter = groupMatch[1];
+                const gName = "Group " + gLetter;
+                const finishedGroupMatches = db.matches.filter(m => m.group === gName && m.status === 'finished').length;
+                return finishedGroupMatches === 6;
+            }
+
+            // 6. 小组第三匹配池校验（全部72场小组赛打完，第三名落位才彻底确定）
+            if (team.includes('/') && team.includes('3')) {
+                const totalFinishedGroupMatches = db.matches.filter(m => m.round !== '淘汰赛' && m.status === 'finished').length;
+                return totalFinishedGroupMatches === 72;
+            }
+
+            // 7. 若已经是真实国家，则说明不再发生改变
+            return isRealCountry(team);
+        }
+
         function resolveTeamName(team, db, matchContext = null) {
             if (!team) return "";
             if (team === "沙特" || team === "沙特阿拉伯") return "沙特阿拉伯"; // 强行拦截并解析，确保整个视图层绝对不会出现拆分
@@ -3095,7 +3171,7 @@ function renderKnockoutData() {
         }
 
         // --- 淘汰赛 3D 拓扑对阵图绘制模块 ---
-        function createBracketMatchNode(matchId) {
+function createBracketMatchNode(matchId) {
             const m = db.matches.find(x => x.id === matchId);
             if (!m) return '';
             const resolvedHome = resolveTeamName(m.home, db, m);
@@ -3128,8 +3204,12 @@ function renderKnockoutData() {
                     <span class="bg-yellow-400 text-blue-950 font-black text-[9px] px-1 py-0.5 rounded skew-x-12 animate-pulse border border-yellow-300 shadow-[0_0_8px_rgba(250,204,21,0.8)]">WIN</span>
                 </div>` : '';
 
+            // 新增：判断本场对决两端队伍是否都已锁定，无后续变数
+            const isDetermined = isTeamDetermined(m.home, db) && isTeamDetermined(m.away, db);
+            const determinedClass = isDetermined ? 'marquee-determined-match' : 'border border-white/10';
+
             return `
-                <div id="bracket-match-${matchId}" onclick="showMatchDetails(${matchId}, event); event.stopPropagation();" class="flex flex-col items-center justify-center p-1 rounded-xl bg-black/40 border border-white/10 shadow-lg hover:bg-black/60 transition-all cursor-pointer relative" style="width: 80px; min-height: 54px;">
+                <div id="bracket-match-${matchId}" onclick="showMatchDetails(${matchId}, event); event.stopPropagation();" class="flex flex-col items-center justify-center p-1 rounded-xl bg-black/40 ${determinedClass} shadow-lg hover:bg-black/60 transition-all cursor-pointer relative" style="width: 80px; min-height: 54px;">
                     <!-- 上队 -->
                     <div class="flex flex-col items-center relative w-full bracket-team-gap-top ${isAwayWinner ? 'opacity-40' : ''}">
                         <span class="leading-none bracket-flag select-none ${homeCursor}" onclick="handleChampionBetClick('${resolvedHome}', event)" title="${homeTitle}">${flagHome}</span>

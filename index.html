@@ -4151,6 +4151,7 @@ function createBracketMatchNode(matchId) {
             document.getElementById('matchStake').value = b.stake;
             const list = document.getElementById('bet-players-list');
             
+const isKnockout = m.round === '淘汰赛';
             let html = '';
             db.players.forEach(p => {
                 let cur = b.predictions[p.id] || 'none';
@@ -4160,6 +4161,9 @@ function createBracketMatchNode(matchId) {
                 let isLocked = (db.buyAndClose && cur !== 'none');
                 let disabledAttr = isLocked ? 'disabled' : '';
                 let lockLabel = isLocked ? '<span class="text-red-500 text-[10px] ml-1 font-bold"><i class="fa-solid fa-lock"></i>买定离手</span>' : '';
+
+                // 如果是淘汰赛，就不渲染“平”选项，常规赛则正常渲染
+                let drawOptionHtml = isKnockout ? '' : `<label><input type="radio" name="p_${p.id}" value="draw" class="peer hidden" ${cur==='draw'?'checked':''} ${disabledAttr} onchange="playAudio('click')"><div class="px-2.5 py-1.5 rounded-md text-xs font-bold text-white/40 peer-checked:bg-gray-500 peer-checked:text-white transition cursor-pointer">平</div></label>`;
 
                 html += `
                     <div class="bg-black/20 p-2 rounded-xl flex items-center justify-between border border-white/5 ${isLocked ? 'opacity-80' : ''}">
@@ -4173,7 +4177,7 @@ function createBracketMatchNode(matchId) {
                         </div>
                         <div class="flex gap-1 bg-black/50 p-1 rounded-lg shrink-0 ${isLocked ? 'pointer-events-none' : ''}">
                             <label><input type="radio" name="p_${p.id}" value="home" class="peer hidden" ${cur==='home'?'checked':''} ${disabledAttr} onchange="playAudio('click')"><div class="px-2.5 py-1.5 rounded-md text-xs font-bold text-white/40 peer-checked:bg-blue-600 peer-checked:text-white transition cursor-pointer">主胜</div></label>
-                            <label><input type="radio" name="p_${p.id}" value="draw" class="peer hidden" ${cur==='draw'?'checked':''} ${disabledAttr} onchange="playAudio('click')"><div class="px-2.5 py-1.5 rounded-md text-xs font-bold text-white/40 peer-checked:bg-gray-500 peer-checked:text-white transition cursor-pointer">平</div></label>
+                            ${drawOptionHtml}
                             <label><input type="radio" name="p_${p.id}" value="away" class="peer hidden" ${cur==='away'?'checked':''} ${disabledAttr} onchange="playAudio('click')"><div class="px-2.5 py-1.5 rounded-md text-xs font-bold text-white/40 peer-checked:bg-red-500 peer-checked:text-white transition cursor-pointer">主负</div></label>
                             <label><input type="radio" name="p_${p.id}" value="none" class="peer hidden" ${cur==='none'?'checked':''} ${disabledAttr} onchange="playAudio('click')"><div class="px-2.5 py-1.5 rounded-md text-xs font-bold text-white/20 peer-checked:text-yellow-500 transition cursor-pointer"><i class="fa-solid fa-ban"></i></div></label>
                         </div>
@@ -4237,7 +4241,7 @@ function createBracketMatchNode(matchId) {
             broadcastData(true); closeModal('betModal'); refreshAllUI();
         }
 
-        function openSettleModal(id) {
+function openSettleModal(id) {
             const m = db.matches.find(x => x.id === id); if (!db.bets[id]) return alert("该场比赛无人下注，无法开奖！");
             document.getElementById('settleMatchId').value = id;
             const resolvedHome = resolveTeamName(m.home, db, m);
@@ -4246,6 +4250,17 @@ function createBracketMatchNode(matchId) {
             document.getElementById('settleScoreHome').value = ''; document.getElementById('settleScoreAway').value = '';
             document.querySelectorAll('.result-btn').forEach(b => { b.classList.remove('border-yellow-400', 'bg-yellow-400/20', 'text-yellow-400'); b.classList.add('border-white/10', 'bg-black/30'); });
             document.getElementById('settleFinalResult').value = '';
+            
+            // 新增：淘汰赛隐藏“平局”结算按钮，并调整为2列网格，常规赛恢复3列
+            const drawBtn = document.getElementById('res-draw');
+            if (m.round === '淘汰赛') {
+                drawBtn.style.display = 'none';
+                drawBtn.parentElement.classList.replace('grid-cols-3', 'grid-cols-2');
+            } else {
+                drawBtn.style.display = 'block';
+                drawBtn.parentElement.classList.replace('grid-cols-2', 'grid-cols-3');
+            }
+
             openModal('settleModal');
         }
 
@@ -4261,10 +4276,11 @@ function createBracketMatchNode(matchId) {
                 const scoreH = parseFloat(scoreHVal);
                 const scoreA = parseFloat(scoreAVal);
                 if (!isNaN(scoreH) && !isNaN(scoreA)) {
-                    const netResult = scoreH - scoreA;
+const netResult = scoreH - scoreA;
                     let res = '';
                     if (Math.abs(netResult) < 0.0001) {
-                        res = 'draw';
+                        // 如果是淘汰赛，平局时Res设为空字符串（不自动勾选），必须让管理员手动裁定谁是点球/加时赛胜者
+                        res = m.round === '淘汰赛' ? '' : 'draw';
                     } else if (netResult > 0) {
                         res = 'home';
                     } else {

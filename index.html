@@ -303,10 +303,10 @@
             <div id="ko-panel-bracket" class="space-y-4 overflow-hidden">
                 <!-- 夺冠竞猜顶部小贴士 -->
                 <div class="text-xs text-yellow-300 bg-yellow-400/10 border border-yellow-400/20 rounded-xl p-3 text-center leading-relaxed font-bold">
-                    💡 点击你觉得会夺冠的球队，进行下注，夺冠或走到所有玩家选择的球队里最后的球队，赢得所有积分。一只球队可供多人选择。
+                    💡 点击你觉得会夺冠的球队，进行下注，夺冠或走到所有玩家选择的球队里最后的球队，赢得所有积分。一只球队可供多人选择。  （以下的概率仅为根据半区剩余球队数量计算的概率，非球队夺冠热门概率。）
                 </div>
 <!-- 已投注夺冠玩家看板容器 -->
-                <div id="champion-bets-dashboard" class="flex gap-2 overflow-x-auto py-2 px-1 no-scrollbar scroll-smooth">
+                <div id="champion-bets-dashboard" class="grid grid-cols-4 gap-2 py-2 px-1 w-full">
                     <!-- 动态载入已下注夺冠的玩家卡片 -->
                 </div>
                 <div id="bracket-container" class="w-full overflow-x-auto no-scrollbar py-4 flex justify-start md:justify-center">
@@ -3237,6 +3237,127 @@ function createBracketMatchNode(matchId) {
         }
 
 // =================================================================
+        // 动态计算球队夺冠概率核心算法辅助函数区
+        // =================================================================
+
+        // 1. 判断该球队在淘汰赛中是否已经被淘汰
+        function isTeamEliminated(teamName, db) {
+            if (!isRealCountry(teamName)) return true;
+            
+            // 如果决赛已经决出结果
+            const m104 = db.matches.find(x => x.id === 104);
+            if (m104 && m104.status === 'finished') {
+                const h = resolveTeamName(m104.home, db, m104);
+                const a = resolveTeamName(m104.away, db, m104);
+                if (h === teamName && m104.result === 'away') return true;
+                if (a === teamName && m104.result === 'home') return true;
+                return false; // 冠军队未被淘汰
+            }
+
+            // 检查除103场（三四名季军赛）之外的所有已结束淘汰赛，输掉任意一场即被淘汰
+            for (let m of db.matches) {
+                if (m.id >= 73 && m.id !== 103 && m.status === 'finished') {
+                    const h = resolveTeamName(m.home, db, m);
+                    const a = resolveTeamName(m.away, db, m);
+                    if (h === teamName && m.result === 'away') return true;
+                    if (a === teamName && m.result === 'home') return true;
+                }
+            }
+            return false;
+        }
+
+        // 2. 追踪该国家属于左半区还是右半区
+        function getTeamHalf(teamName, db) {
+            const leftMatchIds = [73, 74, 75, 77, 81, 82, 83, 84];
+            const rightMatchIds = [76, 78, 79, 80, 85, 86, 87, 88];
+            
+            for (let m of db.matches) {
+                if (m.id >= 73 && m.id <= 88) {
+                    const h = resolveTeamName(m.home, db, m);
+                    const a = resolveTeamName(m.away, db, m);
+                    if (h === teamName || a === teamName) {
+                        if (leftMatchIds.includes(m.id)) return 'left';
+                        if (rightMatchIds.includes(m.id)) return 'right';
+                    }
+                }
+            }
+            return null;
+        }
+
+        // 3. 递归或逐级分析该半区目前还剩余多少有效的“夺冠路径/席位”
+        function getActivePathsCount(half, db) {
+            const sfId = (half === 'left') ? 101 : 102;
+            const qfIds = (half === 'left') ? [97, 98] : [99, 100];
+            const r16Ids = (half === 'left') ? [89, 90, 93, 94] : [91, 92, 95, 96];
+
+            const sf = db.matches.find(x => x.id === sfId);
+            if (sf && sf.status === 'finished') {
+                return 1; // 半决赛已结束，该半区仅剩1名出线选手
+            }
+            
+            let qfActive = 0;
+            qfIds.forEach(qId => {
+                const qm = db.matches.find(x => x.id === qId);
+                if (qm && qm.status === 'finished') {
+                    qfActive += 1; // 1名确定的四强选手
+                } else {
+                    const r16sOfQf = (qId === 97) ? [89, 90] :
+                                     (qId === 98) ? [93, 94] :
+                                     (qId === 99) ? [91, 92] : [95, 96];
+                    let r16Active = 0;
+                    r16sOfQf.forEach(rId => {
+                        const rm = db.matches.find(x => x.id === rId);
+                        if (rm && rm.status === 'finished') {
+                            r16Active += 1;
+                        } else {
+                            const r32sOfR16 = (rId === 89) ? [74, 77] :
+                                              (rId === 90) ? [73, 75] :
+                                              (rId === 93) ? [83, 84] :
+                                              (rId === 94) ? [81, 82] :
+                                              (rId === 91) ? [76, 78] :
+                                              (rId === 92) ? [79, 80] :
+                                              (rId === 95) ? [86, 88] : [85, 87];
+                            let r32Active = 0;
+                            r32sOfR16.forEach(r32Id => {
+                                const r32m = db.matches.find(x => x.id === r32Id);
+                                if (r32m && r32m.status === 'finished') {
+                                    r32Active += 1;
+                                } else {
+                                    r32Active += 2; // 未开赛，该槽位对应2条可能的发展路线
+                                }
+                            });
+                            r16Active += r32Active;
+                        }
+                    });
+                    qfActive += r16Active;
+                }
+            });
+            return qfActive;
+        }
+
+        // 4. 计算该球队晋级决赛并获得冠军的最终数学概率
+        function calculateChampionProbability(teamName, db) {
+            if (!isRealCountry(teamName)) return 0;
+            if (isTeamEliminated(teamName, db)) return 0;
+
+            // 决赛完赛的情形
+            const m104 = db.matches.find(x => x.id === 104);
+            if (m104 && m104.status === 'finished') {
+                const winner = resolveTeamName(m104.result === 'home' ? m104.home : m104.away, db, m104);
+                return (winner === teamName) ? 1 : 0;
+            }
+
+            const half = getTeamHalf(teamName, db);
+            if (!half) return 0;
+
+            const N = getActivePathsCount(half, db);
+            if (N <= 0) return 0;
+
+            // 球队夺冠总概率 = 赢下本半区的概率 (1 / N) * 决赛获胜概率 (50%)
+            return 1 / (2 * N);
+        }
+
+// =================================================================
         // 【修改对阵下注冠军玩家信息UI调整区】
         // 提示：小白用户可直接在此处修改数值来调整国旗大小、国家及玩家字体的尺寸。
         // =================================================================
@@ -3248,44 +3369,63 @@ function createBracketMatchNode(matchId) {
         };
         // =================================================================
 
-        function renderChampionBetsDashboard() {
+function renderChampionBetsDashboard() {
             const container = document.getElementById('champion-bets-dashboard');
             if (!container) return;
 
             // 如果目前数据库里没有任何夺冠下注，显示温馨提示
             if (!db.championBets || Object.keys(db.championBets).length === 0) {
-                container.innerHTML = '<div class="text-[10px] text-white/40 text-center py-2 w-full">目前暂无玩家下注夺冠球队 🏆</div>';
+                container.innerHTML = '<div class="text-[10px] text-white/40 text-center py-2 col-span-4">目前暂无玩家下注夺冠球队 🏆</div>';
                 return;
             }
 
-            let html = '';
+            // 1. 抓取所有下注数据，计算夺冠概率并组装数组
+            const betList = [];
             for (let playerId in db.championBets) {
                 const country = db.championBets[playerId];
                 if (country === 'none' || !country) continue;
                 
                 const p = db.players.find(x => x.id === playerId);
-                if (!p) continue; // 防御保护：如果找不到该玩家则跳过
+                if (!p) continue; // 防御保护：如果玩家被删除则跳过
 
-                const flag = getFlag(country); // 自动匹配获取国旗
+                const prob = calculateChampionProbability(country, db);
+                betList.push({
+                    playerId: playerId,
+                    country: country,
+                    player: p,
+                    prob: prob
+                });
+            }
 
-                // 构建小卡片 HTML，严格遵循：上面国旗，中间国家名字，下方玩家名字
+            // 2. 将玩家夺冠标签根据概率从大到小（降序）排序
+            betList.sort((a, b) => b.prob - a.prob);
+
+            if (betList.length === 0) {
+                container.innerHTML = '<div class="text-[10px] text-white/40 text-center py-2 col-span-4">目前暂无玩家下注夺冠球队 🏆</div>';
+                return;
+            }
+
+            // 3. 构建小卡片 HTML，去除强行拉伸的宽度，由 grid 自主分配 1/4 屏幕宽度，防止左右溢出
+            let html = '';
+            betList.forEach(item => {
+                const flag = getFlag(item.country);
+                const probPercent = (item.prob * 100).toFixed(1) + '%';
+                
                 html += `
-                    <div class="shrink-0 flex flex-col items-center justify-center p-2 rounded-xl bg-black/40 border border-white/10 text-center" style="width: ${CHAMP_UI_CONFIG.cardWidth}; min-width: ${CHAMP_UI_CONFIG.cardWidth};">
+                    <div class="flex flex-col items-center justify-center p-1.5 rounded-xl bg-black/40 border border-white/10 text-center w-full">
                         <!-- 上方国旗 -->
                         <span class="select-none leading-none mb-1" style="font-size: ${CHAMP_UI_CONFIG.flagSize};">${flag}</span>
                         <!-- 中间国家名字 -->
-                        <span class="font-extrabold text-cyan-400 truncate w-full mb-1 leading-tight" style="font-size: ${CHAMP_UI_CONFIG.countryFontSize};" title="${country}">${country}</span>
+                        <span class="font-extrabold text-cyan-400 truncate w-full mb-0.5 leading-tight" style="font-size: ${CHAMP_UI_CONFIG.countryFontSize};" title="${item.country}">${item.country}</span>
+                        <!-- 夺冠概率标签 (国家名字下面) -->
+                        <span class="text-[9px] text-green-400 font-mono font-bold leading-none mb-1" title="根据当前对阵计算的夺冠概率">${probPercent}</span>
                         <!-- 下方玩家名字 -->
-                        <span class="font-black text-yellow-400 truncate w-full leading-none" style="font-size: ${CHAMP_UI_CONFIG.playerFontSize};" title="${p.name}">${p.name}</span>
+                        <span class="font-black text-yellow-400 truncate w-full leading-none" style="font-size: ${CHAMP_UI_CONFIG.playerFontSize};" title="${item.player.name}">${item.player.name}</span>
                     </div>
                 `;
-            }
+            });
 
-            if (html === '') {
-                container.innerHTML = '<div class="text-[10px] text-white/40 text-center py-2 w-full">目前暂无玩家下注夺冠球队 🏆</div>';
-            } else {
-                container.innerHTML = html;
-            }
+            container.innerHTML = html;
         }
 
         function renderCenterColumn() {

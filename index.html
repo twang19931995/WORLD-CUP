@@ -2545,44 +2545,56 @@
                 p.mostLossPredictStr = maxCLTeam !== '无' ? `${maxCLTeam} (${maxCLCount}次)` : '无';
             });
 
-            // 夺冠下注资金结算逻辑
+// 夺冠下注资金结算逻辑（已修正：存活球队不扣分，等待第104场决赛彻底打完才进行平分结算）
             if (db.championBets) {
+                // 筛选出所有存在于玩家列表中的有效参赛者
                 const participants = Object.keys(db.championBets).filter(pid => db.players.some(x => x.id === pid));
                 if (participants.length > 0) {
                     const stake = db.championBetStake !== undefined ? db.championBetStake : 1000;
-                    const pool = participants.length * stake;
-                    
-                    // 1. 每位玩家先行扣除对应单注积分
+                    const pool = participants.length * stake; // 总夺冠奖池
+
+                    // 检测第 104 场决赛是否已经结束
+                    const m104 = db.matches.find(x => x.id === 104);
+                    const isTournamentFinished = m104 && m104.status === 'finished';
+
+                    // 1. 循环处理每一位下注夺冠的玩家扣分
                     participants.forEach(pid => {
                         const p = db.players.find(x => x.id === pid);
-                        if (p) {
-                            p.totalInvest += stake;
-                            p.balance -= stake;
-                        }
-                    });
-
-                    // 2. 统计各下注国家目前最高晋级轮次
-                    let maxStage = -1;
-                    const playerStages = {};
-                    participants.forEach(pid => {
+                        if (!p) return;
                         const countryName = db.championBets[pid];
-                        const stage = getTeamProgressStage(countryName, db);
-                        playerStages[pid] = stage;
-                        if (stage > maxStage) {
-                            maxStage = stage;
+                        if (!countryName || countryName === 'none') return;
+
+                        // 核心规则：只有当球队确定淘汰，或者整个世界杯彻底结束时，才真正扣除玩家的这 1000 积分
+                        const isEliminated = isTeamEliminated(countryName, db);
+                        if (isEliminated || isTournamentFinished) {
+                            p.totalInvest += stake; // 将下注积分累计入该玩家的“总投资”
+                            p.balance -= stake;     // 在该玩家的总榜积分余额里扣除 1000 积分
                         }
                     });
 
-                    // 3. 找出晋级最远的优胜者
-                    const winners = participants.filter(pid => playerStages[pid] === maxStage);
-                    if (winners.length > 0) {
-                        const share = pool / winners.length;
-                        winners.forEach(pid => {
-                            const p = db.players.find(x => x.id === pid);
-                            if (p) {
-                                p.balance += share;
+                    // 2. 如果第 104 场决赛已经打完，开始向最终大赢家分发奖池积分
+                    if (isTournamentFinished) {
+                        let championTeam = "";
+                        if (m104.result === 'home') {
+                            championTeam = resolveTeamName(m104.home, db, m104);
+                        } else if (m104.result === 'away') {
+                            championTeam = resolveTeamName(m104.away, db, m104);
+                        }
+
+                        // 如果最终夺冠国家不为空，找出下注它的玩家
+                        if (championTeam) {
+                            const winners = participants.filter(pid => db.championBets[pid] === championTeam);
+                            // 如果有玩家猜中，将奖池平分给这些玩家
+                            if (winners.length > 0) {
+                                const share = pool / winners.length;
+                                winners.forEach(pid => {
+                                    const p = db.players.find(x => x.id === pid);
+                                    if (p) {
+                                        p.balance += share; // 将平分到的奖金划入余额
+                                    }
+                                });
                             }
-                        });
+                        }
                     }
                 }
             }
@@ -3240,21 +3252,11 @@ function createBracketMatchNode(matchId) {
         // 动态计算球队夺冠概率核心算法辅助函数区
         // =================================================================
 
-        // 1. 判断该球队在淘汰赛中是否已经被淘汰
+// 1. 判断该球队在淘汰赛中是否已经被淘汰（已升级：支持小组赛和淘汰赛完整判定）
         function isTeamEliminated(teamName, db) {
             if (!isRealCountry(teamName)) return true;
-            
-            // 如果决赛已经决出结果
-            const m104 = db.matches.find(x => x.id === 104);
-            if (m104 && m104.status === 'finished') {
-                const h = resolveTeamName(m104.home, db, m104);
-                const a = resolveTeamName(m104.away, db, m104);
-                if (h === teamName && m104.result === 'away') return true;
-                if (a === teamName && m104.result === 'home') return true;
-                return false; // 冠军队未被淘汰
-            }
 
-            // 检查除103场（三四名季军赛）之外的所有已结束淘汰赛，输掉任意一场即被淘汰
+            // A. 淘汰赛判定：检查除103场（三四名季军赛）之外的所有已结束淘汰赛，输掉任意一场即被淘汰
             for (let m of db.matches) {
                 if (m.id >= 73 && m.id !== 103 && m.status === 'finished') {
                     const h = resolveTeamName(m.home, db, m);
@@ -3263,6 +3265,43 @@ function createBracketMatchNode(matchId) {
                     if (a === teamName && m.result === 'home') return true;
                 }
             }
+
+            // B. 小组赛判定：寻找该球队所属的小组，若小组赛全部结束，未晋级的自动算作淘汰
+            let teamGroup = null;
+            for (let m of db.matches) {
+                if (m.round !== '淘汰赛') {
+                    if (m.home === teamName || m.away === teamName) {
+                        teamGroup = m.group;
+                        break;
+                    }
+                }
+            }
+
+            if (teamGroup) {
+                const groupMatches = db.matches.filter(m => m.group === teamGroup);
+                const finishedGroupCount = groupMatches.filter(m => m.status === 'finished').length;
+                // 如果该小组的 6 场小组赛已经全部打完
+                if (finishedGroupCount === 6) {
+                    const sorted = sortGroupTeams(teamGroup, db);
+                    const rankIndex = sorted.findIndex(t => t.name === teamName);
+                    // 1. 小组第四名（倒数第一）直接淘汰
+                    if (rankIndex === 3) {
+                        return true;
+                    }
+                    // 2. 小组第三名，需要等待所有 72 场小组赛全部打完后，成绩最差的4个第三名被淘汰
+                    if (rankIndex === 2) {
+                        const totalFinishedGroupMatches = db.matches.filter(m => m.round !== '淘汰赛' && m.status === 'finished').length;
+                        if (totalFinishedGroupMatches === 72) {
+                            const thirds = getThirdPlaceStandings(db);
+                            const qualifiedThirds = thirds.slice(0, 8).map(t => t.teamName);
+                            if (!qualifiedThirds.includes(teamName)) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+
             return false;
         }
 
@@ -4750,39 +4789,52 @@ const netResult = scoreH - scoreA;
             let totalProfit = 0;
             records.forEach(r => totalProfit += r.netProfit);
             
-            // 加上夺冠竞猜数据展示到记账本 (读取配置，默认1000)
+// 加上夺冠竞猜数据展示到记账本（已修正：和总榜扣分、结算逻辑保持 100% 同步对应）
             const hasChampBet = db.championBets && db.championBets[p.id];
             if (hasChampBet && activeLedgerFilter === 'all') {
-                const stake = db.championBetStake !== undefined ? db.championBetStake : 1000;
-                totalProfit -= stake;
-                
-                // 检查是否算作夺冠奖励分配优胜者
-                const participants = Object.keys(db.championBets).filter(pid => db.players.some(x => x.id === pid));
-                const pool = participants.length * stake;
-                let maxStage = -1;
-                const playerStages = {};
-                participants.forEach(pid => {
-                    const countryName = db.championBets[pid];
-                    const stage = getTeamProgressStage(countryName, db);
-                    playerStages[pid] = stage;
-                    if (stage > maxStage) maxStage = stage;
-                });
-                const winners = participants.filter(pid => playerStages[pid] === maxStage);
-                let reward = 0;
-                if (winners.includes(p.id)) {
-                    reward = pool / winners.length;
-                    totalProfit += reward;
-                }
+                const countryName = db.championBets[p.id];
+                const isEliminated = isTeamEliminated(countryName, db);
+                const m104 = db.matches.find(x => x.id === 104);
+                const isTournamentFinished = m104 && m104.status === 'finished';
 
-                records.push({
-                    id: '夺冠',
-                    home: '2026世界杯',
-                    away: '冠军竞猜总奖池',
-                    date: '终局结算',
-                    predText: `支持: ${db.championBets[p.id]}`,
-                    netProfit: reward - stake,
-                    score: `平分 ${reward.toFixed(0)}分`
-                });
+                // 核心规则：仅在确定淘汰，或者决赛结束时，才将此笔“夺冠盈亏记录”写入对账本
+                if (isEliminated || isTournamentFinished) {
+                    const stake = db.championBetStake !== undefined ? db.championBetStake : 1000;
+                    let netProfit = -stake; // 默认扣除 1000 积分
+                    let scoreText = "未猜中";
+
+                    // 如果整个世界杯决赛已经打完
+                    if (isTournamentFinished) {
+                        let championTeam = "";
+                        if (m104.result === 'home') {
+                            championTeam = resolveTeamName(m104.home, db, m104);
+                        } else if (m104.result === 'away') {
+                            championTeam = resolveTeamName(m104.away, db, m104);
+                        }
+
+                        // 如果该玩家支持的球队夺冠
+                        if (championTeam === countryName) {
+                            const participants = Object.keys(db.championBets).filter(pid => db.players.some(x => x.id === pid));
+                            const pool = participants.length * stake;
+                            const winners = participants.filter(pid => db.championBets[pid] === championTeam);
+                            const reward = pool / winners.length;
+                            netProfit = reward - stake; // 净收益
+                            scoreText = `平分 ${reward.toFixed(0)}分`;
+                        }
+                    }
+
+                    totalProfit += netProfit; // 累加记账本里的总净额
+
+                    records.push({
+                        id: '夺冠',
+                        home: '2026世界杯',
+                        away: '冠军竞猜总奖池',
+                        date: '终局结算',
+                        predText: `支持: ${countryName}`,
+                        netProfit: netProfit,
+                        score: scoreText
+                    });
+                }
             }
 
             countEl.innerText = `${records.length} 场`;
